@@ -1,0 +1,16 @@
+[
+  {
+    "id": 1,
+    "name": "Dr. John Smith",
+    "department": "Cardiology",
+    "qualification": "MD, Cardiologist",
+    "experience": 15
+  },
+  {
+    "id": 2,
+    "name": "Dr. Sarah Johnson",
+    "department": "Orthopedics",
+    "qualification": "MD, Orthopedic Surgeon",
+    "experience": 12
+  }
+]

@@ -1,0 +1,7 @@
+{
+  "id": 1,
+  "username": "testpatient",
+  "email": "patient@example.com",
+  "role": "PATIENT",
+  "name": "Test Patient"
+}
