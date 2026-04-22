@@ -1,0 +1,17 @@
+[
+  {
+    "id": 1,
+    "title": "Cardiology",
+    "description": "Heart and cardiovascular health"
+  },
+  {
+    "id": 2,
+    "title": "Orthopedics",
+    "description": "Bone and joint health"
+  },
+  {
+    "id": 3,
+    "title": "Pediatrics",
+    "description": "Child health and development"
+  }
+]

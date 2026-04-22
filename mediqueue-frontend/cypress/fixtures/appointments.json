@@ -1,0 +1,18 @@
+[
+  {
+    "id": 1,
+    "appointmentDate": "2024-04-25",
+    "appointmentTime": "10:00 AM",
+    "doctor": "Dr. John Smith",
+    "department": "Cardiology",
+    "status": "SCHEDULED"
+  },
+  {
+    "id": 2,
+    "appointmentDate": "2024-04-26",
+    "appointmentTime": "2:30 PM",
+    "doctor": "Dr. Sarah Johnson",
+    "department": "Orthopedics",
+    "status": "COMPLETED"
+  }
+]
