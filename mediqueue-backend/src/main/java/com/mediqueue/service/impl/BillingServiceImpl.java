@@ -70,9 +70,9 @@ public class BillingServiceImpl implements BillingService {
     }
 
     @Override
-    @Transactional(readOnly = true)
+    // NOT readOnly — if no bill exists yet this auto-generates (inserts) a standard one,
+    // which fails inside a read-only transaction on MySQL.
     public BillResponse getBill(Long appointmentId) {
-        // If no bill exists yet, auto-generate a standard one
         return billRepository.findByAppointment_AppointmentId(appointmentId)
             .map(bill -> toResponse(bill, null))
             .orElseGet(() -> generateBill(appointmentId, "STANDARD"));
