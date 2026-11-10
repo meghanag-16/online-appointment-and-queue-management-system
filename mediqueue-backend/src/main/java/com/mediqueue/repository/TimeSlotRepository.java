@@ -9,4 +9,7 @@ public interface TimeSlotRepository extends JpaRepository<TimeSlot, Long> {
         String doctorId, SlotStatus status, LocalDateTime after);
     List<TimeSlot> findByDoctor_Department_DepartmentIdAndStatusAndStartTimeAfter(
         String departmentId, SlotStatus status, LocalDateTime after);
+
+    /** Used by SlotScheduler to avoid duplicate slot creation */
+    boolean existsByDoctorUserIdAndStartTime(String doctorUserId, LocalDateTime startTime);
 }
