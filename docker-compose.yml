@@ -1,26 +1,31 @@
 version: "3.9"
 
+# All values below can be overridden in a local .env file (copy .env.example → .env).
+# Defaults keep `docker compose up` working out of the box for local development.
+
 services:
   mysql:
     image: mysql:8.0
     container_name: mediqueue-db
     restart: unless-stopped
     environment:
-      MYSQL_ROOT_PASSWORD: root
+      MYSQL_ROOT_PASSWORD: ${MYSQL_ROOT_PASSWORD:-root}
       MYSQL_DATABASE: mediqueue
     ports:
-      - "3306:3306"
+      # Change MYSQL_HOST_PORT if a local MySQL already uses 3306
+      - "${MYSQL_HOST_PORT:-3306}:3306"
     volumes:
       - mysql-data:/var/lib/mysql
       - ./schema.sql:/docker-entrypoint-initdb.d/schema.sql # auto-runs on first boot
     healthcheck:
-      test: ["CMD", "mysqladmin", "ping", "-h", "localhost", "-uroot", "-proot"]
+      test: ["CMD-SHELL", "mysqladmin ping -h localhost -uroot -p$$MYSQL_ROOT_PASSWORD"]
       interval: 10s
       timeout: 5s
-      retries: 5
+      retries: 10
 
   backend:
-    build: .
+    # The backend Dockerfile lives in mediqueue-backend/, not the repo root
+    build: ./mediqueue-backend
     container_name: mediqueue-backend
     restart: unless-stopped
     depends_on:
@@ -29,11 +34,17 @@ services:
     environment:
       SPRING_DATASOURCE_URL: jdbc:mysql://mysql:3306/mediqueue?useSSL=false&serverTimezone=UTC&allowPublicKeyRetrieval=true
       SPRING_DATASOURCE_USERNAME: root
-      SPRING_DATASOURCE_PASSWORD: root
+      SPRING_DATASOURCE_PASSWORD: ${MYSQL_ROOT_PASSWORD:-root}
       SPRING_JPA_HIBERNATE_DDL_AUTO: validate
-      APP_JWT_SECRET: dev-secret-key-for-miniproject
+      # HS256 needs a key of at least 32 bytes — shorter secrets make every login fail
+      APP_JWT_SECRET: ${APP_JWT_SECRET:-dev-secret-key-for-miniproject-minimum-32-chars}
+      APP_SEED_ENABLED: ${APP_SEED_ENABLED:-true}
+      APP_SEED_ADMIN_PASSWORD: ${APP_SEED_ADMIN_PASSWORD:-Admin@123}
+      APP_SEED_DEFAULT_PASSWORD: ${APP_SEED_DEFAULT_PASSWORD:-Welcome@123}
+    volumes:
+      - lab-uploads:/app/uploads # keep uploaded lab reports across container restarts
     ports:
-      - "8080:8080"
+      - "${BACKEND_HOST_PORT:-8080}:8080"
 
   frontend:
     build: ./mediqueue-frontend
@@ -42,7 +53,8 @@ services:
     depends_on:
       - backend
     ports:
-      - "80:80"
+      - "${FRONTEND_HOST_PORT:-80}:80"
 
 volumes:
   mysql-data:
+  lab-uploads:
