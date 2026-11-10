@@ -6,6 +6,8 @@ import com.mediqueue.entity.enums.AccountStatus;
 import com.mediqueue.entity.enums.SlotStatus;
 import com.mediqueue.repository.DoctorRepository;
 import com.mediqueue.repository.TimeSlotRepository;
+import org.springframework.boot.context.event.ApplicationReadyEvent;
+import org.springframework.context.event.EventListener;
 import org.springframework.scheduling.annotation.Scheduled;
 import org.springframework.stereotype.Component;
 import org.springframework.transaction.annotation.Transactional;
@@ -35,8 +37,12 @@ public class SlotScheduler {
         this.timeSlotRepository = timeSlotRepository;
     }
 
-    /** Runs at startup — slots exist immediately when app launches */
-    @jakarta.annotation.PostConstruct
+    /**
+     * Runs once the application is fully started — slots exist immediately when the app launches.
+     * Uses ApplicationReadyEvent (not @PostConstruct) so it runs AFTER DataSeeder has created the
+     * demo doctors on a fresh database; @PostConstruct ran before seeding and left them slot-less.
+     */
+    @EventListener(ApplicationReadyEvent.class)
     public void generateOnStartup() {
         generateSlotsForNextDays();
     }
