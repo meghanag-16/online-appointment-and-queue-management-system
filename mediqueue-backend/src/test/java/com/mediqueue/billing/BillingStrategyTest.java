@@ -1,17 +1,16 @@
 package com.mediqueue.billing;
 
+import static org.junit.jupiter.api.Assertions.*;
+import static org.mockito.Mockito.mock;
+
 import com.mediqueue.entity.Appointment;
 import com.mediqueue.entity.Doctor;
 import com.mediqueue.entity.enums.BillingType;
 import com.mediqueue.entity.enums.Priority;
 import com.mediqueue.repository.PrescriptionRepository;
-import org.junit.jupiter.api.Test;
-
 import java.math.BigDecimal;
 import java.util.List;
-
-import static org.junit.jupiter.api.Assertions.*;
-import static org.mockito.Mockito.mock;
+import org.junit.jupiter.api.Test;
 
 /** Which pricing rule is chosen, and what each rule charges. */
 class BillingStrategyTest {
@@ -26,14 +25,20 @@ class BillingStrategyTest {
 
     @Test
     void highPriorityIsAlwaysEmergency() {
-        assertEquals(BillingType.EMERGENCY, BillingStrategySelector.chooseType(Priority.HIGH_PRIORITY, false));
-        assertEquals(BillingType.EMERGENCY, BillingStrategySelector.chooseType(Priority.HIGH_PRIORITY, true));
+        assertEquals(
+                BillingType.EMERGENCY,
+                BillingStrategySelector.chooseType(Priority.HIGH_PRIORITY, false));
+        assertEquals(
+                BillingType.EMERGENCY,
+                BillingStrategySelector.chooseType(Priority.HIGH_PRIORITY, true));
     }
 
     @Test
     void followUpVisitIsFollowUpOtherwiseStandard() {
-        assertEquals(BillingType.FOLLOW_UP, BillingStrategySelector.chooseType(Priority.NORMAL, true));
-        assertEquals(BillingType.STANDARD, BillingStrategySelector.chooseType(Priority.NORMAL, false));
+        assertEquals(
+                BillingType.FOLLOW_UP, BillingStrategySelector.chooseType(Priority.NORMAL, true));
+        assertEquals(
+                BillingType.STANDARD, BillingStrategySelector.chooseType(Priority.NORMAL, false));
         assertEquals(BillingType.STANDARD, BillingStrategySelector.chooseType(null, false));
     }
 
@@ -55,9 +60,13 @@ class BillingStrategyTest {
 
     @Test
     void selectorFindsEachStrategyByType() {
-        var selector = new BillingStrategySelector(
-            List.of(new StandardBilling(), new EmergencyBilling(), new FollowUpBilling()),
-            mock(PrescriptionRepository.class));
+        var selector =
+                new BillingStrategySelector(
+                        List.of(
+                                new StandardBilling(),
+                                new EmergencyBilling(),
+                                new FollowUpBilling()),
+                        mock(PrescriptionRepository.class));
         for (BillingType t : BillingType.values()) {
             assertEquals(t, selector.strategyFor(t).type());
         }

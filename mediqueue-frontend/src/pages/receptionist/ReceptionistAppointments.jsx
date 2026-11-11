@@ -38,7 +38,9 @@ export default function ReceptionistAppointments() {
   const [refreshKey, setRefreshKey] = useState(0)
   const [booking, setBooking] = useState(false)
 
-  useEffect(() => { fetchAppointments() }, [filterDate]) // eslint-disable-line react-hooks/exhaustive-deps
+  useEffect(() => {
+    fetchAppointments()
+  }, [filterDate]) // eslint-disable-line react-hooks/exhaustive-deps
 
   async function fetchAppointments() {
     setLoading(true)
@@ -46,68 +48,102 @@ export default function ReceptionistAppointments() {
       const res = await axiosInstance.get(ENDPOINTS.APPOINTMENTS_ALL(filterDate))
       setAppointments(res.data)
     } catch (err) {
-      setAppointments([]); setError(errorMessage(err, 'Could not load appointments.'))
-    } finally { setLoading(false) }
+      setAppointments([])
+      setError(errorMessage(err, 'Could not load appointments.'))
+    } finally {
+      setLoading(false)
+    }
   }
 
   async function handleStatusChange(a, status) {
-    if (status === 'CANCELLED' && !window.confirm(`Cancel ${a.patientName}'s appointment? The slot will be freed.`)) return
-    setMessage(''); setError('')
+    if (status === 'CANCELLED' && !window.confirm(`Cancel ${a.patientName}'s appointment? The slot will be freed.`))
+      return
+    setMessage('')
+    setError('')
     try {
       await axiosInstance.patch(ENDPOINTS.UPDATE_STATUS(a.appointmentId), { status })
       setMessage(`Appointment ${a.appointmentId} marked ${formatEnum(status)}.`)
       fetchAppointments()
-    } catch (err) { setError(errorMessage(err, 'Could not update the status.')) }
+    } catch (err) {
+      setError(errorMessage(err, 'Could not update the status.'))
+    }
   }
 
   async function togglePriority(a) {
     const next = a.priority === 'HIGH_PRIORITY' ? 'NORMAL' : 'HIGH_PRIORITY'
-    setMessage(''); setError('')
+    setMessage('')
+    setError('')
     try {
       await axiosInstance.patch(ENDPOINTS.APPOINTMENT_PRIORITY(a.appointmentId), { priority: next })
-      setMessage(`${a.patientName} is now ${next === 'HIGH_PRIORITY' ? 'high priority — moved up in the queue' : 'normal priority'}.`)
+      setMessage(
+        `${a.patientName} is now ${next === 'HIGH_PRIORITY' ? 'high priority — moved up in the queue' : 'normal priority'}.`,
+      )
       fetchAppointments()
-    } catch (err) { setError(errorMessage(err, 'Could not change the priority.')) }
+    } catch (err) {
+      setError(errorMessage(err, 'Could not change the priority.'))
+    }
   }
 
   async function handleCancel(a) {
     if (!window.confirm(`Cancel ${a.patientName}'s appointment on ${formatSlot(a.startTime)}?`)) return
-    setMessage(''); setError('')
+    setMessage('')
+    setError('')
     try {
       await axiosInstance.patch(ENDPOINTS.CANCEL_APPOINTMENT(a.appointmentId))
       setMessage('Appointment cancelled and the slot freed.')
       fetchAppointments()
-    } catch (err) { setError(errorMessage(err, 'Could not cancel the appointment.')) }
+    } catch (err) {
+      setError(errorMessage(err, 'Could not cancel the appointment.'))
+    }
   }
 
   function resetBooking() {
-    setPatient(null); setDoctor(null); setSlot(null); setReason(''); setPriority('NORMAL')
-    setBookErr(''); setAlternates([])
+    setPatient(null)
+    setDoctor(null)
+    setSlot(null)
+    setReason('')
+    setPriority('NORMAL')
+    setBookErr('')
+    setAlternates([])
   }
 
   async function handleBook(e) {
     e.preventDefault()
-    if (!patient || !doctor || !slot) { setBookErr('Choose a patient, a doctor and a time slot.'); return }
-    setBookErr(''); setMessage(''); setAlternates([]); setBooking(true)
+    if (!patient || !doctor || !slot) {
+      setBookErr('Choose a patient, a doctor and a time slot.')
+      return
+    }
+    setBookErr('')
+    setMessage('')
+    setAlternates([])
+    setBooking(true)
     try {
       const res = await axiosInstance.post(ENDPOINTS.APPOINTMENTS, {
-        patientId: patient.userId, doctorId: doctor.userId, slotId: slot.slotId,
-        reasonForVisit: reason, priority,
+        patientId: patient.userId,
+        doctorId: doctor.userId,
+        slotId: slot.slotId,
+        reasonForVisit: reason,
+        priority,
       })
       setMessage(`Booked ${res.data.patientName} with ${res.data.doctorName} on ${formatSlot(res.data.startTime)}.`)
-      resetBooking(); setShowBook(false)
+      resetBooking()
+      setShowBook(false)
       fetchAppointments()
     } catch (err) {
       setBookErr(errorMessage(err, 'Booking failed.'))
       setAlternates(err.response?.data?.alternateSlots || [])
-      setSlot(null); setRefreshKey(k => k + 1)
-    } finally { setBooking(false) }
+      setSlot(null)
+      setRefreshKey(k => k + 1)
+    } finally {
+      setBooking(false)
+    }
   }
 
   function pickAlternate(alt) {
     if (alt.doctorId !== doctor?.userId) setDoctor({ userId: alt.doctorId, name: alt.doctorName })
     setSlot({ slotId: alt.slotId, startTime: alt.startTime, endTime: alt.endTime })
-    setAlternates([]); setBookErr('')
+    setAlternates([])
+    setBookErr('')
   }
 
   const filtered = appointments.filter(a => {
@@ -128,24 +164,58 @@ export default function ReceptionistAppointments() {
 
       <div style={{ display: 'flex', gap: 12, flexWrap: 'wrap', marginBottom: 20, alignItems: 'flex-end' }}>
         <div>
-          <label style={labelStyle} htmlFor="f-date">Filter by Date</label>
-          <input id="f-date" type="date" value={filterDate} onChange={e => setFilterDate(e.target.value)} style={filterInput} />
+          <label style={labelStyle} htmlFor="f-date">
+            Filter by Date
+          </label>
+          <input
+            id="f-date"
+            type="date"
+            value={filterDate}
+            onChange={e => setFilterDate(e.target.value)}
+            style={filterInput}
+          />
         </div>
         <div>
-          <label style={labelStyle} htmlFor="f-status">Filter by Status</label>
-          <select id="f-status" value={filterStatus} onChange={e => setFilterStatus(e.target.value)} style={filterInput}>
+          <label style={labelStyle} htmlFor="f-status">
+            Filter by Status
+          </label>
+          <select
+            id="f-status"
+            value={filterStatus}
+            onChange={e => setFilterStatus(e.target.value)}
+            style={filterInput}
+          >
             <option value="">All Statuses</option>
-            {STATUS_OPTIONS.map(s => <option key={s} value={s}>{formatEnum(s)}</option>)}
+            {STATUS_OPTIONS.map(s => (
+              <option key={s} value={s}>
+                {formatEnum(s)}
+              </option>
+            ))}
           </select>
         </div>
         <div>
-          <label style={labelStyle} htmlFor="f-name">Search Name</label>
-          <input id="f-name" placeholder="Patient or doctor name" value={filterName}
-            onChange={e => setFilterName(e.target.value)} style={filterInput} />
+          <label style={labelStyle} htmlFor="f-name">
+            Search Name
+          </label>
+          <input
+            id="f-name"
+            placeholder="Patient or doctor name"
+            value={filterName}
+            onChange={e => setFilterName(e.target.value)}
+            style={filterInput}
+          />
         </div>
-        <button className="btn btn-outline" onClick={fetchAppointments}>Refresh</button>
-        <button className={showBook ? 'btn btn-outline' : 'btn btn-dark'} data-testid="book-for-patient"
-          onClick={() => { setShowBook(b => !b); resetBooking() }}>
+        <button className="btn btn-outline" onClick={fetchAppointments}>
+          Refresh
+        </button>
+        <button
+          className={showBook ? 'btn btn-outline' : 'btn btn-dark'}
+          data-testid="book-for-patient"
+          onClick={() => {
+            setShowBook(b => !b)
+            resetBooking()
+          }}
+        >
           {showBook ? '✕ Close' : '+ Book for Patient'}
         </button>
       </div>
@@ -156,18 +226,42 @@ export default function ReceptionistAppointments() {
           {bookErr && <div className="alert alert-error">{bookErr}</div>}
 
           <div className="form-group">
-            <label>1. Patient</label>
-            <PatientPicker selected={patient} onSelect={setPatient} />
+            <span className="form-label" id="b-patient">
+              1. Patient
+            </span>
+            <div role="group" aria-labelledby="b-patient">
+              <PatientPicker selected={patient} onSelect={setPatient} />
+            </div>
           </div>
           <div className="form-group">
-            <label>2. Doctor</label>
-            <DoctorPicker compact selectedDoctorId={doctor?.userId}
-              onSelect={d => { setDoctor(d); setSlot(null); setAlternates([]) }} />
+            <span className="form-label" id="b-doctor">
+              2. Doctor
+            </span>
+            <div role="group" aria-labelledby="b-doctor">
+              <DoctorPicker
+                compact
+                selectedDoctorId={doctor?.userId}
+                onSelect={d => {
+                  setDoctor(d)
+                  setSlot(null)
+                  setAlternates([])
+                }}
+              />
+            </div>
           </div>
           {doctor && (
             <div className="form-group">
-              <label>3. Time with {doctor.name}</label>
-              <SlotPicker doctorId={doctor.userId} selectedSlotId={slot?.slotId} onSelect={setSlot} refreshKey={refreshKey} />
+              <span className="form-label" id="b-slot">
+                3. Time with {doctor.name}
+              </span>
+              <div role="group" aria-labelledby="b-slot">
+                <SlotPicker
+                  doctorId={doctor.userId}
+                  selectedSlotId={slot?.slotId}
+                  onSelect={setSlot}
+                  refreshKey={refreshKey}
+                />
+              </div>
             </div>
           )}
           <AlternateSlots alternates={alternates} onPick={pickAlternate} />
@@ -175,18 +269,33 @@ export default function ReceptionistAppointments() {
           <div style={{ display: 'grid', gridTemplateColumns: '2fr 1fr', gap: 12, marginTop: 12 }}>
             <div className="form-group">
               <label htmlFor="b-reason">Reason for visit</label>
-              <textarea id="b-reason" className="form-control" rows={2} maxLength={2000}
-                value={reason} onChange={e => setReason(e.target.value)} />
+              <textarea
+                id="b-reason"
+                className="form-control"
+                rows={2}
+                maxLength={2000}
+                value={reason}
+                onChange={e => setReason(e.target.value)}
+              />
             </div>
             <div className="form-group">
               <label htmlFor="b-priority">Priority</label>
-              <select id="b-priority" className="form-control" value={priority} onChange={e => setPriority(e.target.value)}>
+              <select
+                id="b-priority"
+                className="form-control"
+                value={priority}
+                onChange={e => setPriority(e.target.value)}
+              >
                 <option value="NORMAL">Normal</option>
                 <option value="HIGH_PRIORITY">High priority</option>
               </select>
             </div>
           </div>
-          {slot && <p style={{ marginBottom: 12 }}>Selected: <strong>{formatSlot(slot.startTime)}</strong></p>}
+          {slot && (
+            <p style={{ marginBottom: 12 }}>
+              Selected: <strong>{formatSlot(slot.startTime)}</strong>
+            </p>
+          )}
           <div style={{ textAlign: 'right' }}>
             <button type="submit" className="btn btn-primary" disabled={booking || !patient || !doctor || !slot}>
               {booking ? 'Booking…' : 'Book Appointment'}
@@ -195,10 +304,19 @@ export default function ReceptionistAppointments() {
         </form>
       )}
 
-      {loading ? <Spinner /> : (
+      {loading ? (
+        <Spinner />
+      ) : (
         <div className="card" style={{ padding: 0 }}>
-          <div style={{ padding: '14px 20px', borderBottom: '1px solid var(--color-border)',
-            display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+          <div
+            style={{
+              padding: '14px 20px',
+              borderBottom: '1px solid var(--color-border)',
+              display: 'flex',
+              justifyContent: 'space-between',
+              alignItems: 'center',
+            }}
+          >
             <h3 style={{ margin: 0 }}>{filterDate ? `Appointments on ${filterDate}` : 'All Appointments'}</h3>
             <span style={{ fontSize: 13, color: 'var(--color-text-muted)' }}>{filtered.length} records</span>
           </div>
@@ -206,13 +324,24 @@ export default function ReceptionistAppointments() {
             <table>
               <thead>
                 <tr>
-                  <th>ID</th><th>Patient</th><th>Doctor</th><th>Date</th><th>Time</th>
-                  <th>Reason</th><th>Priority</th><th>Status</th><th>Actions</th>
+                  <th>ID</th>
+                  <th>Patient</th>
+                  <th>Doctor</th>
+                  <th>Date</th>
+                  <th>Time</th>
+                  <th>Reason</th>
+                  <th>Priority</th>
+                  <th>Status</th>
+                  <th>Actions</th>
                 </tr>
               </thead>
               <tbody>
                 {filtered.length === 0 && (
-                  <tr><td colSpan={9} style={{ textAlign: 'center', padding: 24, color: 'var(--color-text-muted)' }}>No appointments found</td></tr>
+                  <tr>
+                    <td colSpan={9} style={{ textAlign: 'center', padding: 24, color: 'var(--color-text-muted)' }}>
+                      No appointments found
+                    </td>
+                  </tr>
                 )}
                 {filtered.map(a => (
                   <tr key={a.appointmentId}>
@@ -223,19 +352,41 @@ export default function ReceptionistAppointments() {
                     </td>
                     <td style={{ fontSize: 13 }}>{a.doctorName}</td>
                     <td style={{ fontSize: 13 }}>{a.appointmentDate || '—'}</td>
-                    <td style={{ fontSize: 12 }}>{a.startTime ? `${formatTime(a.startTime)} – ${formatTime(a.endTime)}` : '—'}</td>
+                    <td style={{ fontSize: 12 }}>
+                      {a.startTime ? `${formatTime(a.startTime)} – ${formatTime(a.endTime)}` : '—'}
+                    </td>
                     <td style={{ fontSize: 12, maxWidth: 140 }}>{a.reasonForVisit || '—'}</td>
-                    <td><StatusBadge status={a.priority || 'NORMAL'} /></td>
-                    <td><StatusBadge status={a.status} /></td>
+                    <td>
+                      <StatusBadge status={a.priority || 'NORMAL'} />
+                    </td>
+                    <td>
+                      <StatusBadge status={a.status} />
+                    </td>
                     <td style={{ whiteSpace: 'nowrap' }}>
                       <AppointmentStatusSelect appointment={a} onChange={handleStatusChange} />{' '}
                       {['BOOKED', 'CONFIRMED', 'IN_PROGRESS'].includes(a.status) && (
-                        <button className="btn btn-outline btn-sm" onClick={() => togglePriority(a)} data-testid={`priority-${a.appointmentId}`}>
+                        <button
+                          className="btn btn-outline btn-sm"
+                          onClick={() => togglePriority(a)}
+                          data-testid={`priority-${a.appointmentId}`}
+                        >
                           {a.priority === 'HIGH_PRIORITY' ? 'Unmark priority' : 'Mark high priority'}
                         </button>
                       )}{' '}
-                      {a.canReschedule && <button className="btn btn-outline btn-sm" onClick={() => setRescheduling(a)}>Reschedule</button>}{' '}
-                      {a.canCancel && <button className="btn btn-outline btn-sm" style={{ color: 'var(--color-danger)' }} onClick={() => handleCancel(a)}>Cancel</button>}
+                      {a.canReschedule && (
+                        <button className="btn btn-outline btn-sm" onClick={() => setRescheduling(a)}>
+                          Reschedule
+                        </button>
+                      )}{' '}
+                      {a.canCancel && (
+                        <button
+                          className="btn btn-outline btn-sm"
+                          style={{ color: 'var(--color-danger)' }}
+                          onClick={() => handleCancel(a)}
+                        >
+                          Cancel
+                        </button>
+                      )}
                     </td>
                   </tr>
                 ))}
@@ -246,8 +397,15 @@ export default function ReceptionistAppointments() {
       )}
 
       {rescheduling && (
-        <RescheduleDialog appointment={rescheduling} onClose={() => setRescheduling(null)}
-          onDone={(u) => { setRescheduling(null); setMessage(`Moved to ${formatSlot(u.startTime)}.`); fetchAppointments() }} />
+        <RescheduleDialog
+          appointment={rescheduling}
+          onClose={() => setRescheduling(null)}
+          onDone={u => {
+            setRescheduling(null)
+            setMessage(`Moved to ${formatSlot(u.startTime)}.`)
+            fetchAppointments()
+          }}
+        />
       )}
     </PageLayout>
   )

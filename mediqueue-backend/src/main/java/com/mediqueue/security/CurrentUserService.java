@@ -25,11 +25,14 @@ public class CurrentUserService {
         throw new UnauthorizedException("You are not logged in");
     }
 
-    public String userId() { return get().userId(); }
+    public String userId() {
+        return get().userId();
+    }
 
     /** Loads the full entity for the logged-in user. */
     public User entity() {
-        return userRepository.findById(userId())
-            .orElseThrow(() -> new UnauthorizedException("Your account no longer exists"));
+        return userRepository
+                .findById(userId())
+                .orElseThrow(() -> new UnauthorizedException("Your account no longer exists"));
     }
 }

@@ -1,0 +1,58 @@
+<?xml version="1.0"?>
+<!DOCTYPE module PUBLIC
+    "-//Checkstyle//DTD Checkstyle Configuration 1.3//EN"
+    "https://checkstyle.org/dtds/configuration_1_3.dtd">
+
+<!--
+  A light rule set: real mistakes and clutter only. Layout (indentation, line length, import
+  order) is left to Spotless / google-java-format, so the two tools never disagree.
+-->
+<module name="Checker">
+    <property name="severity" value="warning"/>
+    <property name="charset" value="UTF-8"/>
+    <property name="fileExtensions" value="java"/>
+
+    <module name="FileTabCharacter"/>
+
+    <module name="TreeWalker">
+        <!-- imports -->
+        <module name="UnusedImports"/>
+        <module name="RedundantImport"/>
+        <module name="IllegalImport"/>
+
+        <!-- likely bugs -->
+        <module name="EqualsHashCode"/>
+        <module name="StringLiteralEquality"/>
+        <module name="EmptyStatement"/>
+        <module name="CovariantEquals"/>
+        <module name="FallThrough"/>
+        <module name="MissingOverride"/>
+        <module name="ModifiedControlVariable"/>
+        <module name="SimplifyBooleanExpression"/>
+        <module name="SimplifyBooleanReturn"/>
+        <module name="OneStatementPerLine"/>
+        <module name="MultipleVariableDeclarations"/>
+        <module name="UpperEll"/>
+        <module name="ArrayTypeStyle"/>
+
+        <!-- an empty catch block must at least explain itself with a comment -->
+        <module name="EmptyCatchBlock">
+            <property name="commentFormat" value=".+"/>
+        </module>
+
+        <!-- naming -->
+        <module name="TypeName"/>
+        <!-- underscores allowed: Spring Data query methods use them for property paths (findByDoctor_UserId) -->
+        <module name="MethodName">
+            <property name="format" value="^[a-z][a-zA-Z0-9_]*$"/>
+        </module>
+        <!-- the usual "log" name for a static final logger is allowed -->
+        <module name="ConstantName">
+            <property name="format" value="^log$|^[A-Z][A-Z0-9]*(_[A-Z0-9]+)*$"/>
+        </module>
+        <module name="LocalVariableName"/>
+        <module name="MemberName"/>
+        <module name="ParameterName"/>
+        <module name="PackageName"/>
+    </module>
+</module>

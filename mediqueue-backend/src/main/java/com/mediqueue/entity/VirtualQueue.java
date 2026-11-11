@@ -42,7 +42,13 @@ public class VirtualQueue {
 
     public VirtualQueue() {}
 
-    public VirtualQueue(Long queueId, Doctor doctor, Appointment appointment, LocalDate queueDate, Integer queuePosition, QueueStatus visitStatus) {
+    public VirtualQueue(
+            Long queueId,
+            Doctor doctor,
+            Appointment appointment,
+            LocalDate queueDate,
+            Integer queuePosition,
+            QueueStatus visitStatus) {
         this.queueId = queueId;
         this.doctor = doctor;
         this.appointment = appointment;
@@ -51,27 +57,67 @@ public class VirtualQueue {
         this.visitStatus = visitStatus;
     }
 
-    public Long getQueueId() { return queueId; }
-    public void setQueueId(Long queueId) { this.queueId = queueId; }
+    public Long getQueueId() {
+        return queueId;
+    }
 
-    public Doctor getDoctor() { return doctor; }
-    public void setDoctor(Doctor doctor) { this.doctor = doctor; }
+    public void setQueueId(Long queueId) {
+        this.queueId = queueId;
+    }
 
-    public Appointment getAppointment() { return appointment; }
-    public void setAppointment(Appointment appointment) { this.appointment = appointment; }
+    public Doctor getDoctor() {
+        return doctor;
+    }
 
-    public LocalDate getQueueDate() { return queueDate; }
-    public void setQueueDate(LocalDate queueDate) { this.queueDate = queueDate; }
+    public void setDoctor(Doctor doctor) {
+        this.doctor = doctor;
+    }
 
-    public Integer getQueuePosition() { return queuePosition; }
-    public void setQueuePosition(Integer queuePosition) { this.queuePosition = queuePosition; }
+    public Appointment getAppointment() {
+        return appointment;
+    }
 
-    public QueueStatus getVisitStatus() { return visitStatus; }
-    public void setVisitStatus(QueueStatus visitStatus) { this.visitStatus = visitStatus; }
+    public void setAppointment(Appointment appointment) {
+        this.appointment = appointment;
+    }
 
-    public LocalDateTime getCalledAt() { return calledAt; }
-    public void setCalledAt(LocalDateTime calledAt) { this.calledAt = calledAt; }
+    public LocalDate getQueueDate() {
+        return queueDate;
+    }
 
-    public Integer getOverridePosition() { return overridePosition; }
-    public void setOverridePosition(Integer overridePosition) { this.overridePosition = overridePosition; }
+    public void setQueueDate(LocalDate queueDate) {
+        this.queueDate = queueDate;
+    }
+
+    public Integer getQueuePosition() {
+        return queuePosition;
+    }
+
+    public void setQueuePosition(Integer queuePosition) {
+        this.queuePosition = queuePosition;
+    }
+
+    public QueueStatus getVisitStatus() {
+        return visitStatus;
+    }
+
+    public void setVisitStatus(QueueStatus visitStatus) {
+        this.visitStatus = visitStatus;
+    }
+
+    public LocalDateTime getCalledAt() {
+        return calledAt;
+    }
+
+    public void setCalledAt(LocalDateTime calledAt) {
+        this.calledAt = calledAt;
+    }
+
+    public Integer getOverridePosition() {
+        return overridePosition;
+    }
+
+    public void setOverridePosition(Integer overridePosition) {
+        this.overridePosition = overridePosition;
+    }
 }

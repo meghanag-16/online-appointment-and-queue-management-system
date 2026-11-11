@@ -23,30 +23,44 @@ export default function PatientBilling() {
   const [error, setError] = useState('')
 
   useEffect(() => {
-    axiosInstance.get(ENDPOINTS.BILL_BY_PATIENT(user.userId))
+    axiosInstance
+      .get(ENDPOINTS.BILL_BY_PATIENT(user.userId))
       .then(res => setBills(res.data || []))
-      .catch(err => { setBills([]); setError(errorMessage(err, 'Could not load your bills.')) })
+      .catch(err => {
+        setBills([])
+        setError(errorMessage(err, 'Could not load your bills.'))
+      })
   }, [user.userId])
 
-  const owed = (bills || []).filter(b => ['PENDING', 'FAILED'].includes(b.paymentStatus))
+  const owed = (bills || [])
+    .filter(b => ['PENDING', 'FAILED'].includes(b.paymentStatus))
     .reduce((sum, b) => sum + Number(b.totalAmount || 0), 0)
 
   return (
     <PageLayout>
       <PageTitle title="Billing" subtitle="Your bills and payment status" />
       {error && <div className="alert alert-error">{error}</div>}
-      {bills === null ? <Spinner /> : (
+      {bills === null ? (
+        <Spinner />
+      ) : (
         <div style={{ maxWidth: 760 }}>
           {bills.length > 0 && (
-            <div className="card" style={{ marginBottom: 16, display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+            <div
+              className="card"
+              style={{ marginBottom: 16, display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}
+            >
               <span style={{ color: 'var(--color-text-muted)' }}>Amount due</span>
-              <strong style={{ fontSize: '1.4rem' }} data-testid="amount-due">{formatCurrency(owed)}</strong>
+              <strong style={{ fontSize: '1.4rem' }} data-testid="amount-due">
+                {formatCurrency(owed)}
+              </strong>
             </div>
           )}
           {bills.length === 0 && (
-            <div className="card"><p style={{ color: 'var(--color-text-muted)', margin: 0 }}>
-              No bills yet. A bill is created when you book an appointment.
-            </p></div>
+            <div className="card">
+              <p style={{ color: 'var(--color-text-muted)', margin: 0 }}>
+                No bills yet. A bill is created when you book an appointment.
+              </p>
+            </div>
           )}
           {bills.map(bill => (
             <div key={bill.billId} className="card" data-testid={`bill-${bill.billId}`} style={{ marginBottom: 14 }}>
@@ -57,10 +71,22 @@ export default function PatientBilling() {
                   </p>
                   <p style={{ margin: '4px 0' }}>
                     {drName(bill.doctorName)} · {formatDateTime(bill.appointmentStart)}
-                    {bill.appointmentStatus && <> · <span style={{ color: 'var(--color-text-muted)' }}>{formatEnum(bill.appointmentStatus)}</span></>}
+                    {bill.appointmentStatus && (
+                      <>
+                        {' '}
+                        · <span style={{ color: 'var(--color-text-muted)' }}>{formatEnum(bill.appointmentStatus)}</span>
+                      </>
+                    )}
                   </p>
-                  <p style={{ fontSize: '1.8rem', fontWeight: 700, margin: '4px 0', color: 'var(--color-dark)',
-                    textDecoration: bill.paymentStatus === 'VOID' ? 'line-through' : 'none' }}>
+                  <p
+                    style={{
+                      fontSize: '1.8rem',
+                      fontWeight: 700,
+                      margin: '4px 0',
+                      color: 'var(--color-dark)',
+                      textDecoration: bill.paymentStatus === 'VOID' ? 'line-through' : 'none',
+                    }}
+                  >
                     {formatCurrency(bill.totalAmount)}
                   </p>
                   <div style={{ display: 'flex', gap: 8, alignItems: 'center', flexWrap: 'wrap' }}>
@@ -71,7 +97,12 @@ export default function PatientBilling() {
                 </div>
                 <div style={{ textAlign: 'right', fontSize: '0.82rem', color: 'var(--color-text-muted)' }}>
                   <div>Generated {formatDateTime(bill.generatedAt)}</div>
-                  {bill.paidAt && <div>Paid {formatDateTime(bill.paidAt)}{bill.paymentMethod ? ` by ${formatEnum(bill.paymentMethod)}` : ''}</div>}
+                  {bill.paidAt && (
+                    <div>
+                      Paid {formatDateTime(bill.paidAt)}
+                      {bill.paymentMethod ? ` by ${formatEnum(bill.paymentMethod)}` : ''}
+                    </div>
+                  )}
                 </div>
               </div>
               <p style={{ margin: '10px 0 0', fontSize: '0.85rem' }}>{STATUS_NOTE[bill.paymentStatus]}</p>

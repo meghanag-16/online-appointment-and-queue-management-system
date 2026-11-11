@@ -1,5 +1,9 @@
 package com.mediqueue.queue;
 
+import static org.junit.jupiter.api.Assertions.*;
+import static org.mockito.ArgumentMatchers.*;
+import static org.mockito.Mockito.*;
+
 import com.mediqueue.entity.Appointment;
 import com.mediqueue.entity.Doctor;
 import com.mediqueue.entity.Patient;
@@ -15,18 +19,13 @@ import com.mediqueue.event.AppointmentObserver;
 import com.mediqueue.repository.AppointmentRepository;
 import com.mediqueue.repository.VirtualQueueRepository;
 import com.mediqueue.service.impl.QueueManager;
-import org.junit.jupiter.api.BeforeEach;
-import org.junit.jupiter.api.Test;
-
 import java.time.LocalDate;
 import java.time.LocalDateTime;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Optional;
-
-import static org.junit.jupiter.api.Assertions.*;
-import static org.mockito.ArgumentMatchers.*;
-import static org.mockito.Mockito.*;
+import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.Test;
 
 /** The queue ordering rule and the Observer wiring, without a database. */
 class QueueManagerTest {
@@ -48,7 +47,7 @@ class QueueManagerTest {
         doctor = new Doctor();
         doctor.setUserId("DOC-1");
         when(queueRepository.findByDoctor_UserIdAndQueueDate(eq("DOC-1"), eq(TODAY)))
-            .thenAnswer(inv -> new ArrayList<>(store));
+                .thenAnswer(inv -> new ArrayList<>(store));
     }
 
     private VirtualQueue entry(int hour, Priority priority, QueueStatus status) {
@@ -130,10 +129,18 @@ class QueueManagerTest {
         Appointment a = e.getAppointment();
         a.setAppointmentStatus(AppointmentStatus.CANCELLED);
         when(appointmentRepository.findById(a.getAppointmentId())).thenReturn(Optional.of(a));
-        when(queueRepository.findByAppointment_AppointmentId(a.getAppointmentId())).thenReturn(Optional.of(e));
-        doAnswer(inv -> { store.remove(e); return null; }).when(queueRepository).delete(e);
+        when(queueRepository.findByAppointment_AppointmentId(a.getAppointmentId()))
+                .thenReturn(Optional.of(e));
+        doAnswer(
+                        inv -> {
+                            store.remove(e);
+                            return null;
+                        })
+                .when(queueRepository)
+                .delete(e);
 
-        manager.onAppointmentEvent(AppointmentEvent.of(AppointmentEventType.CANCELLED, a.getAppointmentId()));
+        manager.onAppointmentEvent(
+                AppointmentEvent.of(AppointmentEventType.CANCELLED, a.getAppointmentId()));
 
         verify(queueRepository).delete(e);
         assertTrue(store.isEmpty());

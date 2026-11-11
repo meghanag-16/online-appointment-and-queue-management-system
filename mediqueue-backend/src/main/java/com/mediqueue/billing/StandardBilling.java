@@ -2,16 +2,18 @@ package com.mediqueue.billing;
 
 import com.mediqueue.entity.Appointment;
 import com.mediqueue.entity.enums.BillingType;
-import org.springframework.stereotype.Component;
 import java.math.BigDecimal;
 import java.math.RoundingMode;
+import org.springframework.stereotype.Component;
 
 /** StandardBilling — 100 % of the doctor's consultation fee. */
 @Component
 public class StandardBilling implements BillingStrategy {
 
     @Override
-    public BillingType type() { return BillingType.STANDARD; }
+    public BillingType type() {
+        return BillingType.STANDARD;
+    }
 
     @Override
     public BigDecimal calculate(Appointment appointment) {
@@ -20,5 +22,7 @@ public class StandardBilling implements BillingStrategy {
     }
 
     @Override
-    public String description() { return "Standard consultation fee"; }
+    public String description() {
+        return "Standard consultation fee";
+    }
 }

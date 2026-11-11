@@ -4,12 +4,11 @@ import com.mediqueue.dto.AlertRequest;
 import com.mediqueue.dto.NotificationResponse;
 import com.mediqueue.service.NotificationService;
 import jakarta.validation.Valid;
+import java.time.LocalDateTime;
+import java.util.Map;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.web.bind.annotation.*;
-
-import java.time.LocalDateTime;
-import java.util.Map;
 
 /** Every logged-in user reads their own notifications; only administrators send alerts. */
 @RestController
@@ -23,7 +22,8 @@ public class NotificationController {
     }
 
     @GetMapping("/mine")
-    public ResponseEntity<NotificationResponse.Inbox> mine(@RequestParam(defaultValue = "20") int limit) {
+    public ResponseEntity<NotificationResponse.Inbox> mine(
+            @RequestParam(defaultValue = "20") int limit) {
         return ResponseEntity.ok(notificationService.myInbox(limit));
     }
 
@@ -39,7 +39,8 @@ public class NotificationController {
 
     @PostMapping("/alert")
     @PreAuthorize("hasRole('ADMINISTRATOR')")
-    public ResponseEntity<Map<String, Integer>> sendAlert(@Valid @RequestBody AlertRequest request) {
+    public ResponseEntity<Map<String, Integer>> sendAlert(
+            @Valid @RequestBody AlertRequest request) {
         return ResponseEntity.ok(Map.of("sent", notificationService.sendAlert(request)));
     }
 
@@ -47,6 +48,7 @@ public class NotificationController {
     @PostMapping("/reminders/run")
     @PreAuthorize("hasRole('ADMINISTRATOR')")
     public ResponseEntity<Map<String, Integer>> runReminders() {
-        return ResponseEntity.ok(Map.of("sent", notificationService.sendDueReminders(LocalDateTime.now())));
+        return ResponseEntity.ok(
+                Map.of("sent", notificationService.sendDueReminders(LocalDateTime.now())));
     }
 }

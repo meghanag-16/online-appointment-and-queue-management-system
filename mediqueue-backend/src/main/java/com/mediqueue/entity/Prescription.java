@@ -34,7 +34,14 @@ public class Prescription {
 
     public Prescription() {}
 
-    public Prescription(Long prescriptionId, Appointment appointment, String diagnosisNotes, String medicationList, String advice, LocalDate followUpDate, LocalDateTime issuedAt) {
+    public Prescription(
+            Long prescriptionId,
+            Appointment appointment,
+            String diagnosisNotes,
+            String medicationList,
+            String advice,
+            LocalDate followUpDate,
+            LocalDateTime issuedAt) {
         this.prescriptionId = prescriptionId;
         this.appointment = appointment;
         this.diagnosisNotes = diagnosisNotes;
@@ -44,26 +51,61 @@ public class Prescription {
         this.issuedAt = issuedAt;
     }
 
-    public Long getPrescriptionId() { return prescriptionId; }
-    public void setPrescriptionId(Long prescriptionId) { this.prescriptionId = prescriptionId; }
+    public Long getPrescriptionId() {
+        return prescriptionId;
+    }
 
-    public Appointment getAppointment() { return appointment; }
-    public void setAppointment(Appointment appointment) { this.appointment = appointment; }
+    public void setPrescriptionId(Long prescriptionId) {
+        this.prescriptionId = prescriptionId;
+    }
 
-    public String getDiagnosisNotes() { return diagnosisNotes; }
-    public void setDiagnosisNotes(String diagnosisNotes) { this.diagnosisNotes = diagnosisNotes; }
+    public Appointment getAppointment() {
+        return appointment;
+    }
 
-    public String getMedicationList() { return medicationList; }
-    public void setMedicationList(String medicationList) { this.medicationList = medicationList; }
+    public void setAppointment(Appointment appointment) {
+        this.appointment = appointment;
+    }
 
-    public String getAdvice() { return advice; }
-    public void setAdvice(String advice) { this.advice = advice; }
+    public String getDiagnosisNotes() {
+        return diagnosisNotes;
+    }
 
-    public LocalDate getFollowUpDate() { return followUpDate; }
-    public void setFollowUpDate(LocalDate followUpDate) { this.followUpDate = followUpDate; }
+    public void setDiagnosisNotes(String diagnosisNotes) {
+        this.diagnosisNotes = diagnosisNotes;
+    }
 
-    public LocalDateTime getIssuedAt() { return issuedAt; }
-    public void setIssuedAt(LocalDateTime issuedAt) { this.issuedAt = issuedAt; }
+    public String getMedicationList() {
+        return medicationList;
+    }
+
+    public void setMedicationList(String medicationList) {
+        this.medicationList = medicationList;
+    }
+
+    public String getAdvice() {
+        return advice;
+    }
+
+    public void setAdvice(String advice) {
+        this.advice = advice;
+    }
+
+    public LocalDate getFollowUpDate() {
+        return followUpDate;
+    }
+
+    public void setFollowUpDate(LocalDate followUpDate) {
+        this.followUpDate = followUpDate;
+    }
+
+    public LocalDateTime getIssuedAt() {
+        return issuedAt;
+    }
+
+    public void setIssuedAt(LocalDateTime issuedAt) {
+        this.issuedAt = issuedAt;
+    }
 
     @PrePersist
     public void prePersist() {

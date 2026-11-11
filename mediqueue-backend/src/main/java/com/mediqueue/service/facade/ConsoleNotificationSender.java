@@ -13,11 +13,18 @@ public class ConsoleNotificationSender implements NotificationSender {
     private static final Logger log = LoggerFactory.getLogger(ConsoleNotificationSender.class);
 
     @Override
-    public String channel() { return "CONSOLE"; }
+    public String channel() {
+        return "CONSOLE";
+    }
 
     @Override
     public void send(User recipient, NotificationType type, String message) {
-        log.info("[Notification] {} to {} <{}> phone {}: {}", type, recipient.getName(),
-            recipient.getEmail(), recipient.getPhoneNumber(), message);
+        log.info(
+                "[Notification] {} to {} <{}> phone {}: {}",
+                type,
+                recipient.getName(),
+                recipient.getEmail(),
+                recipient.getPhoneNumber(),
+                message);
     }
 }

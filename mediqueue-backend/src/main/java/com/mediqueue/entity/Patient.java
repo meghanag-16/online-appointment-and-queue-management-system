@@ -21,22 +21,46 @@ public class Patient extends User {
 
     public Patient() {}
 
-    public Patient(String bloodGroup, String allergies, String chronicConditions, String emergencyContact) {
+    public Patient(
+            String bloodGroup,
+            String allergies,
+            String chronicConditions,
+            String emergencyContact) {
         this.bloodGroup = bloodGroup;
         this.allergies = allergies;
         this.chronicConditions = chronicConditions;
         this.emergencyContact = emergencyContact;
     }
 
-    public String getBloodGroup() { return bloodGroup; }
-    public void setBloodGroup(String bloodGroup) { this.bloodGroup = bloodGroup; }
+    public String getBloodGroup() {
+        return bloodGroup;
+    }
 
-    public String getAllergies() { return allergies; }
-    public void setAllergies(String allergies) { this.allergies = allergies; }
+    public void setBloodGroup(String bloodGroup) {
+        this.bloodGroup = bloodGroup;
+    }
 
-    public String getChronicConditions() { return chronicConditions; }
-    public void setChronicConditions(String chronicConditions) { this.chronicConditions = chronicConditions; }
+    public String getAllergies() {
+        return allergies;
+    }
 
-    public String getEmergencyContact() { return emergencyContact; }
-    public void setEmergencyContact(String emergencyContact) { this.emergencyContact = emergencyContact; }
+    public void setAllergies(String allergies) {
+        this.allergies = allergies;
+    }
+
+    public String getChronicConditions() {
+        return chronicConditions;
+    }
+
+    public void setChronicConditions(String chronicConditions) {
+        this.chronicConditions = chronicConditions;
+    }
+
+    public String getEmergencyContact() {
+        return emergencyContact;
+    }
+
+    public void setEmergencyContact(String emergencyContact) {
+        this.emergencyContact = emergencyContact;
+    }
 }

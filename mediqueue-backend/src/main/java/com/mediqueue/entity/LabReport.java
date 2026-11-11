@@ -48,35 +48,85 @@ public class LabReport {
 
     public LabReport() {}
 
-    public Long getReportId() { return reportId; }
-    public void setReportId(Long reportId) { this.reportId = reportId; }
+    public Long getReportId() {
+        return reportId;
+    }
 
-    public Appointment getAppointment() { return appointment; }
-    public void setAppointment(Appointment appointment) { this.appointment = appointment; }
+    public void setReportId(Long reportId) {
+        this.reportId = reportId;
+    }
 
-    public String getReportType() { return reportType; }
-    public void setReportType(String reportType) { this.reportType = reportType; }
+    public Appointment getAppointment() {
+        return appointment;
+    }
 
-    public LocalDateTime getUploadTime() { return uploadTime; }
-    public void setUploadTime(LocalDateTime uploadTime) { this.uploadTime = uploadTime; }
+    public void setAppointment(Appointment appointment) {
+        this.appointment = appointment;
+    }
 
-    public String getFilePath() { return filePath; }
-    public void setFilePath(String filePath) { this.filePath = filePath; }
+    public String getReportType() {
+        return reportType;
+    }
 
-    public String getRemarks() { return remarks; }
-    public void setRemarks(String remarks) { this.remarks = remarks; }
+    public void setReportType(String reportType) {
+        this.reportType = reportType;
+    }
 
-    public String getOriginalFileName() { return originalFileName; }
-    public void setOriginalFileName(String originalFileName) { this.originalFileName = originalFileName; }
+    public LocalDateTime getUploadTime() {
+        return uploadTime;
+    }
 
-    public String getContentType() { return contentType; }
-    public void setContentType(String contentType) { this.contentType = contentType; }
+    public void setUploadTime(LocalDateTime uploadTime) {
+        this.uploadTime = uploadTime;
+    }
 
-    public Long getFileSize() { return fileSize; }
-    public void setFileSize(Long fileSize) { this.fileSize = fileSize; }
+    public String getFilePath() {
+        return filePath;
+    }
 
-    public String getUploadedBy() { return uploadedBy; }
-    public void setUploadedBy(String uploadedBy) { this.uploadedBy = uploadedBy; }
+    public void setFilePath(String filePath) {
+        this.filePath = filePath;
+    }
+
+    public String getRemarks() {
+        return remarks;
+    }
+
+    public void setRemarks(String remarks) {
+        this.remarks = remarks;
+    }
+
+    public String getOriginalFileName() {
+        return originalFileName;
+    }
+
+    public void setOriginalFileName(String originalFileName) {
+        this.originalFileName = originalFileName;
+    }
+
+    public String getContentType() {
+        return contentType;
+    }
+
+    public void setContentType(String contentType) {
+        this.contentType = contentType;
+    }
+
+    public Long getFileSize() {
+        return fileSize;
+    }
+
+    public void setFileSize(Long fileSize) {
+        this.fileSize = fileSize;
+    }
+
+    public String getUploadedBy() {
+        return uploadedBy;
+    }
+
+    public void setUploadedBy(String uploadedBy) {
+        this.uploadedBy = uploadedBy;
+    }
 
     @PrePersist
     public void prePersist() {

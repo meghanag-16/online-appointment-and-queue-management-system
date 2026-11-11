@@ -1,12 +1,11 @@
 package com.mediqueue.scheduler;
 
 import com.mediqueue.service.NotificationService;
+import java.time.LocalDateTime;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.scheduling.annotation.Scheduled;
 import org.springframework.stereotype.Component;
-
-import java.time.LocalDateTime;
 
 /**
  * Every few minutes, sends a reminder for each booked or confirmed appointment that starts within
@@ -23,8 +22,9 @@ public class ReminderScheduler {
         this.notificationService = notificationService;
     }
 
-    @Scheduled(initialDelayString = "${app.reminders.initial-delay-ms:30000}",
-               fixedDelayString = "${app.reminders.interval-ms:300000}")
+    @Scheduled(
+            initialDelayString = "${app.reminders.initial-delay-ms:30000}",
+            fixedDelayString = "${app.reminders.interval-ms:300000}")
     public void sendReminders() {
         try {
             notificationService.sendDueReminders(LocalDateTime.now());

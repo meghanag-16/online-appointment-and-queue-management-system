@@ -4,8 +4,8 @@ import jakarta.persistence.*;
 import java.time.LocalDateTime;
 
 /**
- * One key action: who did what to which record, and when. The actor's name and role are copied
- * in, so the entry still reads correctly if the account is later changed or removed.
+ * One key action: who did what to which record, and when. The actor's name and role are copied in,
+ * so the entry still reads correctly if the account is later changed or removed.
  */
 @Entity
 @Table(name = "audit_log")
@@ -42,32 +42,77 @@ public class AuditLog {
 
     public AuditLog() {}
 
-    public Long getAuditId() { return auditId; }
-    public void setAuditId(Long auditId) { this.auditId = auditId; }
+    public Long getAuditId() {
+        return auditId;
+    }
 
-    public LocalDateTime getCreatedAt() { return createdAt; }
-    public void setCreatedAt(LocalDateTime createdAt) { this.createdAt = createdAt; }
+    public void setAuditId(Long auditId) {
+        this.auditId = auditId;
+    }
 
-    public String getActorId() { return actorId; }
-    public void setActorId(String actorId) { this.actorId = actorId; }
+    public LocalDateTime getCreatedAt() {
+        return createdAt;
+    }
 
-    public String getActorName() { return actorName; }
-    public void setActorName(String actorName) { this.actorName = actorName; }
+    public void setCreatedAt(LocalDateTime createdAt) {
+        this.createdAt = createdAt;
+    }
 
-    public String getActorRole() { return actorRole; }
-    public void setActorRole(String actorRole) { this.actorRole = actorRole; }
+    public String getActorId() {
+        return actorId;
+    }
 
-    public String getAction() { return action; }
-    public void setAction(String action) { this.action = action; }
+    public void setActorId(String actorId) {
+        this.actorId = actorId;
+    }
 
-    public String getTargetType() { return targetType; }
-    public void setTargetType(String targetType) { this.targetType = targetType; }
+    public String getActorName() {
+        return actorName;
+    }
 
-    public String getTargetId() { return targetId; }
-    public void setTargetId(String targetId) { this.targetId = targetId; }
+    public void setActorName(String actorName) {
+        this.actorName = actorName;
+    }
 
-    public String getDetails() { return details; }
-    public void setDetails(String details) { this.details = details; }
+    public String getActorRole() {
+        return actorRole;
+    }
+
+    public void setActorRole(String actorRole) {
+        this.actorRole = actorRole;
+    }
+
+    public String getAction() {
+        return action;
+    }
+
+    public void setAction(String action) {
+        this.action = action;
+    }
+
+    public String getTargetType() {
+        return targetType;
+    }
+
+    public void setTargetType(String targetType) {
+        this.targetType = targetType;
+    }
+
+    public String getTargetId() {
+        return targetId;
+    }
+
+    public void setTargetId(String targetId) {
+        this.targetId = targetId;
+    }
+
+    public String getDetails() {
+        return details;
+    }
+
+    public void setDetails(String details) {
+        this.details = details;
+    }
 
     @PrePersist
     public void prePersist() {

@@ -14,7 +14,8 @@ export default function PatientRecords() {
   const [error, setError] = useState('')
 
   useEffect(() => {
-    axiosInstance.get(ENDPOINTS.PATIENT_RECORDS(user.userId))
+    axiosInstance
+      .get(ENDPOINTS.PATIENT_RECORDS(user.userId))
       .then(res => setRecord(res.data))
       .catch(err => setError(errorMessage(err, 'Could not load your medical record.')))
   }, [user.userId])
@@ -29,8 +30,8 @@ export default function PatientRecords() {
           <Section title="Diagnoses" text={record.diagnoses} />
           <Section title="Treatment notes" text={record.observations} />
           <div className="alert alert-info" style={{ marginTop: 12, marginBottom: 0 }}>
-            Your record is updated by your doctor after each consultation.
-            See the full details on <Link to="/patient/prescriptions">My Prescriptions</Link>.
+            Your record is updated by your doctor after each consultation. See the full details on{' '}
+            <Link to="/patient/prescriptions">My Prescriptions</Link>.
           </div>
         </div>
       )}
@@ -43,11 +44,15 @@ function Section({ title, text }) {
   return (
     <div style={{ marginBottom: 18 }}>
       <h3 style={{ marginBottom: 8 }}>{title}</h3>
-      {empty
-        ? <p style={{ color: 'var(--color-text-muted)', margin: 0 }}>{text || 'Nothing recorded yet.'}</p>
-        : text.split('\n').map((line, i) => (
-          <p key={i} style={{ margin: 0, padding: '6px 0', borderBottom: '1px solid var(--color-border)' }}>{line}</p>
-        ))}
+      {empty ? (
+        <p style={{ color: 'var(--color-text-muted)', margin: 0 }}>{text || 'Nothing recorded yet.'}</p>
+      ) : (
+        text.split('\n').map((line, i) => (
+          <p key={i} style={{ margin: 0, padding: '6px 0', borderBottom: '1px solid var(--color-border)' }}>
+            {line}
+          </p>
+        ))
+      )}
     </div>
   )
 }

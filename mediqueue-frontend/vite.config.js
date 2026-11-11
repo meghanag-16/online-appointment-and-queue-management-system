@@ -6,7 +6,7 @@ export default defineConfig({
   server: {
     proxy: {
       // Override with API_PROXY_TARGET if the backend runs elsewhere (e.g. http://localhost:8091)
-      '/api': process.env.API_PROXY_TARGET || 'http://localhost:8080'
-    }
-  }
+      '/api': process.env.API_PROXY_TARGET || 'http://localhost:8080',
+    },
+  },
 })

@@ -7,34 +7,38 @@ import com.mediqueue.entity.Prescription;
 import com.mediqueue.repository.MedicalRecordRepository;
 import com.mediqueue.repository.PatientRepository;
 import com.mediqueue.service.MedicalRecordService;
-import org.springframework.stereotype.Service;
-import org.springframework.transaction.annotation.Transactional;
-
 import java.time.LocalDate;
 import java.time.format.DateTimeFormatter;
 import java.util.Locale;
+import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Transactional;
 
 @Service
 @Transactional
 public class MedicalRecordServiceImpl implements MedicalRecordService {
 
-    private static final DateTimeFormatter DAY = DateTimeFormatter.ofPattern("dd MMM yyyy", Locale.ENGLISH);
+    private static final DateTimeFormatter DAY =
+            DateTimeFormatter.ofPattern("dd MMM yyyy", Locale.ENGLISH);
 
     private final MedicalRecordRepository recordRepository;
     private final PatientRepository patientRepository;
 
-    public MedicalRecordServiceImpl(MedicalRecordRepository recordRepository, PatientRepository patientRepository) {
+    public MedicalRecordServiceImpl(
+            MedicalRecordRepository recordRepository, PatientRepository patientRepository) {
         this.recordRepository = recordRepository;
         this.patientRepository = patientRepository;
     }
 
     @Override
     public MedicalRecord ensureRecord(Patient patient) {
-        return recordRepository.findByPatient_UserId(patient.getUserId()).orElseGet(() -> {
-            MedicalRecord record = new MedicalRecord();
-            record.setPatient(patient);
-            return recordRepository.save(record);
-        });
+        return recordRepository
+                .findByPatient_UserId(patient.getUserId())
+                .orElseGet(
+                        () -> {
+                            MedicalRecord record = new MedicalRecord();
+                            record.setPatient(patient);
+                            return recordRepository.save(record);
+                        });
     }
 
     @Override
@@ -54,9 +58,13 @@ public class MedicalRecordServiceImpl implements MedicalRecordService {
         LocalDate day = a.getAppointmentDate() != null ? a.getAppointmentDate() : LocalDate.now();
         String header = day.format(DAY) + " · " + a.getDoctor().getName();
 
-        record.setDiagnoses(append(record.getDiagnoses(), header + ": " + prescription.getDiagnosisNotes()));
+        record.setDiagnoses(
+                append(record.getDiagnoses(), header + ": " + prescription.getDiagnosisNotes()));
 
-        StringBuilder obs = new StringBuilder(header).append(": Medications — ").append(prescription.getMedicationList());
+        StringBuilder obs =
+                new StringBuilder(header)
+                        .append(": Medications — ")
+                        .append(prescription.getMedicationList());
         if (prescription.getAdvice() != null && !prescription.getAdvice().isBlank()) {
             obs.append(". Advice — ").append(prescription.getAdvice().trim());
         }

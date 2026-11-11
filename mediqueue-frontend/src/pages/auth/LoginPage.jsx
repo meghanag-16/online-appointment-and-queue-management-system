@@ -5,13 +5,15 @@ import { getHomeForRole } from '../../utils/roleRoutes'
 
 export default function LoginPage() {
   const { login } = useAuth()
-  const navigate   = useNavigate()
-  const params     = new URLSearchParams(window.location.search)
+  const navigate = useNavigate()
+  const params = new URLSearchParams(window.location.search)
   // Set by axiosInstance when a request came back 401 (session expired / account locked)
-  const expiredReason = params.get('expired') ? (params.get('reason') || 'Your session has expired. Please log in again.') : ''
+  const expiredReason = params.get('expired')
+    ? params.get('reason') || 'Your session has expired. Please log in again.'
+    : ''
 
-  const [form, setForm]       = useState({ username: '', password: '' })
-  const [error, setError]     = useState('')
+  const [form, setForm] = useState({ username: '', password: '' })
+  const [error, setError] = useState('')
   const [loading, setLoading] = useState(false)
 
   async function handleSubmit(e) {
@@ -35,9 +37,7 @@ export default function LoginPage() {
         <div style={{ textAlign: 'center', marginBottom: 32 }}>
           <div style={logoStyle}>M</div>
           <h1 style={headingStyle}>MediQueue</h1>
-          <p style={{ color: 'var(--color-text-muted)', fontSize: '0.9rem' }}>
-            Sign in to your account
-          </p>
+          <p style={{ color: 'var(--color-text-muted)', fontSize: '0.9rem' }}>Sign in to your account</p>
         </div>
 
         {expiredReason && !error && <div className="alert alert-info">{expiredReason}</div>}
@@ -53,6 +53,7 @@ export default function LoginPage() {
               value={form.username}
               onChange={e => setForm(f => ({ ...f, username: e.target.value }))}
               required
+              // eslint-disable-next-line jsx-a11y/no-autofocus -- the page is just this form
               autoFocus
             />
           </div>
@@ -93,27 +94,41 @@ export default function LoginPage() {
 }
 
 const outerStyle = {
-  minHeight: '100vh', display: 'flex',
-  alignItems: 'center', justifyContent: 'center',
+  minHeight: '100vh',
+  display: 'flex',
+  alignItems: 'center',
+  justifyContent: 'center',
   background: 'linear-gradient(135deg, var(--color-dark) 0%, #3d3d3d 100%)',
   padding: 16,
 }
 
 const panelStyle = {
-  background: 'var(--color-white)', borderRadius: 16,
-  padding: '40px 36px', width: '100%', maxWidth: 420,
+  background: 'var(--color-white)',
+  borderRadius: 16,
+  padding: '40px 36px',
+  width: '100%',
+  maxWidth: 420,
   boxShadow: 'var(--shadow-lg)',
 }
 
 const logoStyle = {
-  width: 56, height: 56, borderRadius: 14,
+  width: 56,
+  height: 56,
+  borderRadius: 14,
   background: 'var(--color-accent)',
-  color: 'var(--color-white)', fontSize: '1.6rem', fontWeight: 700,
-  display: 'inline-flex', alignItems: 'center', justifyContent: 'center',
+  color: 'var(--color-white)',
+  fontSize: '1.6rem',
+  fontWeight: 700,
+  display: 'inline-flex',
+  alignItems: 'center',
+  justifyContent: 'center',
   marginBottom: 12,
 }
 
 const headingStyle = {
-  fontFamily: 'var(--font-display)', fontSize: '1.6rem',
-  color: 'var(--color-dark)', fontWeight: 400, marginBottom: 4,
+  fontFamily: 'var(--font-display)',
+  fontSize: '1.6rem',
+  color: 'var(--color-dark)',
+  fontWeight: 400,
+  marginBottom: 4,
 }

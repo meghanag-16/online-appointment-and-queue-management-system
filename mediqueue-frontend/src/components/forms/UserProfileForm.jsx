@@ -20,12 +20,24 @@ import { todayLocal } from '../../utils/dates'
 export const ALL_ROLES = ['PATIENT', 'DOCTOR', 'LAB_TECHNICIAN', 'RECEPTIONIST', 'ADMINISTRATOR']
 
 const EMPTY = {
-  name: '', username: '', email: '', password: '', role: 'PATIENT',
-  gender: '', phoneNumber: '', dateOfBirth: '',
+  name: '',
+  username: '',
+  email: '',
+  password: '',
+  role: 'PATIENT',
+  gender: '',
+  phoneNumber: '',
+  dateOfBirth: '',
   // patient
-  bloodGroup: '', allergies: '', chronicConditions: '', emergencyContact: '',
+  bloodGroup: '',
+  allergies: '',
+  chronicConditions: '',
+  emergencyContact: '',
   // doctor
-  departmentId: '', specialization: '', qualification: '', consultationFee: '',
+  departmentId: '',
+  specialization: '',
+  qualification: '',
+  consultationFee: '',
 }
 
 const BLOOD_GROUPS = ['A+', 'A-', 'B+', 'B-', 'AB+', 'AB-', 'O+', 'O-']
@@ -87,9 +99,15 @@ export default function UserProfileForm({
     if (role !== 'DOCTOR' || departments.length > 0) return
     let cancelled = false
     getPublicDepartments()
-      .then(res => { if (!cancelled) setDepartments(Array.isArray(res?.data) ? res.data : []) })
-      .catch(() => { if (!cancelled) setDeptError('Could not load departments.') })
-    return () => { cancelled = true }
+      .then(res => {
+        if (!cancelled) setDepartments(Array.isArray(res?.data) ? res.data : [])
+      })
+      .catch(() => {
+        if (!cancelled) setDeptError('Could not load departments.')
+      })
+    return () => {
+      cancelled = true
+    }
   }, [role, departments.length])
 
   function set(field) {
@@ -114,9 +132,8 @@ export default function UserProfileForm({
     }
   }
 
-  const fe = (name) => fieldErrors[name]
-    ? <small style={{ color: 'var(--color-danger)' }}>{fieldErrors[name]}</small>
-    : null
+  const fe = name =>
+    fieldErrors[name] ? <small style={{ color: 'var(--color-danger)' }}>{fieldErrors[name]}</small> : null
 
   return (
     <form onSubmit={handleSubmit}>
@@ -124,44 +141,84 @@ export default function UserProfileForm({
 
       <div className="form-group">
         <label htmlFor="upf-name">Full Name</label>
-        <input id="upf-name" className="form-control" placeholder="Your full name"
-          value={form.name} onChange={set('name')} required maxLength={100} />
+        <input
+          id="upf-name"
+          className="form-control"
+          placeholder="Your full name"
+          value={form.name}
+          onChange={set('name')}
+          required
+          maxLength={100}
+        />
         {fe('name')}
       </div>
 
       <div style={{ display: 'grid', gridTemplateColumns: fixedRole ? '1fr' : '1fr 1fr', gap: 16 }}>
         <div className="form-group">
           <label htmlFor="upf-username">Username</label>
-          <input id="upf-username" className="form-control" placeholder="username"
-            value={form.username} onChange={set('username')} required minLength={3} maxLength={50} />
+          <input
+            id="upf-username"
+            className="form-control"
+            placeholder="username"
+            value={form.username}
+            onChange={set('username')}
+            required
+            minLength={3}
+            maxLength={50}
+          />
           {fe('username')}
         </div>
         {!fixedRole && (
           <div className="form-group">
             <label htmlFor="role-select">Role</label>
             <select id="role-select" className="form-control" value={form.role} onChange={set('role')}>
-              {roles.map(r => <option key={r} value={r}>{r.replace(/_/g, ' ')}</option>)}
+              {roles.map(r => (
+                <option key={r} value={r}>
+                  {r.replace(/_/g, ' ')}
+                </option>
+              ))}
             </select>
           </div>
         )}
       </div>
       {roleNote && roleNote(role) && (
-        <div className="alert alert-info" style={{ marginTop: -4 }}>{roleNote(role)}</div>
+        <div className="alert alert-info" style={{ marginTop: -4 }}>
+          {roleNote(role)}
+        </div>
       )}
 
       <div className="form-group">
         <label htmlFor="upf-email">Email</label>
-        <input id="upf-email" className="form-control" type="email" placeholder="you@example.com"
-          value={form.email} onChange={set('email')} required maxLength={100} />
+        <input
+          id="upf-email"
+          className="form-control"
+          type="email"
+          placeholder="you@example.com"
+          value={form.email}
+          onChange={set('email')}
+          required
+          maxLength={100}
+        />
         {fe('email')}
       </div>
 
-      {showPassword && <div className="form-group">
-        <label htmlFor="upf-password">{passwordLabel}</label>
-        <input id="upf-password" className="form-control" type="password" placeholder={passwordHint}
-          value={form.password} onChange={set('password')} required minLength={8} autoComplete="new-password" />
-        {fe('password')}
-      </div>}
+      {showPassword && (
+        <div className="form-group">
+          <label htmlFor="upf-password">{passwordLabel}</label>
+          <input
+            id="upf-password"
+            className="form-control"
+            type="password"
+            placeholder={passwordHint}
+            value={form.password}
+            onChange={set('password')}
+            required
+            minLength={8}
+            autoComplete="new-password"
+          />
+          {fe('password')}
+        </div>
+      )}
 
       <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 16 }}>
         <div className="form-group">
@@ -176,16 +233,30 @@ export default function UserProfileForm({
         </div>
         <div className="form-group">
           <label htmlFor="dob-input">Date of Birth</label>
-          <input id="dob-input" className="form-control" type="date" max={today}
-            value={form.dateOfBirth} onChange={set('dateOfBirth')} required />
+          <input
+            id="dob-input"
+            className="form-control"
+            type="date"
+            max={today}
+            value={form.dateOfBirth}
+            onChange={set('dateOfBirth')}
+            required
+          />
           {fe('dateOfBirth')}
         </div>
       </div>
 
       <div className="form-group">
         <label htmlFor="phone-input">Phone Number</label>
-        <input id="phone-input" className="form-control" placeholder="Enter phone number"
-          value={form.phoneNumber} onChange={set('phoneNumber')} required maxLength={15} />
+        <input
+          id="phone-input"
+          className="form-control"
+          placeholder="Enter phone number"
+          value={form.phoneNumber}
+          onChange={set('phoneNumber')}
+          required
+          maxLength={15}
+        />
         {fe('phoneNumber')}
       </div>
 
@@ -197,26 +268,48 @@ export default function UserProfileForm({
               <label htmlFor="upf-blood">Blood Group</label>
               <select id="upf-blood" className="form-control" value={form.bloodGroup} onChange={set('bloodGroup')}>
                 <option value="">Not known</option>
-                {BLOOD_GROUPS.map(b => <option key={b} value={b}>{b}</option>)}
+                {BLOOD_GROUPS.map(b => (
+                  <option key={b} value={b}>
+                    {b}
+                  </option>
+                ))}
               </select>
               {fe('bloodGroup')}
             </div>
             <div className="form-group">
               <label htmlFor="upf-emergency">Emergency Contact</label>
-              <input id="upf-emergency" className="form-control" placeholder="Name and phone"
-                value={form.emergencyContact} onChange={set('emergencyContact')} maxLength={150} />
+              <input
+                id="upf-emergency"
+                className="form-control"
+                placeholder="Name and phone"
+                value={form.emergencyContact}
+                onChange={set('emergencyContact')}
+                maxLength={150}
+              />
               {fe('emergencyContact')}
             </div>
           </div>
           <div className="form-group">
             <label htmlFor="upf-allergies">Allergies</label>
-            <input id="upf-allergies" className="form-control" placeholder="e.g. Penicillin (leave blank if none)"
-              value={form.allergies} onChange={set('allergies')} maxLength={2000} />
+            <input
+              id="upf-allergies"
+              className="form-control"
+              placeholder="e.g. Penicillin (leave blank if none)"
+              value={form.allergies}
+              onChange={set('allergies')}
+              maxLength={2000}
+            />
           </div>
           <div className="form-group">
             <label htmlFor="upf-chronic">Chronic Conditions</label>
-            <input id="upf-chronic" className="form-control" placeholder="e.g. Diabetes (leave blank if none)"
-              value={form.chronicConditions} onChange={set('chronicConditions')} maxLength={2000} />
+            <input
+              id="upf-chronic"
+              className="form-control"
+              placeholder="e.g. Diabetes (leave blank if none)"
+              value={form.chronicConditions}
+              onChange={set('chronicConditions')}
+              maxLength={2000}
+            />
           </div>
         </fieldset>
       )}
@@ -226,36 +319,71 @@ export default function UserProfileForm({
           <legend style={legendStyle}>Professional details</legend>
           <div className="form-group">
             <label htmlFor="upf-dept">Department</label>
-            <select id="upf-dept" className="form-control" value={form.departmentId} onChange={set('departmentId')} required>
+            <select
+              id="upf-dept"
+              className="form-control"
+              value={form.departmentId}
+              onChange={set('departmentId')}
+              required
+            >
               <option value="">Select Department</option>
-              {departments.map(d => <option key={d.departmentId} value={d.departmentId}>{d.departmentName}</option>)}
+              {departments.map(d => (
+                <option key={d.departmentId} value={d.departmentId}>
+                  {d.departmentName}
+                </option>
+              ))}
             </select>
             {deptError && <small style={{ color: 'var(--color-danger)' }}>{deptError}</small>}
           </div>
           <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 16 }}>
             <div className="form-group">
               <label htmlFor="upf-spec">Specialization</label>
-              <input id="upf-spec" className="form-control" placeholder="e.g. Cardiologist"
-                value={form.specialization} onChange={set('specialization')} required maxLength={100} />
+              <input
+                id="upf-spec"
+                className="form-control"
+                placeholder="e.g. Cardiologist"
+                value={form.specialization}
+                onChange={set('specialization')}
+                required
+                maxLength={100}
+              />
             </div>
             <div className="form-group">
               <label htmlFor="upf-fee">Consultation Fee (₹)</label>
-              <input id="upf-fee" className="form-control" type="number" min="0" step="0.01" placeholder="e.g. 500"
-                value={form.consultationFee} onChange={set('consultationFee')} required />
+              <input
+                id="upf-fee"
+                className="form-control"
+                type="number"
+                min="0"
+                step="0.01"
+                placeholder="e.g. 500"
+                value={form.consultationFee}
+                onChange={set('consultationFee')}
+                required
+              />
               {fe('consultationFee')}
             </div>
           </div>
           <div className="form-group">
             <label htmlFor="upf-qual">Qualification</label>
-            <input id="upf-qual" className="form-control" placeholder="e.g. MBBS, MD"
-              value={form.qualification} onChange={set('qualification')} maxLength={200} />
+            <input
+              id="upf-qual"
+              className="form-control"
+              placeholder="e.g. MBBS, MD"
+              value={form.qualification}
+              onChange={set('qualification')}
+              maxLength={200}
+            />
           </div>
         </fieldset>
       )}
 
-      <button type="submit" className="btn btn-primary"
+      <button
+        type="submit"
+        className="btn btn-primary"
         style={{ width: '100%', justifyContent: 'center', marginTop: 8, padding: '12px' }}
-        disabled={loading}>
+        disabled={loading}
+      >
         {loading ? 'Saving…' : submitLabel}
       </button>
     </form>
@@ -263,7 +391,9 @@ export default function UserProfileForm({
 }
 
 const fieldsetStyle = {
-  border: '1px solid var(--color-border)', borderRadius: 8,
-  padding: '12px 16px 4px', margin: '4px 0 16px',
+  border: '1px solid var(--color-border)',
+  borderRadius: 8,
+  padding: '12px 16px 4px',
+  margin: '4px 0 16px',
 }
 const legendStyle = { padding: '0 6px', fontSize: '0.85rem', color: 'var(--color-text-muted)' }

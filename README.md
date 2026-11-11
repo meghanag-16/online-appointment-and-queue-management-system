@@ -84,9 +84,9 @@ docker compose up --build
 |---------|-----|
 | Frontend | http://localhost |
 | Backend API | http://localhost:8080/api/v1 |
-| MySQL | localhost:3306 |
+| MySQL | localhost:3307 (inside Docker: mysql:3306) |
 
-To change ports, passwords or the JWT secret, copy `.env.example` to `.env` and edit it. If a local MySQL already uses port 3306, set `MYSQL_HOST_PORT` (e.g. `3307`) in `.env`.
+To change ports, passwords or the JWT secret, copy `.env.example` to `.env` and edit it. MySQL is published on host port 3307 so it does not clash with a local MySQL on 3306; change it with `MYSQL_HOST_PORT`. When deploying, add the site's address to `APP_CORS_ALLOWED_ORIGINS`.
 
 To reset to an empty database: `docker compose down -v`.
 
@@ -143,6 +143,82 @@ cd mediqueue-frontend && npm test          # frontend unit tests
 cd mediqueue-frontend && npx cypress run   # end-to-end tests (app must be running)
 ```
 
+### Formatting and linting
+
+Both halves are auto-formatted and linted, and CI fails a pull request that is not clean.
+
+```bash
+cd mediqueue-backend && mvn spotless:apply              # format Java (google-java-format, AOSP style)
+cd mediqueue-backend && mvn spotless:check checkstyle:check
+cd mediqueue-frontend && npm run format                 # format with Prettier
+cd mediqueue-frontend && npm run lint                   # ESLint: React, hooks and accessibility rules
+```
+
+`mvn verify` also runs the format check and Checkstyle. Line endings are LF everywhere (`.gitattributes`), so the same files pass on Windows and in CI.
+
+## API reference
+
+All endpoints are under `/api/v1` and, except sign-up, login and the department list, need `Authorization: Bearer <token>`. Errors share one JSON shape: `{timestamp, status, error, path, fieldErrors?}` (plus `alternateSlots` on a 409 for a taken slot). Roles: P patient, D doctor, L lab technician, R receptionist, A administrator. "Own" means the server also checks the record belongs to the caller (a doctor: their own patients).
+
+| Method | Path | Roles | Purpose |
+|--------|------|-------|---------|
+| POST | `/auth/register` | public | Patient sign-up (logs in straight away) |
+| POST | `/auth/login` | public | Log in; returns the JWT |
+| GET / PUT | `/auth/me` | any | Read / edit own profile |
+| PUT | `/auth/me/password` | any | Change own password |
+| GET | `/departments` | public | Department list |
+| GET | `/doctors/search?q=&departmentId=&date=` | P D R A | Find active doctors, with next open slot |
+| GET | `/doctors/{id}/slots?date=` | P D R A | Open slots of a doctor |
+| POST | `/appointments` | P R A | Book (patients always for themselves) |
+| GET | `/appointments/{id}` | P D L R A | One appointment (own) |
+| GET | `/appointments/patient/{id}` | P D R A | A patient's appointments (own) |
+| GET | `/appointments/doctor/{id}` | D R A | A doctor's appointments (own) |
+| GET | `/appointments/all?date=` | R A | All appointments |
+| GET | `/appointments/stats` | R A | Front-desk counts for today |
+| PATCH | `/appointments/{id}/cancel` | P R A | Cancel (patients: before the cutoff) |
+| PATCH | `/appointments/{id}/reschedule` | P R A | Move to another slot of the same doctor |
+| PATCH | `/appointments/{id}/status` | D R A | Status change following the allowed transitions |
+| PATCH | `/appointments/{id}/priority` | R A | NORMAL / HIGH_PRIORITY (queue reorders) |
+| GET | `/queue/doctor/{id}?date=` | D R A | A doctor's queue (own) |
+| POST | `/queue/doctor/{id}/call-next` | D R A | Call the next waiting patient |
+| POST | `/queue/entries/{id}/start` · `/finish` · `/no-show` | D R A | Run a visit |
+| PATCH | `/queue/entries/{id}/position` | A | Pin a waiting patient to a position (null clears) |
+| GET | `/doctor/dashboard/{id}` · `/doctor/queue/{id}` | D A | Doctor dashboard counts, queue |
+| GET | `/patient/dashboard/{id}` | P A | Patient dashboard counts (own) |
+| GET | `/patient/history/{id}` | P D R A | Full clinical history (own) |
+| GET | `/patient/records/{id}` | P D A | Medical record (own) |
+| GET | `/patient/search?q=` | R A | Find a patient to book for |
+| POST | `/prescriptions` | D | Issue a prescription (treating doctor only) |
+| GET | `/prescriptions/patient/{id}` · `/appointment/{id}` | P D R A | Prescriptions (own) |
+| GET | `/prescriptions/doctor/{id}` | D A | A doctor's issued prescriptions (own) |
+| GET | `/lab/appointments?q=` | L A | Find appointments for upload |
+| POST | `/lab/upload` | L | Upload a report (multipart, PDF/PNG/JPEG, 10 MB) |
+| GET | `/lab/appointment/{id}` · `/lab/patient/{id}` | P D L R A | Reports (own) |
+| GET | `/lab/all` | L A | All reports |
+| GET | `/lab/reports/{id}/download` | P D L R A | Download a report file (own) |
+| GET | `/billing/patient/{id}` | P R A | A patient's bills (own) |
+| GET | `/billing/appointment/{id}` | P D R A | Bill of an appointment (own) |
+| GET | `/billing/all?status=&q=` | R A | Billing desk list |
+| PATCH | `/billing/{id}/payment` | R A | Mark paid (with method), failed, refunded |
+| POST | `/billing/generate/{appointmentId}?billingType=` | R A | Re-price an unpaid bill |
+| POST | `/complaints` · GET `/complaints/mine` | P | Raise / list own complaints |
+| GET | `/complaints/all?status=` | A | All complaints |
+| PATCH | `/complaints/{id}/status` | A | Open → Under review → Resolved (note required) |
+| GET | `/notifications/mine` | any | Own notifications and unread count |
+| PATCH | `/notifications/{id}/read` · `/mine/read-all` | any | Mark read |
+| POST | `/notifications/alert` · `/reminders/run` | A | Send an alert; send due reminders now |
+| GET | `/settings/slots` | any | Slot settings and cancel cutoff |
+| PUT | `/admin/settings/slots` | A | Change slot settings (open slots regenerated) |
+| GET / POST | `/admin/doctors` | A | List / onboard doctors (temporary password) |
+| PUT | `/admin/doctors/{id}` | A | Edit department, specialization, qualification, fee |
+| PUT | `/admin/doctors/{id}/deactivate` | A | Deactivate (upcoming appointments are cancelled) |
+| GET / POST | `/admin/departments` | A | List / add departments |
+| GET | `/admin/dashboard` · `/admin/audit` | A | Admin counts; audit log |
+| GET / POST | `/users` | A | List / create users of any role |
+| GET | `/users/{id}` | A | A user's profile |
+| PATCH | `/users/{id}/status` | A | ACTIVE / SUSPENDED / DEACTIVATED (inactive doctors' upcoming appointments are cancelled) |
+| POST | `/users/{id}/reset-password` | A | New temporary password |
+
 ## Limitations
 
 The project is under active development. Known limitations at present:
@@ -150,3 +226,4 @@ The project is under active development. Known limitations at present:
 - Notifications are stored and shown in the app, but external delivery only writes to the server log; no email or SMS provider is connected yet.
 - Payments are recorded by the front desk; there is no online payment.
 - Several Cypress tests are out of date with the current pages and fail.
+- Bookings from past days that nobody attended stay "Booked" until the front desk marks them No show; they are left out of the doctor's pending-prescription count.

@@ -8,6 +8,49 @@ on:
 
 jobs:
 # ─────────────────────────────────────────────
+#  LINT & FORMAT — fast checks, no database
+# ─────────────────────────────────────────────
+  backend-lint:
+    name: Backend — Format & Lint
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-java@v4
+        with:
+          java-version: '17'
+          distribution: temurin
+          cache: maven
+
+      - name: Check formatting (Spotless) and lint (Checkstyle)
+        working-directory: mediqueue-backend
+        run: mvn -B spotless:check checkstyle:check
+
+  frontend-lint:
+    name: Frontend — Lint & Format
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+          cache: npm
+          cache-dependency-path: mediqueue-frontend/package-lock.json
+
+      - name: Install dependencies
+        working-directory: mediqueue-frontend
+        run: npm ci
+
+      - name: Lint (ESLint)
+        working-directory: mediqueue-frontend
+        run: npm run lint
+
+      - name: Check formatting (Prettier)
+        working-directory: mediqueue-frontend
+        run: npm run format:check
+
+# ─────────────────────────────────────────────
 #  BACKEND — build + test (JUnit + Mockito)
 # ─────────────────────────────────────────────
   backend:
@@ -42,7 +85,8 @@ jobs:
 
       - name: Run Backend Tests (JUnit + Mockito)
         working-directory: mediqueue-backend
-        run: mvn clean verify
+        # formatting and Checkstyle already ran in backend-lint
+        run: mvn -B clean verify -Dspotless.check.skip=true -Dcheckstyle.skip=true
         env:
           SPRING_DATASOURCE_URL: jdbc:mysql://127.0.0.1:3306/mediqueue?useSSL=false&serverTimezone=Asia/Kolkata&allowPublicKeyRetrieval=true
           SPRING_DATASOURCE_USERNAME: root

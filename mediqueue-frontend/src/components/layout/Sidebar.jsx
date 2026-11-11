@@ -3,48 +3,54 @@ import { useAuth } from '../../context/AuthContext'
 
 const NAV_LINKS = {
   PATIENT: [
-    { to: '/patient/dashboard',    label: 'Dashboard'    },
+    { to: '/patient/dashboard', label: 'Dashboard' },
     { to: '/patient/appointments', label: 'Appointments' },
-    { to: '/patient/book',         label: 'Book Slot'    },
-    { to: '/patient/billing',      label: 'Billing'      },
+    { to: '/patient/book', label: 'Book Slot' },
+    { to: '/patient/billing', label: 'Billing' },
     { to: '/patient/prescriptions', label: 'Prescriptions' },
-    { to: '/patient/reports',      label: 'Lab Reports'  },
-    { to: '/patient/records',      label: 'My Records'   },
-    { to: '/patient/complaints',   label: 'Complaints'   },
+    { to: '/patient/reports', label: 'Lab Reports' },
+    { to: '/patient/records', label: 'My Records' },
+    { to: '/patient/complaints', label: 'Complaints' },
   ],
   DOCTOR: [
-    { to: '/doctor/dashboard',     label: 'Dashboard'     },
-    { to: '/doctor/appointments',  label: 'Appointments'  },
-    { to: '/doctor/queue',         label: 'Queue'         },
+    { to: '/doctor/dashboard', label: 'Dashboard' },
+    { to: '/doctor/appointments', label: 'Appointments' },
+    { to: '/doctor/queue', label: 'Queue' },
     { to: '/doctor/prescriptions', label: 'Prescriptions' },
   ],
   LAB_TECHNICIAN: [
     { to: '/lab/dashboard', label: 'Upload Reports' },
-    { to: '/lab/reports',   label: 'All Reports'    },
+    { to: '/lab/reports', label: 'All Reports' },
   ],
   RECEPTIONIST: [
-    { to: '/receptionist/dashboard',    label: 'Dashboard'    },
+    { to: '/receptionist/dashboard', label: 'Dashboard' },
     { to: '/receptionist/appointments', label: 'Appointments' },
-    { to: '/receptionist/billing',      label: 'Billing'      },
-    { to: '/receptionist/queue',        label: 'Queues'       },
+    { to: '/receptionist/billing', label: 'Billing' },
+    { to: '/receptionist/queue', label: 'Queues' },
   ],
   ADMINISTRATOR: [
-    { to: '/admin/dashboard',   label: 'Dashboard'   },
-    { to: '/admin/users',       label: 'Users'       },
-    { to: '/admin/doctors',     label: 'Doctors'     },
-    { to: '/admin/queue',       label: 'Queues'      },
+    { to: '/admin/dashboard', label: 'Dashboard' },
+    { to: '/admin/users', label: 'Users' },
+    { to: '/admin/doctors', label: 'Doctors' },
+    { to: '/admin/queue', label: 'Queues' },
     { to: '/admin/departments', label: 'Departments' },
-    { to: '/admin/billing',     label: 'Billing'     },
-    { to: '/admin/complaints',  label: 'Complaints'  },
-    { to: '/admin/settings',    label: 'Slot Settings' },
-    { to: '/admin/audit',       label: 'Audit Log'   },
+    { to: '/admin/billing', label: 'Billing' },
+    { to: '/admin/complaints', label: 'Complaints' },
+    { to: '/admin/settings', label: 'Slot Settings' },
+    { to: '/admin/audit', label: 'Audit Log' },
   ],
 }
 
 const sidebarStyle = {
-  position: 'fixed', top: 0, left: 0, bottom: 0,
-  width: 'var(--sidebar-w)', background: 'var(--color-dark)',
-  display: 'flex', flexDirection: 'column', zIndex: 200,
+  position: 'fixed',
+  top: 0,
+  left: 0,
+  bottom: 0,
+  width: 'var(--sidebar-w)',
+  background: 'var(--color-dark)',
+  display: 'flex',
+  flexDirection: 'column',
+  zIndex: 200,
   overflowY: 'auto',
 }
 
@@ -56,15 +62,24 @@ const headerStyle = {
 
 const brandStyle = {
   fontFamily: 'var(--font-display)',
-  fontSize: '1.4rem', color: 'var(--color-white)',
-  display: 'flex', alignItems: 'center', gap: 10,
+  fontSize: '1.4rem',
+  color: 'var(--color-white)',
+  display: 'flex',
+  alignItems: 'center',
+  gap: 10,
 }
 
 const dotStyle = {
-  width: 28, height: 28, borderRadius: 8,
+  width: 28,
+  height: 28,
+  borderRadius: 8,
   background: 'var(--color-accent)',
-  display: 'flex', alignItems: 'center', justifyContent: 'center',
-  fontSize: '1rem', color: '#fff', fontWeight: 700,
+  display: 'flex',
+  alignItems: 'center',
+  justifyContent: 'center',
+  fontSize: '1rem',
+  color: '#fff',
+  fontWeight: 700,
 }
 
 export default function Sidebar() {
@@ -80,7 +95,7 @@ export default function Sidebar() {
         </div>
       </div>
       <nav style={{ padding: '8px 12px', flex: 1 }}>
-        {links.map((link) => (
+        {links.map(link => (
           <NavLink
             key={link.to}
             to={link.to}

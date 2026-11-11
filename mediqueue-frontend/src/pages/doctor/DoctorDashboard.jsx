@@ -4,6 +4,7 @@ import PageTitle from '../../components/common/PageTitle'
 import Spinner from '../../components/common/Spinner'
 import axiosInstance, { errorMessage } from '../../api/axiosInstance'
 import { useAuth } from '../../context/AuthContext'
+import { drName } from '../../utils/formatters'
 
 export default function DoctorDashboard() {
   const { user } = useAuth()
@@ -30,21 +31,33 @@ export default function DoctorDashboard() {
     { label: "Today's Appointments", value: stats.todaysAppointments, accent: true },
     { label: 'In Queue', value: stats.inQueue },
     { label: 'Pending Prescriptions', value: stats.pendingPrescriptions },
-    { label: 'Completed Today', value: stats.completedToday }
+    { label: 'Completed Today', value: stats.completedToday },
   ]
 
   return (
     <PageLayout>
-      <PageTitle title={`Dr. ${user?.username}`} subtitle="Your schedule and patient overview" />
+      <PageTitle title={drName(user?.name || user?.username || '')} subtitle="Your schedule and patient overview" />
       {error && <div className="alert alert-error">{error}</div>}
       {loading ? (
         <Spinner />
       ) : (
-        <div style={{ display:'grid', gridTemplateColumns:'repeat(auto-fill,minmax(200px,1fr))', gap:20 }}>
-          {cards.map(c=>(
-            <div key={c.label} className="card" style={{borderTop:c.accent?'3px solid var(--color-accent)':undefined}}>
-              <p style={{fontSize:'0.8rem',color:'var(--color-text-muted)',marginBottom:8}}>{c.label}</p>
-              <p style={{fontSize:'2rem',fontWeight:700,color:c.accent?'var(--color-accent)':'var(--color-dark)'}}>{c.value}</p>
+        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill,minmax(200px,1fr))', gap: 20 }}>
+          {cards.map(c => (
+            <div
+              key={c.label}
+              className="card"
+              style={{ borderTop: c.accent ? '3px solid var(--color-accent)' : undefined }}
+            >
+              <p style={{ fontSize: '0.8rem', color: 'var(--color-text-muted)', marginBottom: 8 }}>{c.label}</p>
+              <p
+                style={{
+                  fontSize: '2rem',
+                  fontWeight: 700,
+                  color: c.accent ? 'var(--color-accent)' : 'var(--color-dark)',
+                }}
+              >
+                {c.value}
+              </p>
             </div>
           ))}
         </div>

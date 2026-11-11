@@ -6,6 +6,6 @@ import jakarta.persistence.*;
 @Table(name = "receptionists")
 @PrimaryKeyJoinColumn(name = "user_id")
 public class Receptionist extends User {
-    
+
     public Receptionist() {}
 }

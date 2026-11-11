@@ -7,13 +7,12 @@ import jakarta.validation.constraints.NotNull;
 import jakarta.validation.constraints.Past;
 import jakarta.validation.constraints.Pattern;
 import jakarta.validation.constraints.Size;
-
 import java.time.LocalDate;
 
 /**
- * What a logged-in user may change about themself from their own portal ("My Profile").
- * Username, role and account status are fixed. A doctor's department, specialization and
- * fee are managed by the administrator, so a doctor can only change their qualification here.
+ * What a logged-in user may change about themself from their own portal ("My Profile"). Username,
+ * role and account status are fixed. A doctor's department, specialization and fee are managed by
+ * the administrator, so a doctor can only change their qualification here.
  */
 public class UpdateProfileRequest {
 
@@ -41,7 +40,9 @@ public class UpdateProfileRequest {
     private LocalDate dateOfBirth;
 
     // ── PATIENT ─────────────────────────────────────────────────────────────
-    @Pattern(regexp = "^$|^(A|B|AB|O)[+-]$", message = "Blood group must be one of A+, A-, B+, B-, AB+, AB-, O+, O-")
+    @Pattern(
+            regexp = "^$|^(A|B|AB|O)[+-]$",
+            message = "Blood group must be one of A+, A-, B+, B-, AB+, AB-, O+, O-")
     private String bloodGroup;
 
     @Size(max = 2000, message = "Allergies must be at most 2000 characters")
@@ -57,33 +58,83 @@ public class UpdateProfileRequest {
     @Size(max = 200, message = "Qualification must be at most 200 characters")
     private String qualification;
 
-    public String getName() { return name; }
-    public void setName(String name) { this.name = name; }
+    public String getName() {
+        return name;
+    }
 
-    public String getEmail() { return email; }
-    public void setEmail(String email) { this.email = email; }
+    public void setName(String name) {
+        this.name = name;
+    }
 
-    public String getGender() { return gender; }
-    public void setGender(String gender) { this.gender = gender; }
+    public String getEmail() {
+        return email;
+    }
 
-    public String getPhoneNumber() { return phoneNumber; }
-    public void setPhoneNumber(String phoneNumber) { this.phoneNumber = phoneNumber; }
+    public void setEmail(String email) {
+        this.email = email;
+    }
 
-    public LocalDate getDateOfBirth() { return dateOfBirth; }
-    public void setDateOfBirth(LocalDate dateOfBirth) { this.dateOfBirth = dateOfBirth; }
+    public String getGender() {
+        return gender;
+    }
 
-    public String getBloodGroup() { return bloodGroup; }
-    public void setBloodGroup(String bloodGroup) { this.bloodGroup = bloodGroup; }
+    public void setGender(String gender) {
+        this.gender = gender;
+    }
 
-    public String getAllergies() { return allergies; }
-    public void setAllergies(String allergies) { this.allergies = allergies; }
+    public String getPhoneNumber() {
+        return phoneNumber;
+    }
 
-    public String getChronicConditions() { return chronicConditions; }
-    public void setChronicConditions(String chronicConditions) { this.chronicConditions = chronicConditions; }
+    public void setPhoneNumber(String phoneNumber) {
+        this.phoneNumber = phoneNumber;
+    }
 
-    public String getEmergencyContact() { return emergencyContact; }
-    public void setEmergencyContact(String emergencyContact) { this.emergencyContact = emergencyContact; }
+    public LocalDate getDateOfBirth() {
+        return dateOfBirth;
+    }
 
-    public String getQualification() { return qualification; }
-    public void setQualification(String qualification) { this.qualification = qualification; }
+    public void setDateOfBirth(LocalDate dateOfBirth) {
+        this.dateOfBirth = dateOfBirth;
+    }
+
+    public String getBloodGroup() {
+        return bloodGroup;
+    }
+
+    public void setBloodGroup(String bloodGroup) {
+        this.bloodGroup = bloodGroup;
+    }
+
+    public String getAllergies() {
+        return allergies;
+    }
+
+    public void setAllergies(String allergies) {
+        this.allergies = allergies;
+    }
+
+    public String getChronicConditions() {
+        return chronicConditions;
+    }
+
+    public void setChronicConditions(String chronicConditions) {
+        this.chronicConditions = chronicConditions;
+    }
+
+    public String getEmergencyContact() {
+        return emergencyContact;
+    }
+
+    public void setEmergencyContact(String emergencyContact) {
+        this.emergencyContact = emergencyContact;
+    }
+
+    public String getQualification() {
+        return qualification;
+    }
+
+    public void setQualification(String qualification) {
+        this.qualification = qualification;
+    }
 }

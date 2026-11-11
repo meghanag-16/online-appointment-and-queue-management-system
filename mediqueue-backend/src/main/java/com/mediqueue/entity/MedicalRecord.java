@@ -30,15 +30,35 @@ public class MedicalRecord {
         this.observations = observations;
     }
 
-    public Long getRecordId() { return recordId; }
-    public void setRecordId(Long recordId) { this.recordId = recordId; }
+    public Long getRecordId() {
+        return recordId;
+    }
 
-    public Patient getPatient() { return patient; }
-    public void setPatient(Patient patient) { this.patient = patient; }
+    public void setRecordId(Long recordId) {
+        this.recordId = recordId;
+    }
 
-    public String getDiagnoses() { return diagnoses; }
-    public void setDiagnoses(String diagnoses) { this.diagnoses = diagnoses; }
+    public Patient getPatient() {
+        return patient;
+    }
 
-    public String getObservations() { return observations; }
-    public void setObservations(String observations) { this.observations = observations; }
+    public void setPatient(Patient patient) {
+        this.patient = patient;
+    }
+
+    public String getDiagnoses() {
+        return diagnoses;
+    }
+
+    public void setDiagnoses(String diagnoses) {
+        this.diagnoses = diagnoses;
+    }
+
+    public String getObservations() {
+        return observations;
+    }
+
+    public void setObservations(String observations) {
+        this.observations = observations;
+    }
 }

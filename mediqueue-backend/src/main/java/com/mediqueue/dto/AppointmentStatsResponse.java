@@ -1,4 +1,8 @@
 package com.mediqueue.dto;
 
-public record AppointmentStatsResponse(long todayTotal, long todayBooked, long todayCompleted,
-                                       long todayCancelled, long totalAll) {}
+public record AppointmentStatsResponse(
+        long todayTotal,
+        long todayBooked,
+        long todayCompleted,
+        long todayCancelled,
+        long totalAll) {}

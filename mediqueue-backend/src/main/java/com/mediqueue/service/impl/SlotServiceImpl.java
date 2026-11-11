@@ -11,11 +11,6 @@ import com.mediqueue.repository.DoctorRepository;
 import com.mediqueue.repository.SlotSettingsRepository;
 import com.mediqueue.repository.TimeSlotRepository;
 import com.mediqueue.service.SlotService;
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
-import org.springframework.stereotype.Service;
-import org.springframework.transaction.annotation.Transactional;
-
 import java.time.DayOfWeek;
 import java.time.LocalDate;
 import java.time.LocalDateTime;
@@ -24,6 +19,10 @@ import java.util.ArrayList;
 import java.util.EnumSet;
 import java.util.List;
 import java.util.Set;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
+import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Transactional;
 
 @Service
 @Transactional
@@ -35,9 +34,10 @@ public class SlotServiceImpl implements SlotService {
     private final TimeSlotRepository timeSlotRepository;
     private final DoctorRepository doctorRepository;
 
-    public SlotServiceImpl(SlotSettingsRepository settingsRepository,
-                           TimeSlotRepository timeSlotRepository,
-                           DoctorRepository doctorRepository) {
+    public SlotServiceImpl(
+            SlotSettingsRepository settingsRepository,
+            TimeSlotRepository timeSlotRepository,
+            DoctorRepository doctorRepository) {
         this.settingsRepository = settingsRepository;
         this.timeSlotRepository = timeSlotRepository;
         this.doctorRepository = doctorRepository;
@@ -47,8 +47,9 @@ public class SlotServiceImpl implements SlotService {
 
     @Override
     public SlotSettings settings() {
-        return settingsRepository.findById(SlotSettings.SINGLETON_ID)
-            .orElseGet(this::createDefaults);
+        return settingsRepository
+                .findById(SlotSettings.SINGLETON_ID)
+                .orElseGet(this::createDefaults);
     }
 
     /**
@@ -59,16 +60,19 @@ public class SlotServiceImpl implements SlotService {
     private SlotSettings createDefaults() {
         SlotSettings defaults = settingsRepository.save(new SlotSettings());
         int removed = withdrawOpen(null);
-        log.info("[SlotService] Created default slot settings; replaced {} open slot(s) from the old grid", removed);
+        log.info(
+                "[SlotService] Created default slot settings; replaced {} open slot(s) from the old grid",
+                removed);
         return defaults;
     }
 
     @Override
     @Transactional(readOnly = true)
     public SlotSettingsDTO getSettings() {
-        return settingsRepository.findById(SlotSettings.SINGLETON_ID)
-            .map(SlotSettingsDTO::from)
-            .orElseGet(() -> SlotSettingsDTO.from(new SlotSettings()));
+        return settingsRepository
+                .findById(SlotSettings.SINGLETON_ID)
+                .map(SlotSettingsDTO::from)
+                .orElseGet(() -> SlotSettingsDTO.from(new SlotSettings()));
     }
 
     @Override
@@ -88,7 +92,10 @@ public class SlotServiceImpl implements SlotService {
         // Open slots move to the new grid; booked appointments keep their time.
         int withdrawn = withdrawOpen(null);
         int created = generateAll(s);
-        log.info("[SlotService] Settings updated: withdrew {} open slot(s), created {}", withdrawn, created);
+        log.info(
+                "[SlotService] Settings updated: withdrew {} open slot(s), created {}",
+                withdrawn,
+                created);
         return SlotSettingsDTO.from(s);
     }
 
@@ -96,7 +103,8 @@ public class SlotServiceImpl implements SlotService {
         if (!r.dayStart().isBefore(r.dayEnd())) {
             throw new BadRequestException("End of day must be after start of day");
         }
-        boolean hasBreakStart = r.breakStart() != null, hasBreakEnd = r.breakEnd() != null;
+        boolean hasBreakStart = r.breakStart() != null;
+        boolean hasBreakEnd = r.breakEnd() != null;
         if (hasBreakStart != hasBreakEnd) {
             throw new BadRequestException("Give both a break start and a break end, or neither");
         }
@@ -108,8 +116,10 @@ public class SlotServiceImpl implements SlotService {
                 throw new BadRequestException("The break must be inside working hours");
             }
         }
-        if (dailyGrid(r.dayStart(), r.dayEnd(), r.breakStart(), r.breakEnd(), r.slotMinutes()).isEmpty()) {
-            throw new BadRequestException("These hours leave no room for a single " + r.slotMinutes() + "-minute slot");
+        if (dailyGrid(r.dayStart(), r.dayEnd(), r.breakStart(), r.breakEnd(), r.slotMinutes())
+                .isEmpty()) {
+            throw new BadRequestException(
+                    "These hours leave no room for a single " + r.slotMinutes() + "-minute slot");
         }
     }
 
@@ -139,12 +149,24 @@ public class SlotServiceImpl implements SlotService {
         LocalDate today = now.toLocalDate();
         LocalDate lastDay = today.plusDays(s.getBookingWindowDays() - 1L);
         Set<DayOfWeek> workingDays = s.workingDaySet();
-        List<LocalTime[]> grid = dailyGrid(s.getDayStart(), s.getDayEnd(), s.getBreakStart(), s.getBreakEnd(), s.getSlotMinutes());
+        List<LocalTime[]> grid =
+                dailyGrid(
+                        s.getDayStart(),
+                        s.getDayEnd(),
+                        s.getBreakStart(),
+                        s.getBreakEnd(),
+                        s.getSlotMinutes());
 
-        // Every live slot the doctor already has in the window (open or booked); new ones must not overlap.
-        List<TimeSlot> taken = new ArrayList<>(timeSlotRepository
-            .findByDoctor_UserIdAndStatusNotAndEndTimeGreaterThanAndStartTimeLessThan(
-                doctor.getUserId(), SlotStatus.CANCELLED, today.atStartOfDay(), lastDay.plusDays(1).atStartOfDay()));
+        // Every live slot the doctor already has in the window (open or booked); new ones must not
+        // overlap.
+        List<TimeSlot> taken =
+                new ArrayList<>(
+                        timeSlotRepository
+                                .findByDoctor_UserIdAndStatusNotAndEndTimeGreaterThanAndStartTimeLessThan(
+                                        doctor.getUserId(),
+                                        SlotStatus.CANCELLED,
+                                        today.atStartOfDay(),
+                                        lastDay.plusDays(1).atStartOfDay()));
 
         List<TimeSlot> toCreate = new ArrayList<>();
         for (LocalDate day = today; !day.isAfter(lastDay); day = day.plusDays(1)) {
@@ -152,8 +174,8 @@ public class SlotServiceImpl implements SlotService {
             for (LocalTime[] times : grid) {
                 LocalDateTime start = day.atTime(times[0]);
                 LocalDateTime end = day.atTime(times[1]);
-                if (!start.isAfter(now)) continue;                      // never in the past
-                if (overlapsAny(taken, start, end)) continue;          // never on top of another slot
+                if (!start.isAfter(now)) continue; // never in the past
+                if (overlapsAny(taken, start, end)) continue; // never on top of another slot
                 TimeSlot slot = new TimeSlot();
                 slot.setDoctor(doctor);
                 slot.setStartTime(start);
@@ -168,25 +190,31 @@ public class SlotServiceImpl implements SlotService {
     }
 
     /** Start/end times of each slot in one working day. */
-    private static List<LocalTime[]> dailyGrid(LocalTime dayStart, LocalTime dayEnd,
-                                               LocalTime breakStart, LocalTime breakEnd, int minutes) {
+    private static List<LocalTime[]> dailyGrid(
+            LocalTime dayStart,
+            LocalTime dayEnd,
+            LocalTime breakStart,
+            LocalTime breakEnd,
+            int minutes) {
         List<LocalTime[]> grid = new ArrayList<>();
         boolean hasBreak = breakStart != null && breakEnd != null;
         LocalTime t = dayStart;
         while (true) {
             LocalTime end = t.plusMinutes(minutes);
-            if (!end.isAfter(t) || end.isAfter(dayEnd)) break;      // wrapped past midnight, or past closing
+            if (!end.isAfter(t) || end.isAfter(dayEnd))
+                break; // wrapped past midnight, or past closing
             if (hasBreak && t.isBefore(breakEnd) && end.isAfter(breakStart)) {
-                t = breakEnd.isAfter(t) ? breakEnd : end;           // skip over the break
+                t = breakEnd.isAfter(t) ? breakEnd : end; // skip over the break
                 continue;
             }
-            grid.add(new LocalTime[]{t, end});
+            grid.add(new LocalTime[] {t, end});
             t = end;
         }
         return grid;
     }
 
-    private static boolean overlapsAny(List<TimeSlot> slots, LocalDateTime start, LocalDateTime end) {
+    private static boolean overlapsAny(
+            List<TimeSlot> slots, LocalDateTime start, LocalDateTime end) {
         for (TimeSlot s : slots) {
             if (s.getStartTime().isBefore(end) && s.getEndTime().isAfter(start)) return true;
         }
@@ -203,7 +231,9 @@ public class SlotServiceImpl implements SlotService {
     private int withdrawOpen(String doctorId) {
         LocalDateTime now = LocalDateTime.now();
         int deleted = timeSlotRepository.deleteUnusedOpenSlots(doctorId, now, SlotStatus.AVAILABLE);
-        int withdrawn = timeSlotRepository.withdrawOpenSlots(doctorId, now, SlotStatus.AVAILABLE, SlotStatus.CANCELLED);
+        int withdrawn =
+                timeSlotRepository.withdrawOpenSlots(
+                        doctorId, now, SlotStatus.AVAILABLE, SlotStatus.CANCELLED);
         return deleted + withdrawn;
     }
 }

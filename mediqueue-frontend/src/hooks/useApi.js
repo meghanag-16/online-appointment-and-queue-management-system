@@ -5,14 +5,14 @@ import { useState, useCallback } from 'react'
  *
  * Usage:
  *   const { data, loading, error, execute } = useApi()
- *   execute(() => axiosInstance.get(ENDPOINTS.DOCTORS))
+ *   execute(() => axiosInstance.get(ENDPOINTS.DOCTORS_SEARCH()))
  */
 export function useApi() {
-  const [data, setData]       = useState(null)
+  const [data, setData] = useState(null)
   const [loading, setLoading] = useState(false)
-  const [error, setError]     = useState(null)
+  const [error, setError] = useState(null)
 
-  const execute = useCallback(async (apiFn) => {
+  const execute = useCallback(async apiFn => {
     setLoading(true)
     setError(null)
     try {

@@ -7,16 +7,15 @@ import com.mediqueue.exception.BadRequestException;
 import com.mediqueue.repository.AuditLogRepository;
 import com.mediqueue.repository.UserRepository;
 import com.mediqueue.security.AuthenticatedUser;
+import java.time.LocalDate;
+import java.util.Arrays;
+import java.util.List;
+import java.util.Locale;
 import org.springframework.data.domain.PageRequest;
 import org.springframework.security.core.Authentication;
 import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
-
-import java.time.LocalDate;
-import java.util.Arrays;
-import java.util.List;
-import java.util.Locale;
 
 @Service
 @Transactional
@@ -44,7 +43,11 @@ public class AuditServiceImpl implements AuditService {
         if (actor != null) {
             entry.setActorId(actor.userId());
             entry.setActorRole(actor.role().name());
-            entry.setActorName(userRepository.findById(actor.userId()).map(User::getName).orElse(actor.username()));
+            entry.setActorName(
+                    userRepository
+                            .findById(actor.userId())
+                            .map(User::getName)
+                            .orElse(actor.username()));
         } else {
             entry.setActorName("System");
             entry.setActorRole("SYSTEM");
@@ -54,7 +57,8 @@ public class AuditServiceImpl implements AuditService {
 
     @Override
     @Transactional(readOnly = true)
-    public List<AuditLogResponse> search(String action, LocalDate from, LocalDate to, String text, int limit) {
+    public List<AuditLogResponse> search(
+            String action, LocalDate from, LocalDate to, String text, int limit) {
         String act = blankToNull(action);
         if (act != null) {
             String upper = act.toUpperCase(Locale.ROOT);
@@ -67,12 +71,16 @@ public class AuditServiceImpl implements AuditService {
             throw new BadRequestException("The 'to' date must not be before the 'from' date");
         }
         int size = Math.max(1, Math.min(limit, MAX_LIMIT));
-        return auditLogRepository.search(act,
-                from != null ? from.atStartOfDay() : null,
-                to != null ? to.plusDays(1).atStartOfDay() : null,
-                blankToNull(text),
-                PageRequest.of(0, size))
-            .stream().map(AuditLogResponse::from).toList();
+        return auditLogRepository
+                .search(
+                        act,
+                        from != null ? from.atStartOfDay() : null,
+                        to != null ? to.plusDays(1).atStartOfDay() : null,
+                        blankToNull(text),
+                        PageRequest.of(0, size))
+                .stream()
+                .map(AuditLogResponse::from)
+                .toList();
     }
 
     private static AuthenticatedUser currentActor() {
@@ -80,5 +88,7 @@ public class AuditServiceImpl implements AuditService {
         return auth != null && auth.getPrincipal() instanceof AuthenticatedUser u ? u : null;
     }
 
-    private static String blankToNull(String s) { return s == null || s.isBlank() ? null : s.trim(); }
+    private static String blankToNull(String s) {
+        return s == null || s.isBlank() ? null : s.trim();
+    }
 }

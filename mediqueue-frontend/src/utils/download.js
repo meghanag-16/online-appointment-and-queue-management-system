@@ -6,7 +6,21 @@ import { ENDPOINTS } from '../api/endpoints'
  * under its original file name.
  */
 export async function downloadLabReport(report) {
-  const res = await axiosInstance.get(ENDPOINTS.LAB_DOWNLOAD(report.reportId), { responseType: 'blob' })
+  let res
+  try {
+    res = await axiosInstance.get(ENDPOINTS.LAB_DOWNLOAD(report.reportId), { responseType: 'blob' })
+  } catch (err) {
+    // With responseType 'blob' the JSON error body arrives as a Blob; read it so the real reason is shown.
+    const body = err.response?.data
+    if (body && typeof body.text === 'function') {
+      try {
+        err.response.data = JSON.parse(await body.text())
+      } catch {
+        /* not JSON: keep the generic message */
+      }
+    }
+    throw err
+  }
   const url = URL.createObjectURL(res.data)
   const a = document.createElement('a')
   a.href = url

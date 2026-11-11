@@ -19,21 +19,27 @@ export default function PatientAppointments() {
   const [message, setMessage] = useState('')
   const [rescheduling, setRescheduling] = useState(null)
 
-  useEffect(() => { load() }, [user.userId]) // eslint-disable-line react-hooks/exhaustive-deps
+  useEffect(() => {
+    load()
+  }, [user.userId]) // eslint-disable-line react-hooks/exhaustive-deps
 
   async function load() {
     setLoading(true)
     try {
       const res = await axiosInstance.get(ENDPOINTS.APPOINTMENTS_BY_PATIENT(user.userId))
-      setData(res.data); setError('')
+      setData(res.data)
+      setError('')
     } catch (err) {
       setError(errorMessage(err, 'Could not load your appointments.'))
-    } finally { setLoading(false) }
+    } finally {
+      setLoading(false)
+    }
   }
 
   async function cancel(a) {
     if (!window.confirm(`Cancel your appointment with ${a.doctorName} on ${formatSlot(a.startTime)}?`)) return
-    setMessage(''); setError('')
+    setMessage('')
+    setError('')
     try {
       await axiosInstance.patch(ENDPOINTS.CANCEL_APPOINTMENT(a.appointmentId))
       setMessage('Appointment cancelled. The slot is free for others again.')
@@ -47,7 +53,9 @@ export default function PatientAppointments() {
     <PageLayout>
       <PageTitle title="My Appointments" subtitle="All your past and upcoming appointments" />
       <div style={{ marginBottom: 16 }}>
-        <Link to="/patient/book" className="btn btn-primary">+ Book appointment</Link>
+        <Link to="/patient/book" className="btn btn-primary">
+          + Book appointment
+        </Link>
       </div>
       {message && <div className="alert alert-success">{message}</div>}
       {error && <div className="alert alert-error">{error}</div>}
@@ -57,11 +65,22 @@ export default function PatientAppointments() {
           <div className="table-wrapper">
             <table>
               <thead>
-                <tr><th>ID</th><th>Doctor</th><th>Date &amp; time</th><th>Reason</th><th>Status</th><th>Actions</th></tr>
+                <tr>
+                  <th>ID</th>
+                  <th>Doctor</th>
+                  <th>Date &amp; time</th>
+                  <th>Reason</th>
+                  <th>Status</th>
+                  <th>Actions</th>
+                </tr>
               </thead>
               <tbody>
                 {data.length === 0 && (
-                  <tr><td colSpan={6} style={{ textAlign: 'center', padding: 24, color: 'var(--color-text-muted)' }}>No appointments found</td></tr>
+                  <tr>
+                    <td colSpan={6} style={{ textAlign: 'center', padding: 24, color: 'var(--color-text-muted)' }}>
+                      No appointments found
+                    </td>
+                  </tr>
                 )}
                 {data.map(a => (
                   <tr key={a.appointmentId}>
@@ -77,16 +96,29 @@ export default function PatientAppointments() {
                       </div>
                     </td>
                     <td>{a.reasonForVisit || '—'}</td>
-                    <td><StatusBadge status={a.status} /></td>
+                    <td>
+                      <StatusBadge status={a.status} />
+                    </td>
                     <td style={{ whiteSpace: 'nowrap' }}>
                       {a.canReschedule && (
-                        <button className="btn btn-outline btn-sm" onClick={() => setRescheduling(a)}>Reschedule</button>
+                        <button className="btn btn-outline btn-sm" onClick={() => setRescheduling(a)}>
+                          Reschedule
+                        </button>
                       )}{' '}
                       {a.canCancel && (
-                        <button className="btn btn-outline btn-sm" style={{ color: 'var(--color-danger)' }} onClick={() => cancel(a)}>Cancel</button>
+                        <button
+                          className="btn btn-outline btn-sm"
+                          style={{ color: 'var(--color-danger)' }}
+                          onClick={() => cancel(a)}
+                        >
+                          Cancel
+                        </button>
                       )}
                       {!a.canCancel && ['BOOKED', 'CONFIRMED'].includes(a.status) && a.changeDeadline && (
-                        <span style={{ fontSize: 11, color: 'var(--color-text-muted)' }} title="Contact the front desk to change it">
+                        <span
+                          style={{ fontSize: 11, color: 'var(--color-text-muted)' }}
+                          title="Contact the front desk to change it"
+                        >
                           Too late to change online
                         </span>
                       )}
@@ -100,12 +132,15 @@ export default function PatientAppointments() {
       )}
 
       {rescheduling && (
-        <RescheduleDialog appointment={rescheduling} onClose={() => setRescheduling(null)}
-          onDone={(updated) => {
+        <RescheduleDialog
+          appointment={rescheduling}
+          onClose={() => setRescheduling(null)}
+          onDone={updated => {
             setRescheduling(null)
             setMessage(`Moved to ${formatSlot(updated.startTime)}.`)
             load()
-          }} />
+          }}
+        />
       )}
     </PageLayout>
   )

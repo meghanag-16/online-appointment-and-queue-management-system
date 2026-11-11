@@ -1,5 +1,4 @@
-import React from 'react'
-import { render, screen, fireEvent, waitFor, within } from '@testing-library/react'
+import { render, screen, fireEvent, waitFor } from '@testing-library/react'
 import '@testing-library/jest-dom'
 
 // ── Mock react-router-dom ─────────────────────────────────────────────────────
@@ -8,22 +7,26 @@ jest.mock('react-router-dom', () => ({
   ...jest.requireActual('react-router-dom'),
   useNavigate: () => mockNavigate,
   Link: ({ children, to }) => <a href={to}>{children}</a>,
-  NavLink: ({ children, to, style }) => <a href={to} style={typeof style === 'function' ? style({ isActive: false }) : style}>{children}</a>,
+  NavLink: ({ children, to, style }) => (
+    <a href={to} style={typeof style === 'function' ? style({ isActive: false }) : style}>
+      {children}
+    </a>
+  ),
 }))
 
 // ── Mock AuthContext ───────────────────────────────────────────────────────────
-const mockLogin    = jest.fn()
+const mockLogin = jest.fn()
 const mockRegister = jest.fn()
-const mockLogout   = jest.fn()
+const mockLogout = jest.fn()
 
 let mockUser = null
 
 jest.mock('../context/AuthContext', () => ({
   useAuth: () => ({
-    user:            mockUser,
-    login:           mockLogin,
-    logout:          mockLogout,
-    register:        mockRegister,
+    user: mockUser,
+    login: mockLogin,
+    logout: mockLogout,
+    register: mockRegister,
     isAuthenticated: !!mockUser,
   }),
   AuthProvider: ({ children }) => <>{children}</>,
@@ -32,21 +35,19 @@ jest.mock('../context/AuthContext', () => ({
 // ── Mock axiosInstance ────────────────────────────────────────────────────────
 jest.mock('../api/axiosInstance', () => ({
   default: {
-    get:  jest.fn(),
+    get: jest.fn(),
     post: jest.fn(),
     patch: jest.fn(),
   },
 }))
 
-import axiosInstance from '../api/axiosInstance'
-
 // ─────────────────────────────────────────────────────────────────────────────
 // Component imports
 // ─────────────────────────────────────────────────────────────────────────────
-import StatusBadge  from '../components/common/StatusBadge'
-import Spinner      from '../components/common/Spinner'
-import PageTitle    from '../components/common/PageTitle'
-import LoginPage    from '../pages/auth/LoginPage'
+import StatusBadge from '../components/common/StatusBadge'
+import Spinner from '../components/common/Spinner'
+import PageTitle from '../components/common/PageTitle'
+import LoginPage from '../pages/auth/LoginPage'
 import RegisterPage from '../pages/auth/RegisterPage'
 
 // ─────────────────────────────────────────────────────────────────────────────
@@ -169,7 +170,7 @@ describe('LoginPage', () => {
 
   test('shows error message on failed login', async () => {
     mockLogin.mockRejectedValue({
-      response: { data: { error: 'Invalid credentials' } }
+      response: { data: { error: 'Invalid credentials' } },
     })
     render(<LoginPage />)
 
@@ -222,36 +223,41 @@ describe('RegisterPage', () => {
     mockRegister.mockResolvedValue({ role: 'PATIENT', userId: 'p2', username: 'bob' })
     render(<RegisterPage />)
 
-    fireEvent.change(screen.getByPlaceholderText(/full name/i),   { target: { value: 'Bob Kumar' } })
-    fireEvent.change(screen.getByPlaceholderText(/username/i),    { target: { value: 'bob' } })
+    fireEvent.change(screen.getByPlaceholderText(/full name/i), { target: { value: 'Bob Kumar' } })
+    fireEvent.change(screen.getByPlaceholderText(/username/i), { target: { value: 'bob' } })
     fireEvent.change(screen.getByPlaceholderText(/you@example/i), { target: { value: 'bob@x.com' } })
-    fireEvent.change(screen.getByPlaceholderText(/min. 8/i),      { target: { value: 'password1' } })
+    fireEvent.change(screen.getByPlaceholderText(/min. 8/i), { target: { value: 'password1' } })
     fireEvent.change(screen.getByPlaceholderText(/enter phone number/i), { target: { value: '9876543210' } })
-    fireEvent.change(screen.getByLabelText(/gender/i),               { target: { value: 'MALE' } })
-    fireEvent.change(screen.getByLabelText(/date of birth/i),         { target: { value: '1990-01-01' } })
+    fireEvent.change(screen.getByLabelText(/gender/i), { target: { value: 'MALE' } })
+    fireEvent.change(screen.getByLabelText(/date of birth/i), { target: { value: '1990-01-01' } })
     fireEvent.click(screen.getByRole('button', { name: /register/i }))
 
     await waitFor(() => {
-      expect(mockRegister).toHaveBeenCalledWith(expect.objectContaining({
-        name: 'Bob Kumar', username: 'bob', email: 'bob@x.com',
-        password: 'password1', role: 'PATIENT',
-      }))
+      expect(mockRegister).toHaveBeenCalledWith(
+        expect.objectContaining({
+          name: 'Bob Kumar',
+          username: 'bob',
+          email: 'bob@x.com',
+          password: 'password1',
+          role: 'PATIENT',
+        }),
+      )
     })
   })
 
   test('shows error on registration failure', async () => {
     mockRegister.mockRejectedValue({
-      response: { data: { error: 'Username already taken: bob' } }
+      response: { data: { error: 'Username already taken: bob' } },
     })
     render(<RegisterPage />)
 
-    fireEvent.change(screen.getByPlaceholderText(/full name/i),   { target: { value: 'Bob' } })
-    fireEvent.change(screen.getByPlaceholderText(/username/i),    { target: { value: 'bob' } })
+    fireEvent.change(screen.getByPlaceholderText(/full name/i), { target: { value: 'Bob' } })
+    fireEvent.change(screen.getByPlaceholderText(/username/i), { target: { value: 'bob' } })
     fireEvent.change(screen.getByPlaceholderText(/you@example/i), { target: { value: 'b@x.com' } })
-    fireEvent.change(screen.getByPlaceholderText(/min. 8/i),      { target: { value: 'password1' } })
+    fireEvent.change(screen.getByPlaceholderText(/min. 8/i), { target: { value: 'password1' } })
     fireEvent.change(screen.getByPlaceholderText(/enter phone number/i), { target: { value: '9876543210' } })
-    fireEvent.change(screen.getByLabelText(/gender/i),               { target: { value: 'FEMALE' } })
-    fireEvent.change(screen.getByLabelText(/date of birth/i),         { target: { value: '1992-05-20' } })
+    fireEvent.change(screen.getByLabelText(/gender/i), { target: { value: 'FEMALE' } })
+    fireEvent.change(screen.getByLabelText(/date of birth/i), { target: { value: '1992-05-20' } })
     fireEvent.click(screen.getByRole('button', { name: /register/i }))
 
     await waitFor(() => {
@@ -263,7 +269,7 @@ describe('RegisterPage', () => {
 // ─────────────────────────────────────────────────────────────────────────────
 // formatters utility
 // ─────────────────────────────────────────────────────────────────────────────
-import { formatDate, formatCurrency, formatEnum, formatDateTime } from '../utils/formatters'
+import { formatDate, formatCurrency, formatEnum } from '../utils/formatters'
 
 describe('formatters', () => {
   test('formatDate handles null/undefined', () => {

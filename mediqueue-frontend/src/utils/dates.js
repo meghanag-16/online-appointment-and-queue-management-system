@@ -41,7 +41,12 @@ export function formatDayLabel(yyyyMmDd) {
 export function formatSlot(isoDateTime) {
   if (!isoDateTime) return '—'
   return new Date(isoDateTime).toLocaleString('en-IN', {
-    weekday: 'short', day: '2-digit', month: 'short', year: 'numeric',
-    hour: '2-digit', minute: '2-digit', hour12: true,
+    weekday: 'short',
+    day: '2-digit',
+    month: 'short',
+    year: 'numeric',
+    hour: '2-digit',
+    minute: '2-digit',
+    hour12: true,
   })
 }

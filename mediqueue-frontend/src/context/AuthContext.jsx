@@ -5,8 +5,14 @@ import { TOKEN_KEY, USER_KEY } from '../api/axiosInstance'
 const AuthContext = createContext(null)
 
 function store(data) {
-  const userData = { token: data.token, userId: data.userId, username: data.username, name: data.name, role: data.role,
-    mustChangePassword: !!data.mustChangePassword }
+  const userData = {
+    token: data.token,
+    userId: data.userId,
+    username: data.username,
+    name: data.name,
+    role: data.role,
+    mustChangePassword: !!data.mustChangePassword,
+  }
   localStorage.setItem(TOKEN_KEY, data.token)
   localStorage.setItem(USER_KEY, JSON.stringify(userData))
   return userData
@@ -30,7 +36,7 @@ export function AuthProvider({ children }) {
   }, [])
 
   /** Patient sign-up; the new patient is logged in straight away. */
-  const register = useCallback(async (payload) => {
+  const register = useCallback(async payload => {
     const res = await registerUser(payload)
     const userData = store(res.data)
     setUser(userData)
@@ -38,7 +44,7 @@ export function AuthProvider({ children }) {
   }, [])
 
   /** Keep the stored name in sync after the user edits their profile. */
-  const updateUser = useCallback((changes) => {
+  const updateUser = useCallback(changes => {
     setUser(prev => {
       if (!prev) return prev
       const next = { ...prev, ...changes }

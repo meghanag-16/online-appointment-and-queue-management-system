@@ -1,4 +1,4 @@
-import { defineConfig } from 'cypress';
+import { defineConfig } from 'cypress'
 
 export default defineConfig({
   e2e: {
@@ -10,7 +10,7 @@ export default defineConfig({
     defaultCommandTimeout: 10000,
     requestTimeout: 10000,
     responseTimeout: 10000,
-    setupNodeEvents(on, config) {
+    setupNodeEvents() {
       // implement node event listeners here
     },
   },
@@ -20,4 +20,4 @@ export default defineConfig({
       bundler: 'vite',
     },
   },
-});
+})
