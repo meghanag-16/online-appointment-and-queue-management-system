@@ -163,10 +163,13 @@ CREATE TABLE virtual_queue (
     queue_date      DATE,
     queue_position  INT,
     visit_status    ENUM('WAITING','CALLED','IN_CONSULTATION','FINISHED') DEFAULT 'WAITING',
+    called_at       DATETIME NULL,
+    override_position INT NULL,
     CONSTRAINT fk_vq_doctor FOREIGN KEY (doctor_id)
         REFERENCES doctors(user_id) ON DELETE CASCADE,
     CONSTRAINT fk_vq_appointment FOREIGN KEY (appointment_id)
-        REFERENCES appointments(appointment_id) ON DELETE CASCADE
+        REFERENCES appointments(appointment_id) ON DELETE CASCADE,
+    INDEX idx_vq_doctor_date (doctor_id, queue_date)
 );
 
 

@@ -5,6 +5,7 @@ import com.mediqueue.dto.DoctorDashboardResponse;
 import com.mediqueue.dto.QueueEntryResponse;
 import com.mediqueue.dto.SlotResponse;
 import com.mediqueue.service.DoctorService;
+import com.mediqueue.service.QueueService;
 import org.springframework.format.annotation.DateTimeFormat;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.access.prepost.PreAuthorize;
@@ -18,9 +19,11 @@ import java.util.List;
 public class DoctorController {
 
     private final DoctorService doctorService;
+    private final QueueService queueService;
 
-    public DoctorController(DoctorService doctorService) {
+    public DoctorController(DoctorService doctorService, QueueService queueService) {
         this.doctorService = doctorService;
+        this.queueService = queueService;
     }
 
     /** Open future slots; ?date=YYYY-MM-DD for one day only. Empty for an inactive doctor. */
@@ -54,6 +57,6 @@ public class DoctorController {
     @GetMapping("/doctor/queue/{doctorId}")
     @PreAuthorize("hasAnyRole('DOCTOR','ADMINISTRATOR')")
     public ResponseEntity<List<QueueEntryResponse>> getDoctorQueue(@PathVariable String doctorId) {
-        return ResponseEntity.ok(doctorService.getTodayQueue(doctorId));
+        return ResponseEntity.ok(queueService.getQueue(doctorId, null));   // same as GET /queue/doctor/{id}
     }
 }

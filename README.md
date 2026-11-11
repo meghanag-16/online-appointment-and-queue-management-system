@@ -4,13 +4,15 @@ A web-based hospital system that streamlines doctor appointments, manages a virt
 
 MediQueue gives every user a secure login, and the features they see depend on their role:
 
-- **Patient** — signs up, finds doctors by department, name/specialization and available day, books a time slot (with clickable alternate slots when the chosen one is taken), cancels or reschedules up to a cutoff before the visit, views bills and medical records, and raises complaints.
-- **Doctor** — sees a dashboard and daily queue, views appointments and marks them In Progress / Completed / No Show, and issues digital prescriptions.
+- **Patient** — signs up, finds doctors by department, name/specialization and available day, books a time slot (with clickable alternate slots when the chosen one is taken), cancels or reschedules up to a cutoff before the visit, sees prescriptions as soon as they are issued, views bills and their medical record, and raises complaints.
+- **Doctor** — runs a live daily queue (call next, start, finish, no-show), opens a patient's history (allergies, past diagnoses, prescriptions, visits) for patients on their own appointments, and issues digital prescriptions that complete the visit and update the patient's medical record.
 - **Lab Technician** — uploads diagnostic reports (PDF / images) against an appointment.
-- **Receptionist** — views and filters all appointments, moves them through the allowed statuses, cancels or reschedules them, and books on behalf of walk-in or phone patients (patient and doctor pickers), including high-priority cases.
-- **Administrator** — creates all doctor and staff accounts, deactivates users, manages departments, sets the slot schedule (slot length, hours, break, working days, booking window, cancel cutoff), and resolves patient complaints.
+- **Receptionist** — views and filters all appointments, moves them through the allowed statuses, cancels or reschedules them, books on behalf of walk-in or phone patients (patient and doctor pickers), and marks patients high priority, which reorders the doctor's queue at once.
+- **Administrator** — creates all doctor and staff accounts, deactivates users, manages departments, sets the slot schedule (slot length, hours, break, working days, booking window, cancel cutoff), can override the order of any doctor's queue, and resolves patient complaints.
 
 Every user has a **My Profile** page to edit their own details and change their password.
+
+**Virtual queue.** Every booking joins the doctor's queue for that day. Appointment changes reach the queue through the Observer pattern (`event/AppointmentEventPublisher` notifies `QueueManager`), so booking, cancelling, rescheduling, status and priority changes all update it straight away. Order: patients already called or in consultation stay at the front; waiting patients go high priority first, then by slot time; an administrator override pins a waiting patient to a chosen position. Queue screens refresh every 5 seconds.
 
 Doctor time slots are generated automatically for every active doctor from the administrator's **Slot Settings** (default: 30-minute slots, 09:00–17:00 with a 13:00–14:00 break, Monday–Saturday, 7 days ahead; patients may cancel or reschedule until 2 hours before). Slots are topped up at startup and every night, and regenerated when the settings change; booked appointments keep their time. All dates and times use the hospital time zone (Asia/Kolkata, set with `APP_TIMEZONE`). Bills are generated when an appointment is booked, using the Strategy pattern (standard, emergency and follow-up rates).
 
@@ -108,10 +110,11 @@ Requires Java 17+, Maven, Node.js 20+ and MySQL 8.
 Fresh databases get everything from `schema.sql`. If your database was created earlier, run the files in `db/migrations/` once:
 
 ```bash
-mysql -u root -p mediqueue < db/migrations/phase2_scheduling_and_booking.sql
+mysql -u root -p mediqueue < db/migrations/scheduling_and_booking.sql
+mysql -u root -p mediqueue < db/migrations/queue_and_clinical_records.sql
 ```
 
-With Docker: `docker exec -i mediqueue-db mysql -uroot -proot mediqueue < db/migrations/phase2_scheduling_and_booking.sql` (or start fresh with `docker compose down -v`).
+Run them in that order; skip any you have already run. With Docker: `docker exec -i mediqueue-db mysql -uroot -proot mediqueue < db/migrations/<file>.sql` (or start fresh with `docker compose down -v`).
 
 ### Demo accounts
 
@@ -136,11 +139,9 @@ cd mediqueue-frontend && npx cypress run   # end-to-end tests (app must be runni
 
 The project is under active development. Known limitations at present:
 
-- The doctor's virtual queue is not yet populated automatically, so the queue view and "In Queue" count stay empty; priority-based reordering is not active yet.
-- Patients cannot yet view prescriptions or download lab reports.
+- Patients cannot yet download lab reports.
 - Cancelled appointments keep a pending bill (refunds come with the billing rework).
-- Doctors cannot yet open a patient's medical history; medical records are not updated after a consultation.
 - Lab technicians can upload reports, but there is no download link yet, and file types are not restricted to PDF and images.
-- Notifications (reminders, report-ready, prescription alerts) are only printed to the server log; no email or SMS is sent.
-- Queue-priority override and the audit log are not implemented yet.
+- Notifications (reminders, report-ready, prescription alerts) are only printed to the server log; they are not stored or sent by email/SMS yet.
+- The audit log is not implemented yet.
 - Several Cypress tests are out of date with the current pages and fail.

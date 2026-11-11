@@ -18,6 +18,7 @@ import com.mediqueue.factory.UserFactory;
 import com.mediqueue.repository.DepartmentRepository;
 import com.mediqueue.repository.UserRepository;
 import com.mediqueue.security.CurrentUserService;
+import com.mediqueue.service.MedicalRecordService;
 import com.mediqueue.service.SlotService;
 import com.mediqueue.service.UserAccountService;
 import org.springframework.security.crypto.password.PasswordEncoder;
@@ -37,19 +38,22 @@ public class UserAccountServiceImpl implements UserAccountService {
     private final PasswordEncoder passwordEncoder;
     private final CurrentUserService currentUser;
     private final SlotService slotService;
+    private final MedicalRecordService medicalRecordService;
 
     public UserAccountServiceImpl(UserRepository userRepository,
                                   DepartmentRepository departmentRepository,
                                   UserFactory userFactory,
                                   PasswordEncoder passwordEncoder,
                                   CurrentUserService currentUser,
-                                  SlotService slotService) {
+                                  SlotService slotService,
+                                  MedicalRecordService medicalRecordService) {
         this.userRepository = userRepository;
         this.departmentRepository = departmentRepository;
         this.userFactory = userFactory;
         this.passwordEncoder = passwordEncoder;
         this.currentUser = currentUser;
         this.slotService = slotService;
+        this.medicalRecordService = medicalRecordService;
     }
 
     @Override
@@ -118,7 +122,9 @@ public class UserAccountServiceImpl implements UserAccountService {
             doctor.setConsultationFee(req.getConsultationFee());
         }
 
-        return userRepository.save(user);
+        User saved = userRepository.save(user);
+        if (saved instanceof Patient patient) medicalRecordService.ensureRecord(patient);   // one record per patient
+        return saved;
     }
 
     @Override

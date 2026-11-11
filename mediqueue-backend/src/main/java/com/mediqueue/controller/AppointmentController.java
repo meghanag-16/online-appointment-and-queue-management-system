@@ -3,6 +3,7 @@ package com.mediqueue.controller;
 import com.mediqueue.dto.AppointmentResponse;
 import com.mediqueue.dto.AppointmentStatsResponse;
 import com.mediqueue.dto.BookAppointmentRequest;
+import com.mediqueue.dto.PriorityUpdateRequest;
 import com.mediqueue.dto.RescheduleRequest;
 import com.mediqueue.dto.StatusUpdateRequest;
 import com.mediqueue.service.AppointmentService;
@@ -76,6 +77,14 @@ public class AppointmentController {
     public ResponseEntity<AppointmentResponse> updateStatus(@PathVariable Long id,
                                                             @Valid @RequestBody StatusUpdateRequest body) {
         return ResponseEntity.ok(appointmentService.updateStatus(id, body.status()));
+    }
+
+    /** Receptionist/Admin: {"priority": "HIGH_PRIORITY" | "NORMAL"}; the doctor's queue reorders at once. */
+    @PatchMapping("/{id}/priority")
+    @PreAuthorize("hasAnyRole('RECEPTIONIST','ADMINISTRATOR')")
+    public ResponseEntity<AppointmentResponse> updatePriority(@PathVariable Long id,
+                                                              @Valid @RequestBody PriorityUpdateRequest body) {
+        return ResponseEntity.ok(appointmentService.updatePriority(id, body.priority()));
     }
 
     @PatchMapping("/{id}/cancel")

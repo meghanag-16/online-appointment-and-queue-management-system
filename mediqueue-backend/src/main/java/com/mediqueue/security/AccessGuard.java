@@ -65,10 +65,9 @@ public class AccessGuard {
         throw new ForbiddenException("Access denied: this appointment belongs to someone else");
     }
 
-    /** Clinical writes (prescriptions): only the appointment's own doctor; administrators may override. */
+    /** Clinical writes (prescriptions): only the appointment's own doctor. */
     public void requireTreatingDoctor(Appointment a) {
         AuthenticatedUser me = currentUser.get();
-        if (me.is(UserRole.ADMINISTRATOR)) return;
         if (me.is(UserRole.DOCTOR) && a.getDoctor() != null && me.userId().equals(a.getDoctor().getUserId())) return;
         throw new ForbiddenException("Access denied: only the doctor on this appointment can do this");
     }

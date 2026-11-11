@@ -7,6 +7,7 @@ const NAV_LINKS = {
     { to: '/patient/appointments', label: 'Appointments' },
     { to: '/patient/book',         label: 'Book Slot'    },
     { to: '/patient/billing',      label: 'Billing'      },
+    { to: '/patient/prescriptions', label: 'Prescriptions' },
     { to: '/patient/records',      label: 'My Records'   },
     { to: '/patient/complaints',   label: 'Complaints'   },
   ],
@@ -23,11 +24,13 @@ const NAV_LINKS = {
   RECEPTIONIST: [
     { to: '/receptionist/dashboard',    label: 'Dashboard'    },
     { to: '/receptionist/appointments', label: 'Appointments' },
+    { to: '/receptionist/queue',        label: 'Queues'       },
   ],
   ADMINISTRATOR: [
     { to: '/admin/dashboard',   label: 'Dashboard'   },
     { to: '/admin/users',       label: 'Users'       },
     { to: '/admin/doctors',     label: 'Doctors'     },
+    { to: '/admin/queue',       label: 'Queues'      },
     { to: '/admin/departments', label: 'Departments' },
     { to: '/admin/complaints',  label: 'Complaints'  },
     { to: '/admin/settings',    label: 'Slot Settings' },

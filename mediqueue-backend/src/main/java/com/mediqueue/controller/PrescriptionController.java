@@ -11,7 +11,7 @@ import org.springframework.web.bind.annotation.*;
 
 import java.util.List;
 
-/** Lab technicians and patients cannot create prescriptions; only the appointment's doctor can. */
+/** Only the appointment's own doctor can issue a prescription; patients read their own. */
 @RestController
 @RequestMapping("/api/v1/prescriptions")
 public class PrescriptionController {
@@ -23,7 +23,7 @@ public class PrescriptionController {
     }
 
     @PostMapping
-    @PreAuthorize("hasAnyRole('DOCTOR','ADMINISTRATOR')")
+    @PreAuthorize("hasRole('DOCTOR')")
     public ResponseEntity<PrescriptionResponse> createPrescription(@Valid @RequestBody PrescriptionRequest request) {
         return ResponseEntity.status(HttpStatus.CREATED).body(prescriptionService.create(request));
     }
@@ -32,5 +32,18 @@ public class PrescriptionController {
     @PreAuthorize("hasAnyRole('DOCTOR','ADMINISTRATOR')")
     public ResponseEntity<List<PrescriptionResponse>> getPrescriptionsByDoctor(@PathVariable String doctorId) {
         return ResponseEntity.ok(prescriptionService.getByDoctor(doctorId));
+    }
+
+    /** The patient's own prescriptions (also their treating doctors and staff). */
+    @GetMapping("/patient/{patientId}")
+    @PreAuthorize("hasAnyRole('PATIENT','DOCTOR','RECEPTIONIST','ADMINISTRATOR')")
+    public ResponseEntity<List<PrescriptionResponse>> getPrescriptionsByPatient(@PathVariable String patientId) {
+        return ResponseEntity.ok(prescriptionService.getByPatient(patientId));
+    }
+
+    @GetMapping("/appointment/{appointmentId}")
+    @PreAuthorize("hasAnyRole('PATIENT','DOCTOR','RECEPTIONIST','ADMINISTRATOR')")
+    public ResponseEntity<PrescriptionResponse> getPrescriptionForAppointment(@PathVariable Long appointmentId) {
+        return ResponseEntity.ok(prescriptionService.getByAppointment(appointmentId));
     }
 }

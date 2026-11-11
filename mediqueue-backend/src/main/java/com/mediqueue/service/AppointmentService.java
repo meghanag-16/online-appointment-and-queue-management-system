@@ -21,4 +21,6 @@ public interface AppointmentService {
     /** Status change following the allowed transitions; CANCELLED also frees the slot. */
     AppointmentResponse updateStatus(Long appointmentId, String status);
     AppointmentStatsResponse getStats();
+    /** Receptionist/administrator marks an appointment HIGH_PRIORITY (or back to NORMAL); the queue reorders. */
+    AppointmentResponse updatePriority(Long appointmentId, String priority);
 }
