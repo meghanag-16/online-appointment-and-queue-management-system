@@ -32,9 +32,12 @@ import java.util.Locale;
 @Transactional(readOnly = true)
 public class DoctorServiceImpl implements DoctorService {
 
-    /** Appointments that still need a prescription once seen (excludes cancelled and no-show). */
-    private static final List<AppointmentStatus> PRESCRIBABLE_STATUSES = List.of(
+    /** Today: any visit that is on or done can still need a prescription. */
+    private static final List<AppointmentStatus> PRESCRIBABLE_TODAY = List.of(
         AppointmentStatus.BOOKED, AppointmentStatus.CONFIRMED,
+        AppointmentStatus.IN_PROGRESS, AppointmentStatus.COMPLETED);
+    /** Earlier days: only visits that actually happened (never-attended bookings are not counted). */
+    private static final List<AppointmentStatus> PRESCRIBABLE_PAST = List.of(
         AppointmentStatus.IN_PROGRESS, AppointmentStatus.COMPLETED);
 
     private final DoctorRepository doctorRepository;
@@ -127,8 +130,8 @@ public class DoctorServiceImpl implements DoctorService {
                 doctorId, today, AppointmentStatus.CANCELLED),
             virtualQueueRepository.countByDoctor_UserIdAndQueueDateAndVisitStatus(
                 doctorId, today, QueueStatus.WAITING),
-            // one query, and only appointments up to today (not every future booking)
-            appointmentRepository.countWithoutPrescription(doctorId, today, PRESCRIBABLE_STATUSES),
+            // one query: today's visits plus earlier visits that took place, without a prescription
+            appointmentRepository.countWithoutPrescription(doctorId, today, PRESCRIBABLE_TODAY, PRESCRIBABLE_PAST),
             appointmentRepository.countByDoctor_UserIdAndAppointmentDateAndAppointmentStatus(
                 doctorId, today, AppointmentStatus.COMPLETED));
     }

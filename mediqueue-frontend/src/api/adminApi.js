@@ -7,6 +7,10 @@ export const getAllDoctors = () =>
 export const onboardDoctor = (doctorData) =>
   axiosInstance.post('/admin/doctors', doctorData);
 
+/** { departmentId, specialization, qualification, consultationFee } */
+export const updateDoctor = (doctorId, details) =>
+  axiosInstance.put(`/admin/doctors/${doctorId}`, details);
+
 export const deactivateDoctor = (doctorId) =>
   axiosInstance.put(`/admin/doctors/${doctorId}/deactivate`);
 

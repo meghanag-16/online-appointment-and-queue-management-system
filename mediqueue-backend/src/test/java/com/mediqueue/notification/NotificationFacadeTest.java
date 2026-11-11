@@ -66,9 +66,9 @@ class NotificationFacadeTest {
     void doctorTitleIsNotDoubled() {
         Doctor d = new Doctor();
         d.setName("Dr. Arjun Mehta");
-        assertEquals("Dr. Arjun Mehta", NotificationFacadeImpl.doctor(d));
+        assertEquals("Dr. Arjun Mehta", com.mediqueue.util.DisplayText.doctor(d));
         d.setName("Arjun Mehta");
-        assertEquals("Dr. Arjun Mehta", NotificationFacadeImpl.doctor(d));
+        assertEquals("Dr. Arjun Mehta", com.mediqueue.util.DisplayText.doctor(d));
     }
 
     @Test

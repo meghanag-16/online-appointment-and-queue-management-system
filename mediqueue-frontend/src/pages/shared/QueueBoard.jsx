@@ -22,6 +22,7 @@ export default function QueueBoard() {
   const [doctorId, setDoctorId] = useState('')
   const [queue, setQueue] = useState(null)
   const [error, setError] = useState('')
+  const [loadError, setLoadError] = useState('')
   const [message, setMessage] = useState('')
   const [busy, setBusy] = useState(false)
 
@@ -35,8 +36,8 @@ export default function QueueBoard() {
     if (!doctorId) return
     try {
       const res = await axiosInstance.get(ENDPOINTS.QUEUE(doctorId))
-      setQueue(res.data)
-    } catch (err) { setError(errorMessage(err, 'Could not load the queue.')) }
+      setQueue(res.data); setLoadError('')
+    } catch (err) { setLoadError(errorMessage(err, 'Could not load the queue.')) }
   }
   usePolling(load, REFRESH_MS, [doctorId])
 
@@ -82,6 +83,7 @@ export default function QueueBoard() {
         subtitle={isAdmin ? 'Mark priority or override the order of waiting patients' : 'Mark patients high priority; the queue reorders at once'} />
       {message && <div className="alert alert-success">{message}</div>}
       {error && <div className="alert alert-error">{error}</div>}
+      {loadError && <div className="alert alert-error">{loadError}</div>}
       <div className="form-group" style={{ maxWidth: 360 }}>
         <label htmlFor="qb-doctor">Doctor</label>
         <select id="qb-doctor" className="form-control" value={doctorId} onChange={e => { setDoctorId(e.target.value); setQueue(null) }}>

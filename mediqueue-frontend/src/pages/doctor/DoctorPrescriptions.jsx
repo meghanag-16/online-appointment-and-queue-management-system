@@ -12,6 +12,7 @@ import { formatTime, todayLocal, toLocalDateString } from '../../utils/dates'
 
 const EMPTY = { diagnosisNotes: '', medicationList: '', advice: '', followUpDate: '' }
 const OPEN = ['BOOKED', 'CONFIRMED', 'IN_PROGRESS', 'COMPLETED']
+const PAST_VISIT = ['IN_PROGRESS', 'COMPLETED']
 
 /**
  * Issue a prescription for one of your own appointments (today or earlier, not yet prescribed).
@@ -43,10 +44,13 @@ export default function DoctorPrescriptions() {
     } catch (err) { setError(errorMessage(err, 'Could not load your appointments.')) }
   }
 
-  // Appointments that can still get a prescription: today or earlier, not cancelled/no-show, none issued.
+  // Appointments that can still get a prescription (none issued yet): any of today's visits, plus
+  // earlier visits that actually took place. Old bookings that were never attended are left out.
   const today = todayLocal()
   const pending = useMemo(() => appointments
-    .filter(a => OPEN.includes(a.status) && !a.hasPrescription && a.appointmentDate && a.appointmentDate <= today)
+    .filter(a => !a.hasPrescription && a.appointmentDate && (
+      (a.appointmentDate === today && OPEN.includes(a.status))
+      || (a.appointmentDate < today && PAST_VISIT.includes(a.status))))
     .sort((x, y) => (y.startTime || '').localeCompare(x.startTime || '')), [appointments, today])
   const selected = pending.find(a => String(a.appointmentId) === String(selectedId))
 

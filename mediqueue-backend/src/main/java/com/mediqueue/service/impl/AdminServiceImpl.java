@@ -1,5 +1,6 @@
 package com.mediqueue.service.impl;
 
+import com.mediqueue.service.AppointmentService;
 import com.mediqueue.audit.AuditAction;
 import com.mediqueue.audit.AuditService;
 import com.mediqueue.dto.AccountCreatedResponse;
@@ -7,6 +8,7 @@ import com.mediqueue.dto.AdminDashboardResponse;
 import com.mediqueue.dto.DepartmentDTO;
 import com.mediqueue.dto.DepartmentRequest;
 import com.mediqueue.dto.DoctorDTO;
+import com.mediqueue.dto.DoctorUpdateRequest;
 import com.mediqueue.dto.RegisterRequest;
 import com.mediqueue.entity.Department;
 import com.mediqueue.entity.Doctor;
@@ -15,6 +17,7 @@ import com.mediqueue.entity.enums.AppointmentStatus;
 import com.mediqueue.entity.enums.PaymentStatus;
 import com.mediqueue.entity.enums.ResolutionStatus;
 import com.mediqueue.entity.enums.UserRole;
+import com.mediqueue.exception.BadRequestException;
 import com.mediqueue.exception.DuplicateResourceException;
 import com.mediqueue.exception.ResourceNotFoundException;
 import com.mediqueue.repository.AppointmentRepository;
@@ -51,6 +54,7 @@ public class AdminServiceImpl implements AdminService {
     private final SlotService slotService;
     private final BillRepository billRepository;
     private final AuditService auditService;
+    private final AppointmentService appointmentService;
 
     public AdminServiceImpl(DoctorRepository doctorRepository,
                             DepartmentRepository departmentRepository,
@@ -60,7 +64,8 @@ public class AdminServiceImpl implements AdminService {
                             UserAccountService userAccountService,
                             SlotService slotService,
                             BillRepository billRepository,
-                            AuditService auditService) {
+                            AuditService auditService,
+                            AppointmentService appointmentService) {
         this.doctorRepository = doctorRepository;
         this.departmentRepository = departmentRepository;
         this.userRepository = userRepository;
@@ -70,6 +75,7 @@ public class AdminServiceImpl implements AdminService {
         this.slotService = slotService;
         this.billRepository = billRepository;
         this.auditService = auditService;
+        this.appointmentService = appointmentService;
     }
 
     @Override
@@ -101,12 +107,32 @@ public class AdminServiceImpl implements AdminService {
             .orElseThrow(() -> new ResourceNotFoundException("Doctor not found: " + doctorId));
         AccountStatus previous = doctor.getAccountStatus();
         doctor.setAccountStatus(AccountStatus.DEACTIVATED);
-        Doctor saved = doctorRepository.save(doctor);
+        Doctor saved = doctorRepository.saveAndFlush(doctor);
+        slotService.withdrawOpenSlots(doctorId);   // a deactivated doctor can no longer be booked
+        int cancelled = appointmentService.cancelUpcomingForDoctor(doctorId);
         if (previous != AccountStatus.DEACTIVATED) {
             auditService.record(AuditAction.USER_STATUS_CHANGED, "USER", doctorId,
-                saved.getName() + " (DOCTOR): " + previous + " → DEACTIVATED");
+                saved.getName() + " (DOCTOR): " + previous + " → DEACTIVATED; "
+                    + cancelled + " upcoming appointment(s) cancelled");
         }
-        slotService.withdrawOpenSlots(doctorId);   // a deactivated doctor can no longer be booked
+        return DoctorDTO.from(saved);
+    }
+
+    @Override
+    public DoctorDTO updateDoctor(String doctorId, DoctorUpdateRequest request) {
+        Doctor doctor = doctorRepository.findById(doctorId)
+            .orElseThrow(() -> new ResourceNotFoundException("Doctor not found: " + doctorId));
+        Department department = departmentRepository.findById(request.departmentId().trim())
+            .orElseThrow(() -> new BadRequestException("Department not found: " + request.departmentId()));
+        doctor.setDepartment(department);
+        doctor.setSpecialization(request.specialization().trim());
+        doctor.setQualification(request.qualification() == null || request.qualification().isBlank()
+            ? null : request.qualification().trim());
+        doctor.setConsultationFee(request.consultationFee());
+        Doctor saved = doctorRepository.save(doctor);
+        auditService.record(AuditAction.DOCTOR_DETAILS_CHANGED, "USER", doctorId,
+            saved.getName() + ": " + department.getDepartmentName() + ", " + saved.getSpecialization()
+                + ", fee " + saved.getConsultationFee());
         return DoctorDTO.from(saved);
     }
 

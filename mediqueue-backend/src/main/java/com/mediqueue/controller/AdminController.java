@@ -8,6 +8,7 @@ import com.mediqueue.dto.AuditLogResponse;
 import com.mediqueue.dto.DepartmentDTO;
 import com.mediqueue.dto.DepartmentRequest;
 import com.mediqueue.dto.DoctorDTO;
+import com.mediqueue.dto.DoctorUpdateRequest;
 import com.mediqueue.dto.RegisterRequest;
 import com.mediqueue.entity.enums.UserRole;
 import com.mediqueue.service.AdminService;
@@ -58,6 +59,13 @@ public class AdminController {
     @PutMapping("/doctors/{doctorId}/deactivate")
     public ResponseEntity<DoctorDTO> deactivateDoctor(@PathVariable String doctorId) {
         return ResponseEntity.ok(adminService.deactivateDoctor(doctorId));
+    }
+
+    /** Department, specialization, qualification and fee of an existing doctor. */
+    @PutMapping("/doctors/{doctorId}")
+    public ResponseEntity<DoctorDTO> updateDoctor(@PathVariable String doctorId,
+                                                  @Valid @RequestBody DoctorUpdateRequest request) {
+        return ResponseEntity.ok(adminService.updateDoctor(doctorId, request));
     }
 
     @GetMapping("/departments")

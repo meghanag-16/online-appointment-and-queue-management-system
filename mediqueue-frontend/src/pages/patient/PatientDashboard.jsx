@@ -36,7 +36,7 @@ export default function PatientDashboard() {
 
   return (
     <PageLayout>
-      <PageTitle title={`Welcome, ${user?.username}`} subtitle="Here's your health at a glance" />
+      <PageTitle title={`Welcome, ${user?.name || user?.username}`} subtitle="Here's your health at a glance" />
       {error && <div className="alert alert-error">{error}</div>}
       {loading ? (
         <Spinner />

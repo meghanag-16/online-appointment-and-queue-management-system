@@ -1,4 +1,4 @@
-import { useState } from 'react'
+import { useEffect, useState } from 'react'
 import PageLayout from '../../components/layout/PageLayout'
 import PageTitle from '../../components/common/PageTitle'
 import StatusBadge from '../../components/common/StatusBadge'
@@ -15,18 +15,25 @@ const FILTERS = [['', 'All'], ['PENDING', 'Pending'], ['FAILED', 'Failed'], ['PA
 export default function BillingDesk() {
   const [status, setStatus] = useState('PENDING')
   const [query, setQuery] = useState('')
+  const [search, setSearch] = useState('')   // query, applied 300 ms after typing stops
   const [bills, setBills] = useState(null)
   const [methods, setMethods] = useState({})
   const [message, setMessage] = useState('')
   const [error, setError] = useState('')
+  const [loadError, setLoadError] = useState('')
+
+  useEffect(() => {
+    const t = setTimeout(() => setSearch(query.trim()), 300)
+    return () => clearTimeout(t)
+  }, [query])
 
   async function load() {
     try {
-      const res = await axiosInstance.get(ENDPOINTS.BILLS_ALL(status, query.trim()))
-      setBills(res.data)
-    } catch (err) { setBills([]); setError(errorMessage(err, 'Could not load bills.')) }
+      const res = await axiosInstance.get(ENDPOINTS.BILLS_ALL(status, search))
+      setBills(res.data); setLoadError('')
+    } catch (err) { setBills([]); setLoadError(errorMessage(err, 'Could not load bills.')) }
   }
-  usePolling(load, 15000, [status, query])
+  usePolling(load, 15000, [status, search])
 
   async function update(bill, paymentStatus) {
     setMessage(''); setError('')
@@ -45,6 +52,7 @@ export default function BillingDesk() {
       <PageTitle title="Billing" subtitle="Collect payments and keep bills up to date" />
       {message && <div className="alert alert-success">{message}</div>}
       {error && <div className="alert alert-error">{error}</div>}
+      {loadError && <div className="alert alert-error">{loadError}</div>}
 
       <div style={{ display: 'flex', gap: 10, flexWrap: 'wrap', marginBottom: 16, alignItems: 'center' }}>
         {FILTERS.map(([value, label]) => (

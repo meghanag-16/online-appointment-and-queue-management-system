@@ -1,5 +1,8 @@
 package com.mediqueue.service.facade;
 
+import static com.mediqueue.util.DisplayText.doctor;
+import static com.mediqueue.util.DisplayText.when;
+
 import com.mediqueue.entity.Appointment;
 import com.mediqueue.entity.LabReport;
 import com.mediqueue.entity.Notification;
@@ -12,15 +15,11 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.stereotype.Service;
 
-import java.time.LocalDateTime;
-import java.time.format.DateTimeFormatter;
-import java.util.Locale;
 
 @Service
 public class NotificationFacadeImpl implements NotificationFacade {
 
     private static final Logger log = LoggerFactory.getLogger(NotificationFacadeImpl.class);
-    public static final DateTimeFormatter WHEN = DateTimeFormatter.ofPattern("EEE d MMM yyyy 'at' h:mm a", Locale.ENGLISH);
 
     private final NotificationRepository notificationRepository;
     private final NotificationSender sender;
@@ -58,16 +57,6 @@ public class NotificationFacadeImpl implements NotificationFacade {
         return deliver(recipient, NotificationType.GENERAL_ALERT, message, appointmentId);
     }
 
-    /** "Dr. Name", without doubling the title when the stored name already has it. */
-    public static String doctor(com.mediqueue.entity.Doctor d) {
-        String name = d.getName() == null ? "" : d.getName().trim();
-        return name.matches("(?i)^dr\\.?\\s.*") ? name : "Dr. " + name;
-    }
-
-    public static String when(Appointment a) {
-        LocalDateTime start = a.getSlot() != null ? a.getSlot().getStartTime() : null;
-        return start != null ? WHEN.format(start) : String.valueOf(a.getAppointmentDate());
-    }
 
     /** Store first, then send; a sender failure never breaks the action that caused the notification. */
     private Notification deliver(User recipient, NotificationType type, String message, Long appointmentId) {

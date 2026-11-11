@@ -55,7 +55,9 @@ export default function AdminUsers() {
 
   async function changeStatus(u, status) {
     const verb = { ACTIVE: 'activate', SUSPENDED: 'suspend', DEACTIVATED: 'deactivate' }[status]
-    if (!window.confirm(`Really ${verb} ${u.name}?`)) return
+    const doctorNote = u.role === 'DOCTOR' && status !== 'ACTIVE'
+      ? ' Their upcoming appointments will be cancelled and each patient notified.' : ''
+    if (!window.confirm(`Really ${verb} ${u.name}?${doctorNote}`)) return
     setMessage(''); setError('')
     try {
       await updateUserStatus(u.userId, status)

@@ -241,6 +241,19 @@ public class AppointmentServiceImpl implements AppointmentService {
         return toResponse(saved, ctx);
     }
 
+    @Override
+    public int cancelUpcomingForDoctor(String doctorId) {
+        List<Appointment> upcoming = appointmentRepository
+            .findByDoctor_UserIdAndAppointmentStatusInAndSlot_StartTimeAfter(doctorId, CHANGEABLE, LocalDateTime.now());
+        for (Appointment a : upcoming) {
+            cancel(a);   // the doctor is no longer active, so the slot is withdrawn, not reopened
+            appointmentRepository.saveAndFlush(a);
+            // Observers: queue entry removed, bill voided/refunded, patient told why, audit log.
+            events.publish(AppointmentEvent.of(AppointmentEventType.CANCELLED, a.getAppointmentId()));
+        }
+        return upcoming.size();
+    }
+
     /** Status (BOOKED/CONFIRMED), the slot not started yet, and — for patients — before the cutoff. */
     private void requireChangeAllowed(Appointment a, Context ctx, String verb) {
         if (!CHANGEABLE.contains(a.getAppointmentStatus())) {

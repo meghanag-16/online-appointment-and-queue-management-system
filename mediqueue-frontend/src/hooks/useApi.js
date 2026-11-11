@@ -5,7 +5,7 @@ import { useState, useCallback } from 'react'
  *
  * Usage:
  *   const { data, loading, error, execute } = useApi()
- *   execute(() => axiosInstance.get(ENDPOINTS.DOCTORS))
+ *   execute(() => axiosInstance.get(ENDPOINTS.DOCTORS_SEARCH()))
  */
 export function useApi() {
   const [data, setData]       = useState(null)

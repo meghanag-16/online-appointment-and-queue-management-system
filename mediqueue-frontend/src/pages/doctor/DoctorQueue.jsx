@@ -18,6 +18,7 @@ export default function DoctorQueue() {
   const navigate = useNavigate()
   const [queue, setQueue] = useState(null)
   const [error, setError] = useState('')
+  const [loadError, setLoadError] = useState('')
   const [message, setMessage] = useState('')
   const [busy, setBusy] = useState(false)
   const [history, setHistory] = useState(null)
@@ -26,9 +27,9 @@ export default function DoctorQueue() {
   async function load() {
     try {
       const res = await axiosInstance.get(ENDPOINTS.QUEUE(user.userId))
-      setQueue(res.data); setUpdatedAt(new Date())
+      setQueue(res.data); setUpdatedAt(new Date()); setLoadError('')
     } catch (err) {
-      setError(errorMessage(err, 'Unable to load the queue.'))
+      setLoadError(errorMessage(err, 'Unable to load the queue.'))
     }
   }
   usePolling(load, REFRESH_MS, [user.userId])
@@ -78,6 +79,7 @@ export default function DoctorQueue() {
       <PageTitle title="Today's Queue" subtitle="High priority first, then by slot time. Updates automatically." />
       {message && <div className="alert alert-success">{message}</div>}
       {error && <div className="alert alert-error">{error}</div>}
+      {loadError && <div className="alert alert-error">{loadError}</div>}
 
       <div style={{ display: 'flex', gap: 12, alignItems: 'center', flexWrap: 'wrap', marginBottom: 16 }}>
         <button className="btn btn-primary" onClick={callNext} disabled={busy || !!current || waiting === 0} data-testid="call-next-btn">

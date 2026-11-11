@@ -1,5 +1,5 @@
-import { useState, useEffect } from "react";
-import { getAllDoctors, onboardDoctor, deactivateDoctor } from "../../api/adminApi";
+import { Fragment, useState, useEffect } from "react";
+import { getAllDoctors, onboardDoctor, deactivateDoctor, updateDoctor, getAllDepartments } from "../../api/adminApi";
 import { errorMessage } from "../../api/axiosInstance";
 import { drName } from "../../utils/formatters";
 import PageLayout from "../../components/layout/PageLayout";
@@ -13,8 +13,41 @@ export default function AdminDoctors() {
   const [message, setMessage] = useState("");
   const [error, setError] = useState("");
   const [credentials, setCredentials] = useState(null);
+  const [departments, setDepartments] = useState([]);
+  const [editing, setEditing] = useState(null);   // { doctorId, departmentId, specialization, qualification, consultationFee }
+  const [saving, setSaving] = useState(false);
 
-  useEffect(() => { fetchDoctors(); }, []);
+  useEffect(() => {
+    fetchDoctors();
+    getAllDepartments().then(res => setDepartments(res.data)).catch(() => setDepartments([]));
+  }, []);
+
+  const startEdit = (doc) => {
+    setMessage(""); setError("");
+    setEditing({
+      doctorId: doc.userId,
+      departmentId: doc.departmentId || "",
+      specialization: doc.specialization || "",
+      qualification: doc.qualification || "",
+      consultationFee: doc.consultationFee ?? "",
+    });
+  };
+
+  const saveEdit = async (e) => {
+    e.preventDefault();
+    setSaving(true); setError(""); setMessage("");
+    try {
+      const { doctorId, ...details } = editing;
+      const res = await updateDoctor(doctorId, { ...details, consultationFee: details.consultationFee === "" ? null : details.consultationFee });
+      setMessage(`${drName(res.data.name)} updated. New bookings use the new fee.`);
+      setEditing(null);
+      fetchDoctors();
+    } catch (err) {
+      setError(errorMessage(err, "Could not update the doctor."));
+    } finally { setSaving(false); }
+  };
+
+  const setField = (field) => (e) => setEditing(ed => ({ ...ed, [field]: e.target.value }));
 
   const fetchDoctors = async () => {
     try {
@@ -36,10 +69,10 @@ export default function AdminDoctors() {
   };
 
   const handleDeactivate = async (doctorId) => {
-    if (!window.confirm("Deactivate this doctor? They will no longer be able to log in.")) return;
+    if (!window.confirm("Deactivate this doctor? They will no longer be able to log in, and their upcoming appointments will be cancelled (each patient is notified).")) return;
     try {
       await deactivateDoctor(doctorId);
-      setMessage("Doctor deactivated.");
+      setMessage("Doctor deactivated. Their upcoming appointments were cancelled and the patients notified.");
       setError("");
       fetchDoctors();
     } catch (err) {
@@ -77,7 +110,8 @@ export default function AdminDoctors() {
             doctors.map((doc) => {
               const doctorId = doc.userId || doc.id;
               return (
-                <div key={doctorId} style={{
+                <Fragment key={doctorId}>
+                <div style={{
                   display: "flex", justifyContent: "space-between", alignItems: "center",
                   padding: "12px 0", borderBottom: "1px solid var(--color-border)",
                 }}>
@@ -97,12 +131,45 @@ export default function AdminDoctors() {
                       💰 Consultation Fee: ₹{doc.consultationFee ?? 0}
                     </p>
                   </div>
-                  {doc.accountStatus !== "DEACTIVATED" && (
-                    <button className="btn btn-outline btn-sm" onClick={() => handleDeactivate(doctorId)}>
-                      Deactivate
-                    </button>
-                  )}
+                  <div style={{ display: "flex", gap: 8, flexShrink: 0 }}>
+                    <button className="btn btn-outline btn-sm" onClick={() => startEdit(doc)}>Edit</button>
+                    {doc.accountStatus !== "DEACTIVATED" && (
+                      <button className="btn btn-outline btn-sm" onClick={() => handleDeactivate(doctorId)}>
+                        Deactivate
+                      </button>
+                    )}
+                  </div>
                 </div>
+                {editing?.doctorId === doctorId && (
+                  <form onSubmit={saveEdit} data-testid={`edit-doctor-${doctorId}`}
+                    style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(180px, 1fr))", gap: 10,
+                      padding: "12px 0 16px", borderBottom: "1px solid var(--color-border)" }}>
+                    <div className="form-group" style={{ margin: 0 }}>
+                      <label htmlFor="ed-dept">Department</label>
+                      <select id="ed-dept" className="form-control" value={editing.departmentId} onChange={setField("departmentId")} required>
+                        <option value="">Choose…</option>
+                        {departments.map(d => <option key={d.departmentId} value={d.departmentId}>{d.departmentName}</option>)}
+                      </select>
+                    </div>
+                    <div className="form-group" style={{ margin: 0 }}>
+                      <label htmlFor="ed-spec">Specialization</label>
+                      <input id="ed-spec" className="form-control" maxLength={100} value={editing.specialization} onChange={setField("specialization")} required />
+                    </div>
+                    <div className="form-group" style={{ margin: 0 }}>
+                      <label htmlFor="ed-qual">Qualification</label>
+                      <input id="ed-qual" className="form-control" maxLength={200} value={editing.qualification} onChange={setField("qualification")} />
+                    </div>
+                    <div className="form-group" style={{ margin: 0 }}>
+                      <label htmlFor="ed-fee">Consultation fee (₹)</label>
+                      <input id="ed-fee" type="number" min="0" step="0.01" className="form-control" value={editing.consultationFee} onChange={setField("consultationFee")} required />
+                    </div>
+                    <div style={{ display: "flex", gap: 8, alignItems: "flex-end" }}>
+                      <button type="submit" className="btn btn-primary btn-sm" disabled={saving}>{saving ? "Saving…" : "Save"}</button>
+                      <button type="button" className="btn btn-outline btn-sm" onClick={() => setEditing(null)}>Cancel</button>
+                    </div>
+                  </form>
+                )}
+                </Fragment>
               );
             })
           )}

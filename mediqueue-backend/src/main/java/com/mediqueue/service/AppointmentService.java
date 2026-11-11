@@ -23,4 +23,9 @@ public interface AppointmentService {
     AppointmentStatsResponse getStats();
     /** Receptionist/administrator marks an appointment HIGH_PRIORITY (or back to NORMAL); the queue reorders. */
     AppointmentResponse updatePriority(Long appointmentId, String priority);
+    /**
+     * A doctor was suspended or deactivated: cancels their upcoming booked/confirmed appointments
+     * (freeing the slots, voiding the bills and notifying each patient). Returns how many were cancelled.
+     */
+    int cancelUpcomingForDoctor(String doctorId);
 }

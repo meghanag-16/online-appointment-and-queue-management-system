@@ -137,7 +137,7 @@ public class QueueServiceImpl implements QueueService {
         e.setOverridePosition(position);
         queueRepository.saveAndFlush(e);
         auditService.record(AuditAction.QUEUE_POSITION_OVERRIDDEN, "QUEUE_ENTRY", queueId,
-            e.getAppointment().getPatient().getName() + " in " + com.mediqueue.service.facade.NotificationFacadeImpl.doctor(e.getDoctor()) + "'s queue on "
+            e.getAppointment().getPatient().getName() + " in " + com.mediqueue.util.DisplayText.doctor(e.getDoctor()) + "'s queue on "
                 + e.getQueueDate() + (position == null ? ": override cleared" : ": pinned to position " + position));
         queueManager.reorder(e.getDoctor().getUserId(), e.getQueueDate());
         return getQueue(e.getDoctor().getUserId(), e.getQueueDate());

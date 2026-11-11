@@ -1,5 +1,6 @@
 package com.mediqueue.service.impl;
 
+import com.mediqueue.service.AppointmentService;
 import com.mediqueue.audit.AuditAction;
 import com.mediqueue.audit.AuditService;
 import com.mediqueue.dto.ChangePasswordRequest;
@@ -43,6 +44,7 @@ public class UserAccountServiceImpl implements UserAccountService {
     private final SlotService slotService;
     private final MedicalRecordService medicalRecordService;
     private final AuditService auditService;
+    private final AppointmentService appointmentService;
 
     public UserAccountServiceImpl(UserRepository userRepository,
                                   DepartmentRepository departmentRepository,
@@ -51,7 +53,8 @@ public class UserAccountServiceImpl implements UserAccountService {
                                   CurrentUserService currentUser,
                                   SlotService slotService,
                                   MedicalRecordService medicalRecordService,
-                                  AuditService auditService) {
+                                  AuditService auditService,
+                                  AppointmentService appointmentService) {
         this.userRepository = userRepository;
         this.departmentRepository = departmentRepository;
         this.userFactory = userFactory;
@@ -60,6 +63,7 @@ public class UserAccountServiceImpl implements UserAccountService {
         this.slotService = slotService;
         this.medicalRecordService = medicalRecordService;
         this.auditService = auditService;
+        this.appointmentService = appointmentService;
     }
 
     @Override
@@ -228,16 +232,23 @@ public class UserAccountServiceImpl implements UserAccountService {
             .orElseThrow(() -> new ResourceNotFoundException("User not found: " + userId));
         AccountStatus previous = user.getAccountStatus();
         user.setAccountStatus(newStatus);
-        User saved = userRepository.save(user);
+        User saved = userRepository.saveAndFlush(user);
+
+        // An inactive doctor cannot be booked: withdraw their open slots and cancel their upcoming
+        // appointments (each patient is notified); reactivation brings new slots back.
+        int cancelled = 0;
+        if (saved instanceof Doctor doctor) {
+            if (newStatus == AccountStatus.ACTIVE) {
+                slotService.generateForDoctor(doctor);
+            } else {
+                slotService.withdrawOpenSlots(doctor.getUserId());
+                cancelled = appointmentService.cancelUpcomingForDoctor(doctor.getUserId());
+            }
+        }
         if (previous != newStatus) {
             auditService.record(AuditAction.USER_STATUS_CHANGED, "USER", userId,
-                saved.getName() + " (" + saved.getRole() + "): " + previous + " → " + newStatus);
-        }
-
-        // An inactive doctor cannot be booked: withdraw their open slots; reactivation brings them back.
-        if (saved instanceof Doctor doctor) {
-            if (newStatus == AccountStatus.ACTIVE) slotService.generateForDoctor(doctor);
-            else slotService.withdrawOpenSlots(doctor.getUserId());
+                saved.getName() + " (" + saved.getRole() + "): " + previous + " → " + newStatus
+                    + (cancelled > 0 ? "; " + cancelled + " upcoming appointment(s) cancelled" : ""));
         }
         return UserDTO.from(saved);
     }

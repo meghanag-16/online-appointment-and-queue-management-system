@@ -4,6 +4,7 @@ import PageTitle from '../../components/common/PageTitle'
 import Spinner from '../../components/common/Spinner'
 import axiosInstance, { errorMessage } from '../../api/axiosInstance'
 import { useAuth } from '../../context/AuthContext'
+import { drName } from '../../utils/formatters'
 
 export default function DoctorDashboard() {
   const { user } = useAuth()
@@ -35,7 +36,7 @@ export default function DoctorDashboard() {
 
   return (
     <PageLayout>
-      <PageTitle title={`Dr. ${user?.username}`} subtitle="Your schedule and patient overview" />
+      <PageTitle title={drName(user?.name || user?.username || '')} subtitle="Your schedule and patient overview" />
       {error && <div className="alert alert-error">{error}</div>}
       {loading ? (
         <Spinner />

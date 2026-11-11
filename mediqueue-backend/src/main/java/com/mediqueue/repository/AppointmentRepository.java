@@ -18,6 +18,10 @@ public interface AppointmentRepository extends JpaRepository<Appointment, Long> 
     List<Appointment> findByAppointmentStatus(AppointmentStatus status);
     List<Appointment> findByAppointmentDateGreaterThanEqualAndAppointmentStatusIn(LocalDate from, Collection<AppointmentStatus> statuses);
 
+    /** A doctor's appointments in the given statuses whose slot starts after the given time. */
+    List<Appointment> findByDoctor_UserIdAndAppointmentStatusInAndSlot_StartTimeAfter(
+        String doctorId, Collection<AppointmentStatus> statuses, java.time.LocalDateTime after);
+
     boolean existsByDoctor_UserIdAndPatient_UserId(String doctorId, String patientId);
 
     /** Does the patient already have a live appointment overlapping this time (with any doctor)? */
@@ -64,17 +68,19 @@ public interface AppointmentRepository extends JpaRepository<Appointment, Long> 
         String patientId, LocalDate from, Collection<AppointmentStatus> statuses);
 
     /**
-     * Appointments of this doctor, up to the given day, in one of the given statuses, that have no
-     * prescription yet. One query instead of one prescription lookup per appointment.
+     * Visits of this doctor still waiting for a prescription: today's live or finished appointments,
+     * plus earlier visits that actually took place (in progress or completed). Old bookings that were
+     * never attended are left out. One query instead of one prescription lookup per appointment.
      */
     @Query("""
         select count(a) from Appointment a
         where a.doctor.userId = :doctorId
-          and a.appointmentDate <= :upTo
-          and a.appointmentStatus in :statuses
+          and ((a.appointmentDate = :today and a.appointmentStatus in :todayStatuses)
+               or (a.appointmentDate < :today and a.appointmentStatus in :pastStatuses))
           and not exists (select p.prescriptionId from Prescription p where p.appointment = a)
         """)
     long countWithoutPrescription(@Param("doctorId") String doctorId,
-                                  @Param("upTo") LocalDate upTo,
-                                  @Param("statuses") Collection<AppointmentStatus> statuses);
+                                  @Param("today") LocalDate today,
+                                  @Param("todayStatuses") Collection<AppointmentStatus> todayStatuses,
+                                  @Param("pastStatuses") Collection<AppointmentStatus> pastStatuses);
 }

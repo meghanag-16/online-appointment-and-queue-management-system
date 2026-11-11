@@ -7,7 +7,6 @@ import PageTitle from "../../components/common/PageTitle";
 export default function AdminDepartments() {
   const [departments, setDepartments] = useState([]);
   const [name, setName] = useState("");
-  const [description, setDescription] = useState("");
   const [message, setMessage] = useState("");
   const [error, setError] = useState("");
 
@@ -24,9 +23,9 @@ export default function AdminDepartments() {
     if (!name) { setError("Please enter a department name."); return; }
     try {
       // Backend expects "departmentName" field
-      await addDepartment({ departmentName: name, description });
+      await addDepartment({ departmentName: name });
       setMessage("Department added successfully!");
-      setError(""); setName(""); setDescription("");
+      setError(""); setName("");
       fetchDepartments();
     } catch (err) {
       setError(errorMessage(err, "Failed to add department.")); setMessage("");
@@ -44,9 +43,6 @@ export default function AdminDepartments() {
           <h3 style={{ marginBottom: "16px" }}>Add New Department</h3>
           <input type="text" placeholder="Department Name *" value={name}
             onChange={(e) => setName(e.target.value)}
-            style={{ width: "100%", padding: "10px", marginBottom: "10px" }} />
-          <input type="text" placeholder="Description (optional)" value={description}
-            onChange={(e) => setDescription(e.target.value)}
             style={{ width: "100%", padding: "10px", marginBottom: "10px" }} />
           <div style={{ textAlign: "right" }}>
             <button onClick={handleAdd}

@@ -7,7 +7,6 @@ export const ENDPOINTS = {
 
   // Appointments
   APPOINTMENTS:            '/appointments',
-  APPOINTMENT_BY_ID:       (id)  => `/appointments/${id}`,
   APPOINTMENTS_BY_PATIENT: (pid) => `/appointments/patient/${pid}`,
   APPOINTMENTS_BY_DOCTOR:  (did) => `/appointments/doctor/${did}`,
   APPOINTMENTS_ALL:        (date) => date ? `/appointments/all?date=${date}` : '/appointments/all',
@@ -18,8 +17,6 @@ export const ENDPOINTS = {
   APPOINTMENT_PRIORITY:    (id)  => `/appointments/${id}/priority`,
 
   // Billing
-  GENERATE_BILL:    (apptId, type) => `/billing/generate/${apptId}?billingType=${type}`,
-  BILL_BY_APPT:     (apptId)       => `/billing/appointment/${apptId}`,
   BILL_BY_PATIENT:  (pid)          => `/billing/patient/${pid}`,
   UPDATE_PAYMENT:   (billId)       => `/billing/${billId}/payment`,
   BILLS_ALL:        (status = '', q = '') => {
@@ -52,8 +49,6 @@ export const ENDPOINTS = {
   COMPLAINT_STATUS:  (id) => `/complaints/${id}/status`,
 
   // Doctors
-  DOCTORS:        '/doctors',
-  DOCTOR_BY_ID:   (id) => `/doctors/${id}`,
   DOCTORS_SEARCH: (q = '', departmentId = '', date = '') => {
     const p = new URLSearchParams()
     if (q) p.set('q', q)
@@ -78,7 +73,6 @@ export const ENDPOINTS = {
   PRESCRIPTIONS:            '/prescriptions',
   PRESCRIPTIONS_BY_PATIENT: (pid) => `/prescriptions/patient/${pid}`,
   PRESCRIPTIONS_BY_DOCTOR:  (did) => `/prescriptions/doctor/${did}`,
-  PRESCRIPTION_BY_APPT:     (aid) => `/prescriptions/appointment/${aid}`,
 
   // Patients (front desk picker)
   PATIENT_SEARCH: (q) => `/patient/search?q=${encodeURIComponent(q)}`,
@@ -90,8 +84,6 @@ export const ENDPOINTS = {
   DEPARTMENTS: '/departments',
 
   // Users (administrator)
-  USERS:            '/users',
-  USER_STATUS:      (id) => `/users/${id}/status`,
   USER_RESET_PASSWORD: (id) => `/users/${id}/reset-password`,
   ADMIN_DASHBOARD:  '/admin/dashboard',
   ADMIN_AUDIT:      (params = {}) => {

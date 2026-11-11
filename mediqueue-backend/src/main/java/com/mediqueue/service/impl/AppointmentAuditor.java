@@ -7,7 +7,7 @@ import com.mediqueue.entity.enums.AppointmentStatus;
 import com.mediqueue.event.AppointmentEvent;
 import com.mediqueue.event.AppointmentObserver;
 import com.mediqueue.repository.AppointmentRepository;
-import com.mediqueue.service.facade.NotificationFacadeImpl;
+import com.mediqueue.util.DisplayText;
 import org.springframework.stereotype.Component;
 
 /** Observer: writes bookings, cancellations, moves, no-shows and priority changes to the audit log. */
@@ -26,8 +26,8 @@ public class AppointmentAuditor implements AppointmentObserver {
     public void onAppointmentEvent(AppointmentEvent event) {
         Appointment a = appointmentRepository.findById(event.appointmentId()).orElse(null);
         if (a == null) return;
-        String who = a.getPatient().getName() + " with " + NotificationFacadeImpl.doctor(a.getDoctor())
-            + " on " + NotificationFacadeImpl.when(a);
+        String who = a.getPatient().getName() + " with " + DisplayText.doctor(a.getDoctor())
+            + " on " + DisplayText.when(a);
         switch (event.type()) {
             case BOOKED -> record(AuditAction.APPOINTMENT_BOOKED, a, who
                 + (a.getPriority() != null ? " (" + a.getPriority() + ")" : ""));
