@@ -24,7 +24,7 @@ jobs:
     name: Backend lint
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v7
       - uses: actions/setup-java@v4
         with:
           java-version: '17'
@@ -40,7 +40,7 @@ jobs:
     env:
       CYPRESS_INSTALL_BINARY: 0
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v7
       - uses: actions/setup-node@v4
         with:
           node-version: '20'
@@ -73,7 +73,7 @@ jobs:
           --health-timeout=5s
           --health-retries=10
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v7
       - uses: actions/setup-java@v4
         with:
           java-version: '17'
@@ -105,7 +105,7 @@ jobs:
     env:
       CYPRESS_INSTALL_BINARY: 0
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v7
       - uses: actions/setup-node@v4
         with:
           node-version: '20'
@@ -129,7 +129,7 @@ jobs:
     runs-on: ubuntu-latest
     needs: [backend-lint, frontend-lint]
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v7
       - name: Build backend image
         run: docker build -t mediqueue-backend:ci mediqueue-backend
       - name: Build frontend image
@@ -141,7 +141,7 @@ jobs:
     runs-on: ubuntu-latest
     needs: [backend-test, frontend-test, build]
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v7
       - name: Start MySQL, backend and frontend
         run: docker compose up -d --build
       - name: Wait until the stack is healthy
@@ -188,7 +188,7 @@ jobs:
       contents: read
       packages: write
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v7
       - name: Image names (registry paths must be lower case)
         id: names
         run: echo "owner=$(echo '${{ github.repository_owner }}' | tr '[:upper:]' '[:lower:]')" >> "$GITHUB_OUTPUT"
