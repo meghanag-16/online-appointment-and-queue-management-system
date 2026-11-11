@@ -1,5 +1,6 @@
-CREATE DATABASE IF NOT EXISTS mediqueue;
-USE mediqueue;
+-- Initial MediQueue schema. Flyway runs this on an empty database; an existing database that
+-- already has these tables is baselined at version 1, so this file is skipped there.
+
 
 CREATE TABLE users (
     user_id VARCHAR(50) PRIMARY KEY,

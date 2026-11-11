@@ -1,12 +1,12 @@
 import { useEffect, useState } from 'react'
 import PageLayout from '../../components/layout/PageLayout'
 import PageTitle from '../../components/common/PageTitle'
-import Spinner from '../../components/common/Spinner'
 import QueueTable from '../../components/queue/QueueTable'
 import axiosInstance, { errorMessage } from '../../api/axiosInstance'
 import { ENDPOINTS } from '../../api/endpoints'
 import { useAuth } from '../../context/AuthContext'
 import { usePolling } from '../../hooks/usePolling'
+import { Alert, Button, ErrorState, LoadingState, Select, useToast } from '../../components/ui'
 
 const REFRESH_MS = 5000
 
@@ -17,13 +17,13 @@ const REFRESH_MS = 5000
  */
 export default function QueueBoard() {
   const { user } = useAuth()
+  const toast = useToast()
   const isAdmin = user?.role === 'ADMINISTRATOR'
   const [doctors, setDoctors] = useState([])
   const [doctorId, setDoctorId] = useState('')
   const [queue, setQueue] = useState(null)
   const [error, setError] = useState('')
   const [loadError, setLoadError] = useState('')
-  const [message, setMessage] = useState('')
   const [busy, setBusy] = useState(false)
 
   useEffect(() => {
@@ -32,8 +32,9 @@ export default function QueueBoard() {
       .then(res => {
         setDoctors(res.data)
         if (res.data[0]) setDoctorId(res.data[0].userId)
+        else setQueue([])
       })
-      .catch(err => setError(errorMessage(err, 'Could not load doctors.')))
+      .catch(err => setLoadError(errorMessage(err, 'Could not load doctors.')))
   }, [])
 
   async function load() {
@@ -51,10 +52,9 @@ export default function QueueBoard() {
   async function act(request, success) {
     setBusy(true)
     setError('')
-    setMessage('')
     try {
       await request()
-      setMessage(success)
+      toast.success(success)
       await load()
     } catch (err) {
       setError(errorMessage(err, 'That did not work.'))
@@ -82,40 +82,41 @@ export default function QueueBoard() {
     const firstWaiting = active.find(x => x.visitStatus === 'WAITING')
     return (
       <>
-        <button
-          className="btn btn-outline btn-sm"
+        <Button
+          variant="outline"
+          size="sm"
           disabled={busy}
           onClick={() => togglePriority(e)}
           data-testid={`priority-${e.appointmentId}`}
         >
           {e.priority === 'HIGH_PRIORITY' ? 'Unmark priority' : 'Mark high priority'}
-        </button>
+        </Button>
         {isAdmin && e.visitStatus === 'WAITING' && (
           <>
-            {' '}
-            <button
-              className="btn btn-outline btn-sm"
+            <Button
+              variant="outline"
+              size="sm"
               title="Move up"
+              aria-label={`Move ${e.patientName} up`}
               disabled={busy || e.queueId === firstWaiting?.queueId}
               onClick={() => move(e, e.queuePosition - 1)}
             >
               ▲
-            </button>{' '}
-            <button
-              className="btn btn-outline btn-sm"
+            </Button>
+            <Button
+              variant="outline"
+              size="sm"
               title="Move down"
+              aria-label={`Move ${e.patientName} down`}
               disabled={busy || e.queuePosition === active.length}
               onClick={() => move(e, e.queuePosition + 1)}
             >
               ▼
-            </button>
+            </Button>
             {e.overridePosition != null && (
-              <>
-                {' '}
-                <button className="btn btn-outline btn-sm" disabled={busy} onClick={() => move(e, null)}>
-                  Clear override
-                </button>
-              </>
+              <Button variant="ghost" size="sm" disabled={busy} onClick={() => move(e, null)}>
+                Clear override
+              </Button>
             )}
           </>
         )}
@@ -133,29 +134,21 @@ export default function QueueBoard() {
             : 'Mark patients high priority; the queue reorders at once'
         }
       />
-      {message && <div className="alert alert-success">{message}</div>}
-      {error && <div className="alert alert-error">{error}</div>}
-      {loadError && <div className="alert alert-error">{loadError}</div>}
-      <div className="form-group" style={{ maxWidth: 360 }}>
-        <label htmlFor="qb-doctor">Doctor</label>
-        <select
-          id="qb-doctor"
-          className="form-control"
-          value={doctorId}
-          onChange={e => {
-            setDoctorId(e.target.value)
-            setQueue(null)
-          }}
-        >
-          {doctors.map(d => (
-            <option key={d.userId} value={d.userId}>
-              {d.name} — {d.departmentName || d.specialization}
-            </option>
-          ))}
-        </select>
-      </div>
+      <Alert tone="error">{error}</Alert>
+      <ErrorState message={loadError} onRetry={load} />
+      <Select
+        id="qb-doctor"
+        label="Doctor"
+        fieldClassName="max-w-sm"
+        value={doctorId}
+        onChange={e => {
+          setDoctorId(e.target.value)
+          setQueue(null)
+        }}
+        options={doctors.map(d => ({ value: d.userId, label: `${d.name} — ${d.departmentName || d.specialization}` }))}
+      />
       {queue === null ? (
-        <Spinner />
+        <LoadingState label="Loading queue…" />
       ) : (
         <QueueTable entries={queue} renderActions={actions} emptyText="Nobody in this doctor's queue today." />
       )}

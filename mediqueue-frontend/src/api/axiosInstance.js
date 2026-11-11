@@ -8,7 +8,19 @@ import axios from 'axios'
  *  - every error carries a readable message in err.userMessage.
  * Never call fetch() or axios directly with http://localhost:8080 — use this instead.
  */
-const BASE_URL = '/api/v1'
+/**
+ * The API address, set at build time (see vite.config.js). A bare host such as
+ * "mediqueue-api.onrender.com" becomes "https://mediqueue-api.onrender.com/api/v1".
+ */
+export function resolveApiBase(raw) {
+  const value = (raw || '').trim().replace(/\/+$/, '')
+  if (!value) return '/api/v1'
+  if (value.startsWith('/')) return value
+  const withScheme = /^https?:\/\//.test(value) ? value : `https://${value}`
+  return withScheme.endsWith('/api/v1') ? withScheme : `${withScheme}/api/v1`
+}
+
+const BASE_URL = resolveApiBase(typeof __API_BASE_URL__ !== 'undefined' ? __API_BASE_URL__ : '/api/v1')
 
 export const TOKEN_KEY = 'mq_token'
 export const USER_KEY = 'mq_user'

@@ -1,0 +1,35 @@
+# Weekly dependency update pull requests; they go through the same CI checks as any other PR.
+version: 2
+updates:
+  - package-ecosystem: maven
+    directory: /mediqueue-backend
+    schedule:
+      interval: weekly
+    open-pull-requests-limit: 5
+    groups:
+      spring:
+        patterns: ['org.springframework*']
+
+  - package-ecosystem: npm
+    directory: /mediqueue-frontend
+    schedule:
+      interval: weekly
+    open-pull-requests-limit: 5
+    groups:
+      lint-and-test:
+        patterns: ['eslint*', '@eslint/*', 'prettier', 'jest*', '@testing-library/*', 'babel-*', '@babel/*']
+
+  - package-ecosystem: github-actions
+    directory: /
+    schedule:
+      interval: monthly
+
+  - package-ecosystem: docker
+    directory: /mediqueue-backend
+    schedule:
+      interval: monthly
+
+  - package-ecosystem: docker
+    directory: /mediqueue-frontend
+    schedule:
+      interval: monthly

@@ -41,6 +41,9 @@ import AdminComplaints from '../pages/admin/AdminComplaints'
 import AdminSettings from '../pages/admin/AdminSettings'
 import AdminAudit from '../pages/admin/AdminAudit'
 
+// Public landing page
+import LandingPage from '../pages/landing/LandingPage'
+
 // Shared
 import NotFound from '../pages/shared/NotFound'
 import Unauthorized from '../pages/shared/Unauthorized'
@@ -65,12 +68,10 @@ export default function AppRouter() {
   return (
     <BrowserRouter>
       <Routes>
-        {/* Root redirect */}
+        {/* Landing page for visitors; signed-in users go straight to their home page */}
         <Route
           path="/"
-          element={
-            isAuthenticated ? <Navigate to={getHomeForRole(user?.role)} replace /> : <Navigate to="/login" replace />
-          }
+          element={isAuthenticated ? <Navigate to={getHomeForRole(user?.role)} replace /> : <LandingPage />}
         />
 
         {/* Auth */}

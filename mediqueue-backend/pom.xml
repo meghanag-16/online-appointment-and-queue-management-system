@@ -25,6 +25,11 @@
         <google-java-format.version>1.28.0</google-java-format.version>
         <maven-checkstyle-plugin.version>3.6.0</maven-checkstyle-plugin.version>
         <checkstyle.version>10.26.1</checkstyle.version>
+        <jacoco.version>0.8.14</jacoco.version>
+        <!-- the coverage gate is enforced only when the integration tests run (CI sets -Dcoverage.check=true) -->
+        <coverage.check>false</coverage.check>
+        <!-- minimum line coverage of the service and business-logic packages (unit + integration tests) -->
+        <coverage.minimum>0.70</coverage.minimum>
     </properties>
 
     <dependencies>
@@ -78,6 +83,17 @@
             <scope>runtime</scope>
         </dependency>
 
+        <!-- Database migrations -->
+        <dependency>
+            <groupId>org.flywaydb</groupId>
+            <artifactId>flyway-core</artifactId>
+        </dependency>
+
+        <dependency>
+            <groupId>org.flywaydb</groupId>
+            <artifactId>flyway-mysql</artifactId>
+        </dependency>
+
         <!-- Testing -->
         <dependency>
             <groupId>org.springframework.boot</groupId>
@@ -104,6 +120,80 @@
                 <configuration>
                     <release>17</release>
                 </configuration>
+            </plugin>
+
+            <!--
+              Integration tests (*IT.java) run in `mvn verify` against a real MySQL database given by
+              IT_DATASOURCE_URL / IT_DATASOURCE_USERNAME / IT_DATASOURCE_PASSWORD; without it they are skipped.
+            -->
+            <plugin>
+                <groupId>org.apache.maven.plugins</groupId>
+                <artifactId>maven-failsafe-plugin</artifactId>
+                <executions>
+                    <execution>
+                        <goals>
+                            <goal>integration-test</goal>
+                            <goal>verify</goal>
+                        </goals>
+                    </execution>
+                </executions>
+            </plugin>
+
+            <!-- Coverage: unit and integration tests both write target/jacoco.exec; report in target/site/jacoco. -->
+            <plugin>
+                <groupId>org.jacoco</groupId>
+                <artifactId>jacoco-maven-plugin</artifactId>
+                <version>${jacoco.version}</version>
+                <executions>
+                    <execution>
+                        <id>unit-agent</id>
+                        <goals>
+                            <goal>prepare-agent</goal>
+                        </goals>
+                    </execution>
+                    <execution>
+                        <id>it-agent</id>
+                        <goals>
+                            <goal>prepare-agent-integration</goal>
+                        </goals>
+                        <configuration>
+                            <destFile>${project.build.directory}/jacoco.exec</destFile>
+                        </configuration>
+                    </execution>
+                    <execution>
+                        <id>report</id>
+                        <goals>
+                            <goal>report</goal>
+                        </goals>
+                    </execution>
+                    <execution>
+                        <id>check</id>
+                        <goals>
+                            <goal>check</goal>
+                        </goals>
+                        <configuration>
+                            <haltOnFailure>${coverage.check}</haltOnFailure>
+                            <includes>
+                                <include>com/mediqueue/service/**</include>
+                                <include>com/mediqueue/billing/**</include>
+                                <include>com/mediqueue/lab/**</include>
+                                <include>com/mediqueue/security/**</include>
+                            </includes>
+                            <rules>
+                                <rule>
+                                    <element>BUNDLE</element>
+                                    <limits>
+                                        <limit>
+                                            <counter>LINE</counter>
+                                            <value>COVEREDRATIO</value>
+                                            <minimum>${coverage.minimum}</minimum>
+                                        </limit>
+                                    </limits>
+                                </rule>
+                            </rules>
+                        </configuration>
+                    </execution>
+                </executions>
             </plugin>
 
             <!-- Spring Boot Plugin -->

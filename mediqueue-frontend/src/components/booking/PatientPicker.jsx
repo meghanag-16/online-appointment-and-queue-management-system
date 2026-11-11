@@ -1,6 +1,7 @@
 import { useEffect, useState } from 'react'
 import axiosInstance, { errorMessage } from '../../api/axiosInstance'
 import { ENDPOINTS } from '../../api/endpoints'
+import Button from '../ui/Button'
 
 /**
  * Front desk: find a patient by name, username, phone, email or ID (no typing raw IDs).
@@ -30,23 +31,23 @@ export default function PatientPicker({ selected, onSelect }) {
 
   if (selected) {
     return (
-      <div style={chosen}>
+      <div className="picked" data-testid="picked-patient">
         <div>
           <strong>{selected.name}</strong>
-          <div style={{ fontSize: 12, color: 'var(--color-text-muted)' }}>
+          <span className="cell-sub">
             {selected.username} · {selected.phoneNumber || 'no phone'} · {selected.userId}
-          </div>
+          </span>
         </div>
-        <button
-          type="button"
-          className="btn btn-outline btn-sm"
+        <Button
+          variant="outline"
+          size="sm"
           onClick={() => {
             onSelect(null)
             setQuery('')
           }}
         >
           Change
-        </button>
+        </Button>
       </div>
     )
   }
@@ -59,19 +60,24 @@ export default function PatientPicker({ selected, onSelect }) {
         placeholder="Patient name, phone, username or ID (min. 2 letters)"
         value={query}
         onChange={e => setQuery(e.target.value)}
+        data-testid="patient-search"
       />
-      {error && <small style={{ color: 'var(--color-danger)' }}>{error}</small>}
+      {error && <small className="form-error">{error}</small>}
       {query.trim().length >= 2 && results.length === 0 && !error && (
-        <p style={{ fontSize: 12, color: 'var(--color-text-muted)', marginTop: 6 }}>
-          No matching patient. New patients register themselves on the sign-up page.
-        </p>
+        <p className="form-hint mt-2">No matching patient. New patients register themselves on the sign-up page.</p>
       )}
       {results.length > 0 && (
-        <div style={list}>
+        <div className="result-list">
           {results.map(p => (
-            <button key={p.userId} type="button" onClick={() => onSelect(p)} style={row}>
+            <button
+              key={p.userId}
+              type="button"
+              className="result-item"
+              onClick={() => onSelect(p)}
+              data-testid={`patient-${p.userId}`}
+            >
               <strong>{p.name}</strong>{' '}
-              <span style={{ fontSize: 12, color: 'var(--color-text-muted)' }}>
+              <span className="muted text-xs">
                 {p.username} · {p.phoneNumber} · {p.userId}
               </span>
             </button>
@@ -80,32 +86,4 @@ export default function PatientPicker({ selected, onSelect }) {
       )}
     </div>
   )
-}
-
-const chosen = {
-  display: 'flex',
-  justifyContent: 'space-between',
-  alignItems: 'center',
-  gap: 10,
-  padding: '10px 12px',
-  border: '1.5px solid var(--color-accent)',
-  borderRadius: 8,
-  background: 'var(--color-accent-soft)',
-}
-const list = {
-  border: '1px solid var(--color-border)',
-  borderRadius: 8,
-  marginTop: 6,
-  maxHeight: 220,
-  overflowY: 'auto',
-}
-const row = {
-  display: 'block',
-  width: '100%',
-  textAlign: 'left',
-  padding: '8px 12px',
-  border: 'none',
-  borderBottom: '1px solid var(--color-border)',
-  background: 'var(--color-white)',
-  cursor: 'pointer',
 }

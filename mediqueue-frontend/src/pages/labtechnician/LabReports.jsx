@@ -1,10 +1,10 @@
 import { useEffect, useState } from 'react'
 import PageLayout from '../../components/layout/PageLayout'
 import PageTitle from '../../components/common/PageTitle'
-import Spinner from '../../components/common/Spinner'
 import ReportsTable from '../../components/lab/ReportsTable'
 import { getAllLabReports } from '../../api/labApi'
 import { errorMessage } from '../../api/axiosInstance'
+import { Card, ErrorState, Input, LoadingState } from '../../components/ui'
 
 /** Every uploaded report, newest first, with a filter and downloads. */
 export default function LabReports() {
@@ -12,14 +12,16 @@ export default function LabReports() {
   const [filter, setFilter] = useState('')
   const [error, setError] = useState('')
 
-  useEffect(() => {
+  function load() {
+    setError('')
     getAllLabReports()
       .then(res => setReports(res.data))
       .catch(err => {
         setReports([])
         setError(errorMessage(err, 'Could not load reports.'))
       })
-  }, [])
+  }
+  useEffect(load, [])
 
   const f = filter.trim().toLowerCase()
   const shown = (reports || []).filter(
@@ -32,29 +34,25 @@ export default function LabReports() {
   return (
     <PageLayout>
       <PageTitle title="All Lab Reports" subtitle="Every report uploaded, newest first" />
-      {error && <div className="alert alert-error">{error}</div>}
-      <div style={{ marginBottom: 16, maxWidth: 420 }}>
-        <label htmlFor="lr-filter" className="sr-only">
-          Filter
-        </label>
-        <input
-          id="lr-filter"
-          className="form-control"
-          placeholder="Filter by patient, test, doctor or appointment #"
-          value={filter}
-          onChange={e => setFilter(e.target.value)}
-        />
-      </div>
+      <ErrorState message={error} onRetry={load} />
+      <Input
+        id="lr-filter"
+        label="Filter"
+        fieldClassName="max-w-sm"
+        placeholder="Patient, test, doctor or appointment #"
+        value={filter}
+        onChange={e => setFilter(e.target.value)}
+      />
       {reports === null ? (
-        <Spinner />
+        <LoadingState label="Loading reports…" />
       ) : (
-        <div className="card" style={{ padding: 0 }}>
+        <Card flush>
           <ReportsTable
             reports={shown}
             showPatient
             emptyText={reports.length ? 'No reports match the filter' : 'No reports yet'}
           />
-        </div>
+        </Card>
       )}
     </PageLayout>
   )

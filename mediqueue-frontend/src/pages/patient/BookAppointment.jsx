@@ -8,10 +8,12 @@ import AlternateSlots from '../../components/booking/AlternateSlots'
 import axiosInstance, { errorMessage } from '../../api/axiosInstance'
 import { ENDPOINTS } from '../../api/endpoints'
 import { formatSlot } from '../../utils/dates'
+import { Alert, Button, Card, Textarea, useToast } from '../../components/ui'
 
-/** Patient booking: pick a doctor → pick a slot → book. ?doctorId= preselects a doctor (from Find Doctors). */
+/** Patient booking: pick a doctor → pick a slot → book. ?doctorId= preselects a doctor. */
 export default function BookAppointment() {
   const navigate = useNavigate()
+  const toast = useToast()
   const [params] = useSearchParams()
 
   const [doctor, setDoctor] = useState(null)
@@ -19,7 +21,6 @@ export default function BookAppointment() {
   const [reasonForVisit, setReasonForVisit] = useState('')
   const [loading, setLoading] = useState(false)
   const [error, setError] = useState('')
-  const [success, setSuccess] = useState('')
   const [alternates, setAlternates] = useState([])
   const [refreshKey, setRefreshKey] = useState(0)
   const [cutoff, setCutoff] = useState(null)
@@ -56,7 +57,6 @@ export default function BookAppointment() {
     }
     setLoading(true)
     setError('')
-    setSuccess('')
     setAlternates([])
     try {
       await axiosInstance.post(ENDPOINTS.APPOINTMENTS, {
@@ -64,8 +64,8 @@ export default function BookAppointment() {
         slotId: slot.slotId,
         reasonForVisit,
       })
-      setSuccess(`Booked with ${doctor.name} on ${formatSlot(slot.startTime)}.`)
-      setTimeout(() => navigate('/patient/appointments'), 1500)
+      toast.success(`Booked with ${doctor.name} on ${formatSlot(slot.startTime)}.`)
+      navigate('/patient/appointments')
     } catch (err) {
       setError(errorMessage(err, 'Booking failed. Please try again.'))
       setAlternates(err.response?.data?.alternateSlots || [])
@@ -89,20 +89,23 @@ export default function BookAppointment() {
     <PageLayout>
       <PageTitle title="Book Appointment" subtitle="Choose a doctor, then an open time" />
 
-      <div className="card" style={{ marginBottom: 20 }}>
-        <h3 style={{ marginBottom: 12 }}>1. Choose a doctor</h3>
+      <Card title="1. Choose a doctor" className="mb-6">
         <DoctorPicker selectedDoctorId={doctor?.userId} onSelect={chooseDoctor} />
-      </div>
+      </Card>
 
       {doctor && (
-        <form className="card" onSubmit={handleSubmit} style={{ maxWidth: 760 }}>
-          <h3 style={{ marginBottom: 4 }}>2. Choose a time with {doctor.name}</h3>
-          <p style={{ fontSize: '0.82rem', color: 'var(--color-text-muted)', marginBottom: 14 }}>
-            {cutoff != null &&
-              `You can cancel or reschedule up to ${cutoff} hour${cutoff === 1 ? '' : 's'} before the appointment.`}
-          </p>
-          {error && <div className="alert alert-error">{error}</div>}
-          {success && <div className="alert alert-success">{success}</div>}
+        <Card
+          as="form"
+          onSubmit={handleSubmit}
+          className="max-w-md"
+          title={`2. Choose a time with ${doctor.name}`}
+          subtitle={
+            cutoff != null
+              ? `You can cancel or reschedule up to ${cutoff} hour${cutoff === 1 ? '' : 's'} before the appointment.`
+              : undefined
+          }
+        >
+          <Alert tone="error">{error}</Alert>
 
           <SlotPicker
             doctorId={doctor.userId}
@@ -115,34 +118,26 @@ export default function BookAppointment() {
           />
           <AlternateSlots alternates={alternates} onPick={pickAlternate} />
 
-          <div className="form-group" style={{ marginTop: 16 }}>
-            <label htmlFor="reason">Reason for visit</label>
-            <textarea
-              id="reason"
-              className="form-control"
-              rows={3}
-              maxLength={2000}
-              placeholder="Describe your symptoms or reason for visit…"
-              value={reasonForVisit}
-              onChange={e => setReasonForVisit(e.target.value)}
-            />
-          </div>
+          <Textarea
+            id="reason"
+            label="Reason for visit"
+            fieldClassName="mt-4"
+            maxLength={2000}
+            hint="Optional. Helps the doctor prepare."
+            placeholder="Describe your symptoms or reason for visit…"
+            value={reasonForVisit}
+            onChange={e => setReasonForVisit(e.target.value)}
+          />
 
           {slot && (
-            <p style={{ marginBottom: 12 }}>
+            <p className="mb-4">
               Selected: <strong>{formatSlot(slot.startTime)}</strong>
             </p>
           )}
-          <button
-            type="submit"
-            className="btn btn-primary"
-            data-testid="book-btn"
-            style={{ width: '100%', justifyContent: 'center', padding: '12px' }}
-            disabled={loading || !slot || !!success}
-          >
-            {loading ? 'Booking…' : 'Book Appointment'}
-          </button>
-        </form>
+          <Button type="submit" size="lg" block data-testid="book-btn" loading={loading} disabled={!slot}>
+            Book Appointment
+          </Button>
+        </Card>
       )}
     </PageLayout>
   )

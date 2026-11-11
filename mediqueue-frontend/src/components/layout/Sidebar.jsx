@@ -41,77 +41,21 @@ const NAV_LINKS = {
   ],
 }
 
-const sidebarStyle = {
-  position: 'fixed',
-  top: 0,
-  left: 0,
-  bottom: 0,
-  width: 'var(--sidebar-w)',
-  background: 'var(--color-dark)',
-  display: 'flex',
-  flexDirection: 'column',
-  zIndex: 200,
-  overflowY: 'auto',
-}
-
-const headerStyle = {
-  padding: '24px 20px 20px',
-  borderBottom: '1px solid rgba(255,255,255,0.08)',
-  marginBottom: 8,
-}
-
-const brandStyle = {
-  fontFamily: 'var(--font-display)',
-  fontSize: '1.4rem',
-  color: 'var(--color-white)',
-  display: 'flex',
-  alignItems: 'center',
-  gap: 10,
-}
-
-const dotStyle = {
-  width: 28,
-  height: 28,
-  borderRadius: 8,
-  background: 'var(--color-accent)',
-  display: 'flex',
-  alignItems: 'center',
-  justifyContent: 'center',
-  fontSize: '1rem',
-  color: '#fff',
-  fontWeight: 700,
-}
-
 export default function Sidebar() {
   const { user } = useAuth()
   const links = user ? [...(NAV_LINKS[user.role] || []), { to: '/profile', label: 'My Profile' }] : []
 
   return (
-    <aside style={sidebarStyle}>
-      <div style={headerStyle}>
-        <div style={brandStyle}>
-          <div style={dotStyle}>M</div>
-          MediQueue
-        </div>
+    <aside className="sidebar">
+      <div className="sidebar-brand">
+        <span className="brand-mark" aria-hidden="true">
+          M
+        </span>
+        MediQueue
       </div>
-      <nav style={{ padding: '8px 12px', flex: 1 }}>
+      <nav className="sidebar-nav" aria-label="Main">
         {links.map(link => (
-          <NavLink
-            key={link.to}
-            to={link.to}
-            style={({ isActive }) => ({
-              display: 'block',
-              padding: '10px 14px',
-              borderRadius: 8,
-              marginBottom: 2,
-              color: isActive ? 'var(--color-white)' : 'rgba(255,255,255,0.6)',
-              background: isActive ? 'var(--color-accent)' : 'transparent',
-              fontWeight: isActive ? 600 : 400,
-              fontSize: '0.9rem',
-              textDecoration: 'none',
-              transition: 'all 0.15s ease',
-            })}
-          >
+          <NavLink key={link.to} to={link.to} className="sidebar-link">
             {link.label}
           </NavLink>
         ))}

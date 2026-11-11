@@ -19,6 +19,7 @@ uploads/
 mediqueue-frontend/coverage/
 mediqueue-frontend/cypress/screenshots/
 mediqueue-frontend/cypress/videos/
+mediqueue-frontend/cypress/downloads/
 
 # ── IDE / OS ──
 .idea/

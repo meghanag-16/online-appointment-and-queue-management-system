@@ -21,7 +21,7 @@ export default [
       ecmaVersion: 'latest',
       sourceType: 'module',
       parserOptions: { ecmaFeatures: { jsx: true } },
-      globals: { ...globals.browser },
+      globals: { ...globals.browser, __API_BASE_URL__: 'readonly' },
     },
     settings: { react: { version: 'detect' } },
     rules: {

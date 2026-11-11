@@ -47,6 +47,9 @@ public class SecurityConfig {
                                         .permitAll()
                                         // Spring forwards errors to /error; keep it open so the
                                         // real status is returned
+                                        // health check for the hosting platform and smoke tests
+                                        .requestMatchers(HttpMethod.GET, "/api/v1/health")
+                                        .permitAll()
                                         .requestMatchers("/error")
                                         .permitAll()
                                         .anyRequest()

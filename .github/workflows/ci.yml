@@ -1,154 +1,215 @@
-name: MediQueue CI
+name: CI
+
+# Every pull request and every push to main runs lint, unit and integration tests, the builds and the
+# end-to-end tests. Pushes to main also publish Docker images. Render deploys main automatically once
+# these checks pass (render.yaml: autoDeployTrigger: checksPass).
 
 on:
-  push:
-    branches: [main, develop]
   pull_request:
-    branches: [main, develop]
+    branches: [main]
+  push:
+    branches: [main]
+  workflow_dispatch:
+
+concurrency:
+  group: ci-${{ github.ref }}
+  cancel-in-progress: true
+
+permissions:
+  contents: read
 
 jobs:
-# ─────────────────────────────────────────────
-#  LINT & FORMAT — fast checks, no database
-# ─────────────────────────────────────────────
+  # ─── lint and format ─────────────────────────────────────────────────────
   backend-lint:
-    name: Backend — Format & Lint
+    name: Backend lint
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
-
       - uses: actions/setup-java@v4
         with:
           java-version: '17'
           distribution: temurin
           cache: maven
-
-      - name: Check formatting (Spotless) and lint (Checkstyle)
+      - name: Spotless and Checkstyle
         working-directory: mediqueue-backend
         run: mvn -B spotless:check checkstyle:check
 
   frontend-lint:
-    name: Frontend — Lint & Format
+    name: Frontend lint
     runs-on: ubuntu-latest
+    env:
+      CYPRESS_INSTALL_BINARY: 0
     steps:
       - uses: actions/checkout@v4
-
       - uses: actions/setup-node@v4
         with:
           node-version: '20'
           cache: npm
           cache-dependency-path: mediqueue-frontend/package-lock.json
-
-      - name: Install dependencies
-        working-directory: mediqueue-frontend
+      - working-directory: mediqueue-frontend
         run: npm ci
-
-      - name: Lint (ESLint)
+      - name: ESLint
         working-directory: mediqueue-frontend
         run: npm run lint
-
-      - name: Check formatting (Prettier)
+      - name: Prettier
         working-directory: mediqueue-frontend
         run: npm run format:check
 
-# ─────────────────────────────────────────────
-#  BACKEND — build + test (JUnit + Mockito)
-# ─────────────────────────────────────────────
-  backend:
-    name: Backend — Build & Test
+  # ─── tests ───────────────────────────────────────────────────────────────
+  backend-test:
+    name: Backend unit + integration tests
     runs-on: ubuntu-latest
-
     services:
       mysql:
         image: mysql:8.0
         env:
           MYSQL_ROOT_PASSWORD: root
-          MYSQL_DATABASE: mediqueue
+          MYSQL_DATABASE: mediqueue_it
         ports:
           - 3306:3306
         options: >-
           --health-cmd="mysqladmin ping -h localhost -uroot -proot"
           --health-interval=10s
           --health-timeout=5s
-          --health-retries=5
-
+          --health-retries=10
     steps:
       - uses: actions/checkout@v4
-
       - uses: actions/setup-java@v4
         with:
           java-version: '17'
           distribution: temurin
           cache: maven
-
-      - name: Import schema
-        run: mysql -h 127.0.0.1 -uroot -proot mediqueue < schema.sql
-
-      - name: Run Backend Tests (JUnit + Mockito)
+      - name: Unit tests, integration tests (real MySQL) and coverage gate
         working-directory: mediqueue-backend
-        # formatting and Checkstyle already ran in backend-lint
-        run: mvn -B clean verify -Dspotless.check.skip=true -Dcheckstyle.skip=true
         env:
-          SPRING_DATASOURCE_URL: jdbc:mysql://127.0.0.1:3306/mediqueue?useSSL=false&serverTimezone=Asia/Kolkata&allowPublicKeyRetrieval=true
-          SPRING_DATASOURCE_USERNAME: root
-          SPRING_DATASOURCE_PASSWORD: root
-          SPRING_JPA_HIBERNATE_DDL_AUTO: validate
-          # HS256 requires >= 32 characters; the old 14-char value made JWT generation throw
-          APP_JWT_SECRET: ci-secret-key-for-mediqueue-minimum-32-chars
+          IT_DATASOURCE_URL: jdbc:mysql://127.0.0.1:3306/mediqueue_it?useSSL=false&allowPublicKeyRetrieval=true&serverTimezone=Asia/Kolkata
+          IT_DATASOURCE_USERNAME: root
+          IT_DATASOURCE_PASSWORD: root
+          APP_TIMEZONE: Asia/Kolkata
+          TZ: Asia/Kolkata
+        # lint already ran in backend-lint
+        run: mvn -B verify -Dcoverage.check=true -Dspotless.check.skip=true -Dcheckstyle.skip=true
+      - name: Upload test and coverage reports
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: backend-reports
+          path: |
+            mediqueue-backend/target/surefire-reports
+            mediqueue-backend/target/failsafe-reports
+            mediqueue-backend/target/site/jacoco
 
-
-# ─────────────────────────────────────────────
-#  FRONTEND — Jest testing + build
-# ─────────────────────────────────────────────
-  frontend:
-    name: Frontend — Test & Build
+  frontend-test:
+    name: Frontend unit tests
     runs-on: ubuntu-latest
-
+    env:
+      CYPRESS_INSTALL_BINARY: 0
     steps:
       - uses: actions/checkout@v4
-
       - uses: actions/setup-node@v4
         with:
           node-version: '20'
           cache: npm
           cache-dependency-path: mediqueue-frontend/package-lock.json
-
-      - name: Install dependencies
-        working-directory: mediqueue-frontend
+      - working-directory: mediqueue-frontend
         run: npm ci
-
-      - name: Run Jest Tests
+      - name: Jest with coverage
         working-directory: mediqueue-frontend
-        run: npm run test
+        run: npm run test:coverage
+      - name: Upload coverage report
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: frontend-coverage
+          path: mediqueue-frontend/coverage
 
-      - name: Build
-        working-directory: mediqueue-frontend
-        run: npm run build
-        env:
-          VITE_API_BASE_URL: /api/v1
-
-
-# ─────────────────────────────────────────────
-#  E2E TESTING — Cypress
-# ─────────────────────────────────────────────
-  e2e:
-    name: End-to-End Tests (Cypress)
+  # ─── builds ──────────────────────────────────────────────────────────────
+  build:
+    name: Docker images build
     runs-on: ubuntu-latest
-    needs: [backend, frontend]
-
+    needs: [backend-lint, frontend-lint]
     steps:
       - uses: actions/checkout@v4
+      - name: Build backend image
+        run: docker build -t mediqueue-backend:ci mediqueue-backend
+      - name: Build frontend image
+        run: docker build -t mediqueue-frontend:ci mediqueue-frontend
 
-      - name: Start Backend
-        working-directory: mediqueue-backend
-        run: mvn spring-boot:run &
-      
-      - name: Start Frontend
+  # ─── end-to-end ──────────────────────────────────────────────────────────
+  e2e:
+    name: End-to-end tests (Cypress, full stack)
+    runs-on: ubuntu-latest
+    needs: [backend-test, frontend-test, build]
+    steps:
+      - uses: actions/checkout@v4
+      - name: Start MySQL, backend and frontend
+        run: docker compose up -d --build
+      - name: Wait until the stack is healthy
+        run: |
+          for i in $(seq 1 60); do
+            if curl -fsS http://localhost/api/v1/health | grep -q '"status":"UP"'; then
+              echo "Stack is up"; exit 0
+            fi
+            sleep 5
+          done
+          echo "Stack did not become healthy"; docker compose logs backend; exit 1
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+          cache: npm
+          cache-dependency-path: mediqueue-frontend/package-lock.json
+      - working-directory: mediqueue-frontend
+        run: npm ci
+      - name: Cypress
         working-directory: mediqueue-frontend
-        run: npm install && npm run dev &
-      
-      - name: Wait for servers
-        run: sleep 25
+        env:
+          CYPRESS_BASE_URL: http://localhost
+        run: npx cypress run --browser electron
+      - name: Upload screenshots of failures
+        if: failure()
+        uses: actions/upload-artifact@v4
+        with:
+          name: cypress-screenshots
+          path: mediqueue-frontend/cypress/screenshots
+      - name: Backend logs on failure
+        if: failure()
+        run: docker compose logs backend
+      - name: Stop the stack
+        if: always()
+        run: docker compose down -v
 
-      - name: Run Cypress Tests
-        working-directory: mediqueue-frontend
-        run: npx cypress run
+  # ─── publish (main only) ─────────────────────────────────────────────────
+  publish:
+    name: Publish Docker images
+    runs-on: ubuntu-latest
+    needs: [e2e]
+    if: github.event_name == 'push' && github.ref == 'refs/heads/main'
+    permissions:
+      contents: read
+      packages: write
+    steps:
+      - uses: actions/checkout@v4
+      - name: Image names (registry paths must be lower case)
+        id: names
+        run: echo "owner=$(echo '${{ github.repository_owner }}' | tr '[:upper:]' '[:lower:]')" >> "$GITHUB_OUTPUT"
+      - uses: docker/login-action@v3
+        with:
+          registry: ghcr.io
+          username: ${{ github.actor }}
+          password: ${{ secrets.GITHUB_TOKEN }}
+      - name: Backend image
+        uses: docker/build-push-action@v6
+        with:
+          context: mediqueue-backend
+          push: true
+          tags: |
+            ghcr.io/${{ steps.names.outputs.owner }}/mediqueue-backend:latest
+            ghcr.io/${{ steps.names.outputs.owner }}/mediqueue-backend:${{ github.sha }}
+      - name: Frontend image
+        uses: docker/build-push-action@v6
+        with:
+          context: mediqueue-frontend
+          push: true
+          tags: |
+            ghcr.io/${{ steps.names.outputs.owner }}/mediqueue-frontend:latest
+            ghcr.io/${{ steps.names.outputs.owner }}/mediqueue-frontend:${{ github.sha }}

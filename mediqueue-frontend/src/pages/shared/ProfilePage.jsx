@@ -1,13 +1,19 @@
 import { useEffect, useState } from 'react'
 import PageLayout from '../../components/layout/PageLayout'
 import PageTitle from '../../components/common/PageTitle'
-import Spinner from '../../components/common/Spinner'
 import { useAuth } from '../../context/AuthContext'
 import axiosInstance, { errorMessage } from '../../api/axiosInstance'
 import { ENDPOINTS } from '../../api/endpoints'
 import { todayLocal } from '../../utils/dates'
+import { Alert, Button, Card, ErrorState, Input, LoadingState, Select, useToast } from '../../components/ui'
 
 const BLOOD_GROUPS = ['A+', 'A-', 'B+', 'B-', 'AB+', 'AB-', 'O+', 'O-']
+const GENDERS = [
+  { value: 'MALE', label: 'Male' },
+  { value: 'FEMALE', label: 'Female' },
+  { value: 'OTHER', label: 'Other' },
+]
+const EMPTY_PW = { currentPassword: '', newPassword: '', confirm: '' }
 
 /**
  * "My Profile" for every role: edit your own details and change your password.
@@ -15,21 +21,22 @@ const BLOOD_GROUPS = ['A+', 'A-', 'B+', 'B-', 'AB+', 'AB-', 'O+', 'O-']
  */
 export default function ProfilePage() {
   const { updateUser } = useAuth()
+  const toast = useToast()
   const [profile, setProfile] = useState(null)
   const [form, setForm] = useState(null)
   const [editing, setEditing] = useState(false)
   const [loadError, setLoadError] = useState('')
-  const [msg, setMsg] = useState('')
   const [err, setErr] = useState('')
   const [fieldErrors, setFieldErrors] = useState({})
   const [saving, setSaving] = useState(false)
 
-  const [pw, setPw] = useState({ currentPassword: '', newPassword: '', confirm: '' })
-  const [pwMsg, setPwMsg] = useState('')
+  const [pw, setPw] = useState(EMPTY_PW)
   const [pwErr, setPwErr] = useState('')
+  const [pwFieldErrors, setPwFieldErrors] = useState({})
   const [pwSaving, setPwSaving] = useState(false)
 
-  useEffect(() => {
+  function load() {
+    setLoadError('')
     axiosInstance
       .get(ENDPOINTS.ME)
       .then(res => {
@@ -37,15 +44,14 @@ export default function ProfilePage() {
         setForm(toForm(res.data))
       })
       .catch(e => setLoadError(errorMessage(e, 'Could not load your profile.')))
-  }, [])
+  }
+  useEffect(load, [])
 
   const set = field => e => setForm(f => ({ ...f, [field]: e.target.value }))
-  const fe = name =>
-    fieldErrors[name] ? <small style={{ color: 'var(--color-danger)' }}>{fieldErrors[name]}</small> : null
+  const fe = name => fieldErrors[name]
 
   async function saveProfile(e) {
     e.preventDefault()
-    setMsg('')
     setErr('')
     setFieldErrors({})
     setSaving(true)
@@ -55,7 +61,7 @@ export default function ProfilePage() {
       setForm(toForm(res.data))
       updateUser({ name: res.data.name })
       setEditing(false)
-      setMsg('Your details have been saved.')
+      toast.success('Your details have been saved.')
     } catch (e2) {
       setErr(errorMessage(e2, 'Could not save your details.'))
       setFieldErrors(e2?.response?.data?.fieldErrors || {})
@@ -64,41 +70,37 @@ export default function ProfilePage() {
     }
   }
 
+  const pwMismatch = pw.confirm && pw.newPassword !== pw.confirm ? 'The new passwords do not match.' : ''
+
   async function changePassword(e) {
     e.preventDefault()
-    setPwMsg('')
     setPwErr('')
-    if (pw.newPassword !== pw.confirm) {
-      setPwErr('The new passwords do not match.')
-      return
-    }
+    setPwFieldErrors({})
+    if (pwMismatch) return
     setPwSaving(true)
     try {
       await axiosInstance.put(ENDPOINTS.ME_PASSWORD, {
         currentPassword: pw.currentPassword,
         newPassword: pw.newPassword,
       })
-      setPw({ currentPassword: '', newPassword: '', confirm: '' })
-      setPwMsg('Password changed. Use the new password next time you sign in.')
+      setPw(EMPTY_PW)
+      toast.success('Password changed. Use the new password next time you sign in.')
     } catch (e2) {
       setPwErr(errorMessage(e2, 'Could not change the password.'))
+      setPwFieldErrors(e2?.response?.data?.fieldErrors || {})
     } finally {
       setPwSaving(false)
     }
   }
 
-  if (loadError)
+  if (loadError || !form) {
     return (
       <PageLayout>
-        <div className="alert alert-error">{loadError}</div>
+        <PageTitle title="My Profile" />
+        {loadError ? <ErrorState message={loadError} onRetry={load} /> : <LoadingState label="Loading your profile…" />}
       </PageLayout>
     )
-  if (!form)
-    return (
-      <PageLayout>
-        <Spinner />
-      </PageLayout>
-    )
+  }
 
   const role = profile.role
   return (
@@ -107,34 +109,27 @@ export default function ProfilePage() {
         title="My Profile"
         subtitle={`Signed in as ${profile.username} · ${role.replace(/_/g, ' ').toLowerCase()}`}
       />
-      <div
-        style={{
-          display: 'grid',
-          gridTemplateColumns: 'repeat(auto-fit, minmax(320px, 1fr))',
-          gap: 20,
-          alignItems: 'start',
-        }}
-      >
+      <div className="grid-2">
         {!editing ? (
-          <div className="card" data-testid="profile-view">
-            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 16 }}>
-              <h3 style={{ margin: 0 }}>Personal details</h3>
-              <button
-                type="button"
-                className="btn btn-outline btn-sm"
+          <Card
+            title="Personal details"
+            data-testid="profile-view"
+            actions={
+              <Button
+                variant="outline"
+                size="sm"
                 onClick={() => {
                   setForm(toForm(profile))
-                  setMsg('')
                   setErr('')
                   setFieldErrors({})
                   setEditing(true)
                 }}
               >
                 Edit
-              </button>
-            </div>
-            {msg && <div className="alert alert-success">{msg}</div>}
-            <dl style={dl}>
+              </Button>
+            }
+          >
+            <dl className="divider-list">
               <Detail label="Full Name" value={profile.name} />
               <Detail label="Username" value={profile.username} />
               <Detail label="Email" value={profile.email} />
@@ -164,150 +159,119 @@ export default function ProfilePage() {
                 </>
               )}
             </dl>
-          </div>
+          </Card>
         ) : (
-          <form className="card" onSubmit={saveProfile}>
-            <h3 style={{ marginBottom: 16 }}>Edit personal details</h3>
-            {err && <div className="alert alert-error">{err}</div>}
-
-            <div className="form-group">
-              <label htmlFor="pf-name">Full Name</label>
-              <input
-                id="pf-name"
-                className="form-control"
-                value={form.name}
-                onChange={set('name')}
+          <Card as="form" title="Edit personal details" onSubmit={saveProfile}>
+            <Alert tone="error">{err}</Alert>
+            <Input
+              id="pf-name"
+              label="Full Name"
+              value={form.name}
+              onChange={set('name')}
+              required
+              maxLength={100}
+              error={fe('name')}
+            />
+            <Input
+              id="pf-email"
+              label="Email"
+              type="email"
+              value={form.email}
+              onChange={set('email')}
+              required
+              maxLength={100}
+              error={fe('email')}
+            />
+            <div className="grid-form">
+              <Select
+                id="pf-gender"
+                label="Gender"
+                value={form.gender}
+                onChange={set('gender')}
                 required
-                maxLength={100}
+                placeholder="Select"
+                options={GENDERS}
+                error={fe('gender')}
               />
-              {fe('name')}
-            </div>
-            <div className="form-group">
-              <label htmlFor="pf-email">Email</label>
-              <input
-                id="pf-email"
-                type="email"
-                className="form-control"
-                value={form.email}
-                onChange={set('email')}
+              <Input
+                id="pf-dob"
+                label="Date of Birth"
+                type="date"
+                max={todayLocal()}
+                value={form.dateOfBirth}
+                onChange={set('dateOfBirth')}
                 required
-                maxLength={100}
+                error={fe('dateOfBirth')}
               />
-              {fe('email')}
             </div>
-            <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 16 }}>
-              <div className="form-group">
-                <label htmlFor="pf-gender">Gender</label>
-                <select id="pf-gender" className="form-control" value={form.gender} onChange={set('gender')} required>
-                  <option value="">Select</option>
-                  <option value="MALE">Male</option>
-                  <option value="FEMALE">Female</option>
-                  <option value="OTHER">Other</option>
-                </select>
-                {fe('gender')}
-              </div>
-              <div className="form-group">
-                <label htmlFor="pf-dob">Date of Birth</label>
-                <input
-                  id="pf-dob"
-                  type="date"
-                  className="form-control"
-                  max={todayLocal()}
-                  value={form.dateOfBirth}
-                  onChange={set('dateOfBirth')}
-                  required
-                />
-                {fe('dateOfBirth')}
-              </div>
-            </div>
-            <div className="form-group">
-              <label htmlFor="pf-phone">Phone Number</label>
-              <input
-                id="pf-phone"
-                className="form-control"
-                value={form.phoneNumber}
-                onChange={set('phoneNumber')}
-                required
-                maxLength={15}
-              />
-              {fe('phoneNumber')}
-            </div>
-
+            <Input
+              id="pf-phone"
+              label="Phone Number"
+              value={form.phoneNumber}
+              onChange={set('phoneNumber')}
+              required
+              maxLength={15}
+              hint="7 to 15 digits"
+              error={fe('phoneNumber')}
+            />
             {role === 'PATIENT' && (
               <>
-                <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 16 }}>
-                  <div className="form-group">
-                    <label htmlFor="pf-blood">Blood Group</label>
-                    <select id="pf-blood" className="form-control" value={form.bloodGroup} onChange={set('bloodGroup')}>
-                      <option value="">Not known</option>
-                      {BLOOD_GROUPS.map(b => (
-                        <option key={b} value={b}>
-                          {b}
-                        </option>
-                      ))}
-                    </select>
-                  </div>
-                  <div className="form-group">
-                    <label htmlFor="pf-emerg">Emergency Contact</label>
-                    <input
-                      id="pf-emerg"
-                      className="form-control"
-                      value={form.emergencyContact}
-                      onChange={set('emergencyContact')}
-                      maxLength={150}
-                    />
-                  </div>
-                </div>
-                <div className="form-group">
-                  <label htmlFor="pf-allergies">Allergies</label>
-                  <input
-                    id="pf-allergies"
-                    className="form-control"
-                    value={form.allergies}
-                    onChange={set('allergies')}
-                    maxLength={2000}
+                <div className="grid-form">
+                  <Select
+                    id="pf-blood"
+                    label="Blood Group"
+                    value={form.bloodGroup}
+                    onChange={set('bloodGroup')}
+                    placeholder="Not known"
+                    options={BLOOD_GROUPS}
+                    error={fe('bloodGroup')}
+                  />
+                  <Input
+                    id="pf-emerg"
+                    label="Emergency Contact"
+                    value={form.emergencyContact}
+                    onChange={set('emergencyContact')}
+                    maxLength={150}
                   />
                 </div>
-                <div className="form-group">
-                  <label htmlFor="pf-chronic">Chronic Conditions</label>
-                  <input
-                    id="pf-chronic"
-                    className="form-control"
-                    value={form.chronicConditions}
-                    onChange={set('chronicConditions')}
-                    maxLength={2000}
-                  />
-                </div>
+                <Input
+                  id="pf-allergies"
+                  label="Allergies"
+                  value={form.allergies}
+                  onChange={set('allergies')}
+                  maxLength={2000}
+                />
+                <Input
+                  id="pf-chronic"
+                  label="Chronic Conditions"
+                  value={form.chronicConditions}
+                  onChange={set('chronicConditions')}
+                  maxLength={2000}
+                />
               </>
             )}
-
             {role === 'DOCTOR' && (
               <>
-                <div className="form-group">
-                  <label htmlFor="pf-qual">Qualification</label>
-                  <input
-                    id="pf-qual"
-                    className="form-control"
-                    value={form.qualification}
-                    onChange={set('qualification')}
-                    maxLength={200}
-                  />
-                </div>
-                <p style={{ fontSize: '0.82rem', color: 'var(--color-text-muted)', marginBottom: 12 }}>
+                <Input
+                  id="pf-qual"
+                  label="Qualification"
+                  value={form.qualification}
+                  onChange={set('qualification')}
+                  maxLength={200}
+                />
+                <p className="muted text-sm mb-4">
                   Department: <strong>{profile.departmentName || '—'}</strong> · Specialization:{' '}
                   <strong>{profile.specialization || '—'}</strong> · Fee:{' '}
                   <strong>₹{profile.consultationFee ?? '—'}</strong>. Ask the administrator to change these.
                 </p>
               </>
             )}
-
-            <div style={{ display: 'flex', gap: 10 }}>
-              <button type="submit" className="btn btn-primary" disabled={saving}>
-                {saving ? 'Saving…' : 'Save changes'}
-              </button>
-              <button
-                type="button"
-                className="btn btn-outline"
+            <div className="row">
+              <Button type="submit" loading={saving}>
+                Save changes
+              </Button>
+              <Button
+                variant="outline"
                 disabled={saving}
                 onClick={() => {
                   setForm(toForm(profile))
@@ -317,58 +281,50 @@ export default function ProfilePage() {
                 }}
               >
                 Cancel
-              </button>
+              </Button>
             </div>
-          </form>
+          </Card>
         )}
 
-        <form className="card" onSubmit={changePassword}>
-          <h3 style={{ marginBottom: 16 }}>Change password</h3>
-          {pwMsg && <div className="alert alert-success">{pwMsg}</div>}
-          {pwErr && <div className="alert alert-error">{pwErr}</div>}
-          <div className="form-group">
-            <label htmlFor="pw-current">Current password</label>
-            <input
-              id="pw-current"
-              type="password"
-              className="form-control"
-              autoComplete="current-password"
-              value={pw.currentPassword}
-              onChange={e => setPw(p => ({ ...p, currentPassword: e.target.value }))}
-              required
-            />
-          </div>
-          <div className="form-group">
-            <label htmlFor="pw-new">New password</label>
-            <input
-              id="pw-new"
-              type="password"
-              className="form-control"
-              autoComplete="new-password"
-              minLength={8}
-              placeholder="Min. 8 characters"
-              value={pw.newPassword}
-              onChange={e => setPw(p => ({ ...p, newPassword: e.target.value }))}
-              required
-            />
-          </div>
-          <div className="form-group">
-            <label htmlFor="pw-confirm">Confirm new password</label>
-            <input
-              id="pw-confirm"
-              type="password"
-              className="form-control"
-              autoComplete="new-password"
-              minLength={8}
-              value={pw.confirm}
-              onChange={e => setPw(p => ({ ...p, confirm: e.target.value }))}
-              required
-            />
-          </div>
-          <button type="submit" className="btn btn-dark" disabled={pwSaving}>
-            {pwSaving ? 'Changing…' : 'Change password'}
-          </button>
-        </form>
+        <Card as="form" title="Change password" onSubmit={changePassword}>
+          <Alert tone="error">{pwErr}</Alert>
+          <Input
+            id="pw-current"
+            label="Current password"
+            type="password"
+            autoComplete="current-password"
+            value={pw.currentPassword}
+            onChange={e => setPw(p => ({ ...p, currentPassword: e.target.value }))}
+            required
+            error={pwFieldErrors.currentPassword}
+          />
+          <Input
+            id="pw-new"
+            label="New password"
+            type="password"
+            autoComplete="new-password"
+            minLength={8}
+            hint="At least 8 characters"
+            value={pw.newPassword}
+            onChange={e => setPw(p => ({ ...p, newPassword: e.target.value }))}
+            required
+            error={pwFieldErrors.newPassword}
+          />
+          <Input
+            id="pw-confirm"
+            label="Confirm new password"
+            type="password"
+            autoComplete="new-password"
+            minLength={8}
+            value={pw.confirm}
+            onChange={e => setPw(p => ({ ...p, confirm: e.target.value }))}
+            required
+            error={pwMismatch}
+          />
+          <Button type="submit" variant="dark" loading={pwSaving} disabled={!!pwMismatch}>
+            Change password
+          </Button>
+        </Card>
       </div>
     </PageLayout>
   )
@@ -376,14 +332,12 @@ export default function ProfilePage() {
 
 function Detail({ label, value }) {
   return (
-    <div style={{ padding: '8px 0', borderBottom: '1px solid var(--color-border)' }}>
-      <dt style={{ fontSize: '0.78rem', color: 'var(--color-text-muted)' }}>{label}</dt>
-      <dd style={{ margin: 0, fontWeight: 500 }}>{value || '—'}</dd>
+    <div>
+      <dt className="muted text-xs">{label}</dt>
+      <dd className="strong">{value || '—'}</dd>
     </div>
   )
 }
-
-const dl = { margin: 0 }
 
 function formatDob(d) {
   if (!d) return null

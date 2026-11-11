@@ -1,0 +1,41 @@
+name: Smoke test (deployed site)
+
+# Checks the live Render deployment: the API health check (API and database up), a public API call,
+# and that the site serves the app. Run it by hand after a deploy, and it also runs every morning.
+# Set the repository variables RENDER_API_URL and RENDER_SITE_URL
+# (Settings → Secrets and variables → Actions → Variables), e.g. https://mediqueue-api.onrender.com.
+
+on:
+  workflow_dispatch:
+  schedule:
+    - cron: '30 3 * * *' # 09:00 in India
+
+permissions:
+  contents: read
+
+jobs:
+  smoke:
+    runs-on: ubuntu-latest
+    env:
+      API: ${{ vars.RENDER_API_URL }}
+      SITE: ${{ vars.RENDER_SITE_URL }}
+    steps:
+      - name: Variables are set
+        run: |
+          if [ -z "$API" ] || [ -z "$SITE" ]; then
+            echo "Set the RENDER_API_URL and RENDER_SITE_URL repository variables first."; exit 1
+          fi
+      - name: API health (free instances sleep, so allow a cold start)
+        run: |
+          for i in $(seq 1 18); do
+            body=$(curl -fsS --max-time 20 "$API/api/v1/health" || true)
+            if echo "$body" | grep -q '"status":"UP"'; then echo "API: $body"; exit 0; fi
+            echo "Waiting for the API ($i)…"; sleep 10
+          done
+          echo "API health check failed"; exit 1
+      - name: Public API answers
+        run: curl -fsS "$API/api/v1/departments" | grep -q departmentName
+      - name: Site serves the app
+        run: |
+          curl -fsS "$SITE/" | grep -q '<div id="root">'
+          curl -fsS "$SITE/login" | grep -q '<div id="root">'

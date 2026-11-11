@@ -8,5 +8,7 @@ module.exports = {
   transform: {
     '^.+\\.[jt]sx?$': 'babel-jest',
   },
+  collectCoverageFrom: ['src/**/*.{js,jsx}', '!src/main.jsx', '!src/__tests__/**'],
+  coverageReporters: ['text-summary', 'lcov'],
   testMatch: ['**/__tests__/**/*.test.[jt]s?(x)', '**/*.test.[jt]s?(x)'],
 }

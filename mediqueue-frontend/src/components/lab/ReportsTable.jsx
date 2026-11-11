@@ -2,8 +2,9 @@ import { useState } from 'react'
 import { errorMessage } from '../../api/axiosInstance'
 import { downloadLabReport, formatFileSize } from '../../utils/download'
 import { drName, formatDate, formatDateTime } from '../../utils/formatters'
+import { Alert, Button, Cell, Table } from '../ui'
 
-/** Lab reports with a Download button. showPatient adds patient and doctor columns (staff views). */
+/** Lab reports with a Download button. showPatient adds the patient column (staff views). */
 export default function ReportsTable({ reports, showPatient = false, emptyText = 'No reports yet.' }) {
   const [error, setError] = useState('')
   const [busy, setBusy] = useState(null)
@@ -20,74 +21,53 @@ export default function ReportsTable({ reports, showPatient = false, emptyText =
     }
   }
 
+  const headers = [
+    'Test',
+    'Appointment',
+    ...(showPatient ? ['Patient'] : []),
+    'Doctor',
+    'File',
+    'Uploaded',
+    'Remarks',
+    '',
+  ]
+
   return (
     <>
-      {error && <div className="alert alert-error">{error}</div>}
-      <div className="table-wrapper">
-        <table>
-          <thead>
-            <tr>
-              <th>Test</th>
-              <th>Appointment</th>
-              {showPatient && <th>Patient</th>}
-              <th>Doctor</th>
-              <th>File</th>
-              <th>Uploaded</th>
-              <th>Remarks</th>
-              <th></th>
-            </tr>
-          </thead>
-          <tbody>
-            {reports.length === 0 && (
-              <tr>
-                <td
-                  colSpan={showPatient ? 8 : 7}
-                  style={{ textAlign: 'center', padding: 24, color: 'var(--color-text-muted)' }}
-                >
-                  {emptyText}
-                </td>
-              </tr>
+      <Alert tone="error">{error}</Alert>
+      <Table headers={headers} empty={emptyText} isEmpty={reports.length === 0}>
+        {reports.map(r => (
+          <tr key={r.reportId} data-testid={`report-row-${r.reportId}`}>
+            <td>
+              <strong>{r.reportType}</strong>
+            </td>
+            <td>
+              <Cell main={`#${r.appointmentId}`} sub={formatDate(r.appointmentDate)} />
+            </td>
+            {showPatient && (
+              <td>
+                <Cell main={r.patientName} sub={r.patientId} />
+              </td>
             )}
-            {reports.map(r => (
-              <tr key={r.reportId} data-testid={`report-row-${r.reportId}`}>
-                <td>
-                  <strong>{r.reportType}</strong>
-                </td>
-                <td>
-                  #{r.appointmentId}
-                  <br />
-                  <small style={{ color: 'var(--color-text-muted)' }}>{formatDate(r.appointmentDate)}</small>
-                </td>
-                {showPatient && (
-                  <td>
-                    {r.patientName}
-                    <br />
-                    <small style={{ color: 'var(--color-text-muted)' }}>{r.patientId}</small>
-                  </td>
-                )}
-                <td>{drName(r.doctorName)}</td>
-                <td style={{ fontSize: '0.85rem' }}>
-                  {r.fileName}
-                  <br />
-                  <small style={{ color: 'var(--color-text-muted)' }}>{formatFileSize(r.fileSize)}</small>
-                </td>
-                <td>{formatDateTime(r.uploadTime)}</td>
-                <td style={{ maxWidth: 220, fontSize: '0.85rem' }}>{r.remarks || '—'}</td>
-                <td>
-                  <button
-                    type="button"
-                    className="btn btn-primary btn-sm"
-                    disabled={busy === r.reportId}
-                    onClick={() => download(r)}
-                  >
-                    {busy === r.reportId ? '…' : 'Download'}
-                  </button>
-                </td>
-              </tr>
-            ))}
-          </tbody>
-        </table>
-      </div>
+            <td>{drName(r.doctorName)}</td>
+            <td className="text-sm">
+              <Cell main={r.fileName} sub={formatFileSize(r.fileSize)} />
+            </td>
+            <td>{formatDateTime(r.uploadTime)}</td>
+            <td className="text-sm">{r.remarks || '—'}</td>
+            <td>
+              <Button
+                size="sm"
+                loading={busy === r.reportId}
+                onClick={() => download(r)}
+                data-testid={`download-${r.reportId}`}
+              >
+                Download
+              </Button>
+            </td>
+          </tr>
+        ))}
+      </Table>
     </>
   )
 }

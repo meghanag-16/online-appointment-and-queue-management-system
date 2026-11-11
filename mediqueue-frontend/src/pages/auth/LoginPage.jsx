@@ -2,6 +2,7 @@ import { useState } from 'react'
 import { useNavigate, Link } from 'react-router-dom'
 import { useAuth } from '../../context/AuthContext'
 import { getHomeForRole } from '../../utils/roleRoutes'
+import { Alert, Button, Input } from '../../components/ui'
 
 export default function LoginPage() {
   const { login } = useAuth()
@@ -31,104 +32,53 @@ export default function LoginPage() {
   }
 
   return (
-    <div style={outerStyle}>
-      <div style={panelStyle} className="animate-in">
-        {/* Brand */}
-        <div style={{ textAlign: 'center', marginBottom: 32 }}>
-          <div style={logoStyle}>M</div>
-          <h1 style={headingStyle}>MediQueue</h1>
-          <p style={{ color: 'var(--color-text-muted)', fontSize: '0.9rem' }}>Sign in to your account</p>
+    <div className="auth-screen">
+      <div className="auth-panel animate-in">
+        <div className="auth-head">
+          <Link to="/" className="auth-logo" aria-label="MediQueue home">
+            M
+          </Link>
+          <h1>MediQueue</h1>
+          <p className="muted text-sm">Sign in to your account</p>
         </div>
 
-        {expiredReason && !error && <div className="alert alert-info">{expiredReason}</div>}
-        {error && <div className="alert alert-error">{error}</div>}
+        {!error && <Alert tone="info">{expiredReason}</Alert>}
+        <Alert tone="error">{error}</Alert>
 
         <form onSubmit={handleSubmit}>
-          <div className="form-group">
-            <label htmlFor="username">Username</label>
-            <input
-              id="username"
-              className="form-control"
-              placeholder="Enter your username"
-              value={form.username}
-              onChange={e => setForm(f => ({ ...f, username: e.target.value }))}
-              required
-              // eslint-disable-next-line jsx-a11y/no-autofocus -- the page is just this form
-              autoFocus
-            />
-          </div>
-          <div className="form-group">
-            <label htmlFor="password">Password</label>
-            <input
-              id="password"
-              type="password"
-              className="form-control"
-              placeholder="Enter your password"
-              value={form.password}
-              onChange={e => setForm(f => ({ ...f, password: e.target.value }))}
-              required
-            />
-          </div>
-          <button
-            type="submit"
-            className="btn btn-primary"
-            style={{ width: '100%', justifyContent: 'center', marginTop: 8, padding: '12px' }}
-            disabled={loading}
-          >
-            {loading ? 'Signing in…' : 'Sign In'}
-          </button>
+          <Input
+            id="username"
+            label="Username"
+            placeholder="Enter your username"
+            value={form.username}
+            onChange={e => setForm(f => ({ ...f, username: e.target.value }))}
+            required
+            autoComplete="username"
+            // eslint-disable-next-line jsx-a11y/no-autofocus -- the page is just this form
+            autoFocus
+          />
+          <Input
+            id="password"
+            label="Password"
+            type="password"
+            placeholder="Enter your password"
+            value={form.password}
+            onChange={e => setForm(f => ({ ...f, password: e.target.value }))}
+            required
+            autoComplete="current-password"
+          />
+          <Button type="submit" size="lg" block loading={loading} className="mt-2" data-testid="login-btn">
+            Sign In
+          </Button>
         </form>
 
-        <p style={{ textAlign: 'center', marginTop: 20, fontSize: '0.875rem', color: 'var(--color-text-muted)' }}>
-          New patient?{' '}
-          <Link to="/register" style={{ color: 'var(--color-accent)', fontWeight: 500 }}>
-            Register
-          </Link>
+        <p className="auth-foot">
+          New patient? <Link to="/register">Register</Link>
         </p>
-        <p style={{ textAlign: 'center', marginTop: 6, fontSize: '0.8rem', color: 'var(--color-text-muted)' }}>
+        <p className="auth-foot text-xs mt-2">
           Doctors and staff: sign in with the username and password given by the hospital administrator.
         </p>
       </div>
     </div>
   )
-}
-
-const outerStyle = {
-  minHeight: '100vh',
-  display: 'flex',
-  alignItems: 'center',
-  justifyContent: 'center',
-  background: 'linear-gradient(135deg, var(--color-dark) 0%, #3d3d3d 100%)',
-  padding: 16,
-}
-
-const panelStyle = {
-  background: 'var(--color-white)',
-  borderRadius: 16,
-  padding: '40px 36px',
-  width: '100%',
-  maxWidth: 420,
-  boxShadow: 'var(--shadow-lg)',
-}
-
-const logoStyle = {
-  width: 56,
-  height: 56,
-  borderRadius: 14,
-  background: 'var(--color-accent)',
-  color: 'var(--color-white)',
-  fontSize: '1.6rem',
-  fontWeight: 700,
-  display: 'inline-flex',
-  alignItems: 'center',
-  justifyContent: 'center',
-  marginBottom: 12,
-}
-
-const headingStyle = {
-  fontFamily: 'var(--font-display)',
-  fontSize: '1.6rem',
-  color: 'var(--color-dark)',
-  fontWeight: 400,
-  marginBottom: 4,
 }

@@ -74,9 +74,9 @@ describe('StatusBadge', () => {
     expect(screen.getByText('Unknown Status')).toBeInTheDocument()
   })
 
-  test('renders null status without crashing', () => {
-    render(<StatusBadge status={null} />)
-    expect(screen.getByText('—')).toBeInTheDocument()
+  test('renders nothing for a missing status', () => {
+    const { container } = render(<StatusBadge status={null} />)
+    expect(container).toBeEmptyDOMElement()
   })
 })
 
@@ -89,10 +89,9 @@ describe('Spinner', () => {
     expect(container.firstChild).toBeInTheDocument()
   })
 
-  test('accepts custom size prop', () => {
-    render(<Spinner size={48} />)
-    const spinner = screen.getByTestId('spinner')
-    expect(spinner).toHaveStyle({ width: '48px', height: '48px' })
+  test('shows a loading label for screen readers', () => {
+    render(<Spinner label="Loading bills…" />)
+    expect(screen.getByRole('status')).toHaveTextContent('Loading bills…')
   })
 })
 
@@ -191,7 +190,9 @@ describe('LoginPage', () => {
     fireEvent.change(screen.getByLabelText(/password/i), { target: { value: 'b' } })
     fireEvent.click(screen.getByRole('button', { name: /sign in/i }))
 
-    expect(screen.getByRole('button', { name: /signing in/i })).toBeDisabled()
+    const button = screen.getByRole('button', { name: /sign in/i })
+    expect(button).toBeDisabled()
+    expect(button).toHaveAttribute('aria-busy', 'true')
   })
 })
 

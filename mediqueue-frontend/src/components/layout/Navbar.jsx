@@ -1,47 +1,21 @@
 import { useAuth } from '../../context/AuthContext'
 import { formatEnum } from '../../utils/formatters'
+import Badge from '../ui/Badge'
+import Button from '../ui/Button'
 import NotificationBell from './NotificationBell'
 
 export default function Navbar() {
   const { user, logout } = useAuth()
   return (
-    <nav
-      style={{
-        position: 'fixed',
-        top: 0,
-        left: 'var(--sidebar-w)',
-        right: 0,
-        height: 'var(--navbar-h)',
-        background: 'var(--color-white)',
-        borderBottom: '1px solid var(--color-border)',
-        display: 'flex',
-        alignItems: 'center',
-        justifyContent: 'flex-end',
-        padding: '0 32px',
-        gap: 16,
-        zIndex: 100,
-        boxShadow: 'var(--shadow-sm)',
-      }}
-    >
+    <nav className="navbar" aria-label="Account">
       {user && (
         <>
           <NotificationBell />
-          <span style={{ fontSize: '0.875rem', color: 'var(--color-text-muted)' }}>{user.username}</span>
-          <span
-            style={{
-              background: 'var(--color-accent-soft)',
-              color: 'var(--color-accent)',
-              padding: '3px 10px',
-              borderRadius: 20,
-              fontSize: '0.75rem',
-              fontWeight: 600,
-            }}
-          >
-            {formatEnum(user.role)}
-          </span>
-          <button className="btn btn-outline btn-sm" onClick={logout}>
+          <span className="navbar-user">{user.name || user.username}</span>
+          <Badge tone="accent">{formatEnum(user.role)}</Badge>
+          <Button variant="outline" size="sm" onClick={logout} data-testid="logout-btn">
             Logout
-          </button>
+          </Button>
         </>
       )}
     </nav>

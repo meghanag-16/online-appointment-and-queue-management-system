@@ -1,28 +1,30 @@
-import { useState, useEffect } from 'react'
+import { useEffect, useState } from 'react'
 import PageLayout from '../../components/layout/PageLayout'
 import PageTitle from '../../components/common/PageTitle'
-import Spinner from '../../components/common/Spinner'
 import StatusBadge from '../../components/common/StatusBadge'
 import AppointmentStatusSelect from '../../components/booking/AppointmentStatusSelect'
 import axiosInstance, { errorMessage } from '../../api/axiosInstance'
 import { ENDPOINTS } from '../../api/endpoints'
 import { todayLocal, formatTime } from '../../utils/dates'
-
-function StatCard({ label, value, color }) {
-  return (
-    <div className="card" style={{ textAlign: 'center', flex: 1, minWidth: 140 }}>
-      <p style={{ fontSize: '0.85rem', color: 'var(--color-text-muted)', marginBottom: 6 }}>{label}</p>
-      <p style={{ fontSize: '2.4rem', fontWeight: 700, color: color || 'var(--color-dark)', margin: 0 }}>
-        {value ?? 0}
-      </p>
-    </div>
-  )
-}
+import {
+  Alert,
+  Button,
+  Card,
+  ErrorState,
+  LoadingState,
+  StatCard,
+  Table,
+  useConfirm,
+  useToast,
+} from '../../components/ui'
 
 export default function ReceptionistDashboard() {
+  const confirm = useConfirm()
+  const toast = useToast()
   const [stats, setStats] = useState(null)
   const [today, setToday] = useState([])
   const [loading, setLoading] = useState(true)
+  const [loadError, setLoadError] = useState('')
   const [error, setError] = useState('')
 
   useEffect(() => {
@@ -30,7 +32,6 @@ export default function ReceptionistDashboard() {
   }, [])
 
   async function fetchAll() {
-    setLoading(true)
     try {
       // Local calendar day (not UTC), so early-morning IST shows today, not yesterday.
       const [statsRes, todayRes] = await Promise.all([
@@ -39,10 +40,9 @@ export default function ReceptionistDashboard() {
       ])
       setStats(statsRes.data)
       setToday(todayRes.data)
-      setError('')
+      setLoadError('')
     } catch (err) {
-      setStats(null)
-      setError(errorMessage(err, 'Could not load the dashboard.'))
+      setLoadError(errorMessage(err, 'Could not load the dashboard.'))
     } finally {
       setLoading(false)
     }
@@ -50,8 +50,10 @@ export default function ReceptionistDashboard() {
 
   async function togglePriority(a) {
     const next = a.priority === 'HIGH_PRIORITY' ? 'NORMAL' : 'HIGH_PRIORITY'
+    setError('')
     try {
       await axiosInstance.patch(ENDPOINTS.APPOINTMENT_PRIORITY(a.appointmentId), { priority: next })
+      toast.success(`${a.patientName} is now ${next === 'HIGH_PRIORITY' ? 'high priority' : 'normal priority'}.`)
       fetchAll()
     } catch (err) {
       setError(errorMessage(err, 'Could not change the priority.'))
@@ -59,7 +61,16 @@ export default function ReceptionistDashboard() {
   }
 
   async function handleStatus(a, status) {
-    if (status === 'CANCELLED' && !window.confirm(`Cancel ${a.patientName}'s appointment?`)) return
+    if (status === 'CANCELLED') {
+      const ok = await confirm({
+        title: `Cancel ${a.patientName}'s appointment?`,
+        message: 'The slot is freed and the patient is notified.',
+        confirmLabel: 'Cancel appointment',
+        danger: true,
+      })
+      if (!ok) return
+    }
+    setError('')
     try {
       await axiosInstance.patch(ENDPOINTS.UPDATE_STATUS(a.appointmentId), { status })
       fetchAll()
@@ -71,74 +82,55 @@ export default function ReceptionistDashboard() {
   return (
     <PageLayout>
       <PageTitle title="Receptionist Dashboard" subtitle="Front desk overview" />
-      {error && <div className="alert alert-error">{error}</div>}
+      <ErrorState message={loadError} onRetry={fetchAll} />
+      <Alert tone="error">{error}</Alert>
       {loading ? (
-        <Spinner />
+        <LoadingState />
       ) : (
         <>
-          <div style={{ display: 'flex', gap: 16, flexWrap: 'wrap', marginBottom: 28 }}>
-            <StatCard label="Today's Appointments" value={stats?.todayTotal} color="var(--color-dark)" />
-            <StatCard label="Booked" value={stats?.todayBooked} color="var(--color-accent)" />
-            <StatCard label="Completed" value={stats?.todayCompleted} color="#27ae60" />
-            <StatCard label="Cancelled" value={stats?.todayCancelled} color="#e74c3c" />
-            <StatCard label="Total All Time" value={stats?.totalAll} color="#7f8c8d" />
+          <div className="grid-auto mb-6">
+            <StatCard label="Today's Appointments" value={stats?.todayTotal} />
+            <StatCard label="Booked" value={stats?.todayBooked} tone="accent" />
+            <StatCard label="Completed" value={stats?.todayCompleted} tone="success" />
+            <StatCard label="Cancelled" value={stats?.todayCancelled} tone="danger" />
+            <StatCard label="Total All Time" value={stats?.totalAll} tone="muted" />
           </div>
 
-          <div className="card" style={{ padding: 0 }}>
-            <div style={{ padding: '16px 20px', borderBottom: '1px solid var(--color-border)' }}>
-              <h3 style={{ margin: 0 }}>Today&apos;s Appointments</h3>
-            </div>
-            <div className="table-wrapper">
-              <table>
-                <thead>
-                  <tr>
-                    <th>ID</th>
-                    <th>Patient</th>
-                    <th>Doctor</th>
-                    <th>Time</th>
-                    <th>Reason</th>
-                    <th>Priority</th>
-                    <th>Status</th>
-                    <th>Update</th>
-                  </tr>
-                </thead>
-                <tbody>
-                  {today.length === 0 && (
-                    <tr>
-                      <td colSpan={8} style={{ textAlign: 'center', padding: 24, color: 'var(--color-text-muted)' }}>
-                        No appointments today
-                      </td>
-                    </tr>
-                  )}
-                  {today.map(a => (
-                    <tr key={a.appointmentId}>
-                      <td style={{ fontSize: 12 }}>{a.appointmentId}</td>
-                      <td>
-                        <strong>{a.patientName}</strong>
-                      </td>
-                      <td>{a.doctorName}</td>
-                      <td style={{ fontSize: 12 }}>{formatTime(a.startTime)}</td>
-                      <td style={{ fontSize: 12 }}>{a.reasonForVisit || '—'}</td>
-                      <td>
-                        <StatusBadge status={a.priority || 'NORMAL'} />
-                      </td>
-                      <td>
-                        <StatusBadge status={a.status} />
-                      </td>
-                      <td style={{ whiteSpace: 'nowrap' }}>
-                        <AppointmentStatusSelect appointment={a} onChange={handleStatus} />{' '}
-                        {['BOOKED', 'CONFIRMED', 'IN_PROGRESS'].includes(a.status) && (
-                          <button className="btn btn-outline btn-sm" onClick={() => togglePriority(a)}>
-                            {a.priority === 'HIGH_PRIORITY' ? 'Unmark priority' : 'Mark high priority'}
-                          </button>
-                        )}
-                      </td>
-                    </tr>
-                  ))}
-                </tbody>
-              </table>
-            </div>
-          </div>
+          <Card flush title="Today's appointments">
+            <Table
+              headers={['ID', 'Patient', 'Doctor', 'Time', 'Reason', 'Priority', 'Status', 'Update']}
+              empty="No appointments today"
+              isEmpty={today.length === 0}
+            >
+              {today.map(a => (
+                <tr key={a.appointmentId}>
+                  <td className="text-xs">{a.appointmentId}</td>
+                  <td>
+                    <strong>{a.patientName}</strong>
+                  </td>
+                  <td>{a.doctorName}</td>
+                  <td className="text-sm">{formatTime(a.startTime)}</td>
+                  <td className="text-sm">{a.reasonForVisit || '—'}</td>
+                  <td>
+                    <StatusBadge status={a.priority || 'NORMAL'} />
+                  </td>
+                  <td>
+                    <StatusBadge status={a.status} />
+                  </td>
+                  <td className="nowrap">
+                    <div className="row">
+                      <AppointmentStatusSelect appointment={a} onChange={handleStatus} />
+                      {['BOOKED', 'CONFIRMED', 'IN_PROGRESS'].includes(a.status) && (
+                        <Button variant="outline" size="sm" onClick={() => togglePriority(a)}>
+                          {a.priority === 'HIGH_PRIORITY' ? 'Unmark priority' : 'Mark high priority'}
+                        </Button>
+                      )}
+                    </div>
+                  </td>
+                </tr>
+              ))}
+            </Table>
+          </Card>
         </>
       )}
     </PageLayout>

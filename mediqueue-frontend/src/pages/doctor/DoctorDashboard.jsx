@@ -1,67 +1,47 @@
 import { useEffect, useState } from 'react'
+import { Link } from 'react-router-dom'
 import PageLayout from '../../components/layout/PageLayout'
 import PageTitle from '../../components/common/PageTitle'
-import Spinner from '../../components/common/Spinner'
 import axiosInstance, { errorMessage } from '../../api/axiosInstance'
 import { useAuth } from '../../context/AuthContext'
 import { drName } from '../../utils/formatters'
+import { ErrorState, LoadingState, StatCard } from '../../components/ui'
 
 export default function DoctorDashboard() {
   const { user } = useAuth()
-  const [stats, setStats] = useState({ todaysAppointments: 0, inQueue: 0, pendingPrescriptions: 0, completedToday: 0 })
-  const [loading, setLoading] = useState(true)
-  const [error, setError] = useState(null)
+  const [stats, setStats] = useState(null)
+  const [error, setError] = useState('')
 
-  useEffect(() => {
-    if (!user?.userId) return
-    const fetchStats = async () => {
-      try {
-        const res = await axiosInstance.get(`/doctor/dashboard/${user.userId}`)
-        setStats(res.data)
-      } catch (err) {
-        setError(errorMessage(err, 'Unable to load doctor dashboard data.'))
-      } finally {
-        setLoading(false)
-      }
-    }
-    fetchStats()
-  }, [user?.userId])
-
-  const cards = [
-    { label: "Today's Appointments", value: stats.todaysAppointments, accent: true },
-    { label: 'In Queue', value: stats.inQueue },
-    { label: 'Pending Prescriptions', value: stats.pendingPrescriptions },
-    { label: 'Completed Today', value: stats.completedToday },
-  ]
+  function load() {
+    setError('')
+    axiosInstance
+      .get(`/doctor/dashboard/${user.userId}`)
+      .then(res => setStats(res.data))
+      .catch(err => setError(errorMessage(err, 'Unable to load doctor dashboard data.')))
+  }
+  useEffect(load, [user.userId])
 
   return (
     <PageLayout>
       <PageTitle title={drName(user?.name || user?.username || '')} subtitle="Your schedule and patient overview" />
-      {error && <div className="alert alert-error">{error}</div>}
-      {loading ? (
-        <Spinner />
-      ) : (
-        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill,minmax(200px,1fr))', gap: 20 }}>
-          {cards.map(c => (
-            <div
-              key={c.label}
-              className="card"
-              style={{ borderTop: c.accent ? '3px solid var(--color-accent)' : undefined }}
-            >
-              <p style={{ fontSize: '0.8rem', color: 'var(--color-text-muted)', marginBottom: 8 }}>{c.label}</p>
-              <p
-                style={{
-                  fontSize: '2rem',
-                  fontWeight: 700,
-                  color: c.accent ? 'var(--color-accent)' : 'var(--color-dark)',
-                }}
-              >
-                {c.value}
-              </p>
-            </div>
-          ))}
+      <ErrorState message={error} onRetry={load} />
+      {!stats && !error && <LoadingState />}
+      {stats && (
+        <div className="grid-auto mb-6">
+          <StatCard
+            label="Today's Appointments"
+            value={stats.todaysAppointments}
+            tone="accent"
+            to="/doctor/appointments"
+          />
+          <StatCard label="In Queue" value={stats.inQueue} to="/doctor/queue" />
+          <StatCard label="Pending Prescriptions" value={stats.pendingPrescriptions} to="/doctor/prescriptions" />
+          <StatCard label="Completed Today" value={stats.completedToday} tone="success" />
         </div>
       )}
+      <Link to="/doctor/queue" className="btn btn-primary">
+        Open today&apos;s queue
+      </Link>
     </PageLayout>
   )
 }
