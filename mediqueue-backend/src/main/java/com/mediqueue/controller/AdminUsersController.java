@@ -12,7 +12,7 @@ import org.springframework.web.bind.annotation.*;
 
 import java.util.List;
 
-/** Administrator user management: list, create (any role), view profile, approve/suspend/deactivate. */
+/** Administrator user management: list, create (any role), view profile, activate/suspend/deactivate. */
 @RestController
 @RequestMapping("/api/v1/users")
 @PreAuthorize("hasRole('ADMINISTRATOR')")
@@ -29,7 +29,7 @@ public class AdminUsersController {
         return ResponseEntity.ok(userAccountService.listUsers());
     }
 
-    /** Same RegisterRequest and same creation path as public sign-up, but ACTIVE immediately. */
+    /** The only way to create doctor, lab technician, receptionist and administrator accounts. */
     @PostMapping
     public ResponseEntity<Object> createUser(@Valid @RequestBody RegisterRequest request) {
         var user = userAccountService.createByAdmin(request);
@@ -41,7 +41,7 @@ public class AdminUsersController {
         return ResponseEntity.ok(userAccountService.getProfile(userId));
     }
 
-    /** {"status": "ACTIVE" | "SUSPENDED" | "DEACTIVATED" | "PENDING_APPROVAL"} */
+    /** {"status": "ACTIVE" | "SUSPENDED" | "DEACTIVATED"} */
     @PatchMapping("/{userId}/status")
     public ResponseEntity<UserDTO> updateStatus(@PathVariable String userId,
                                                 @Valid @RequestBody StatusUpdateRequest body) {

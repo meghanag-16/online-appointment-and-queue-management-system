@@ -6,7 +6,6 @@ const NAV_LINKS = {
     { to: '/patient/dashboard',    label: 'Dashboard'    },
     { to: '/patient/appointments', label: 'Appointments' },
     { to: '/patient/book',         label: 'Book Slot'    },
-    { to: '/patient/doctors',      label: 'Find Doctors' },
     { to: '/patient/billing',      label: 'Billing'      },
     { to: '/patient/records',      label: 'My Records'   },
     { to: '/patient/complaints',   label: 'Complaints'   },
@@ -31,6 +30,7 @@ const NAV_LINKS = {
     { to: '/admin/doctors',     label: 'Doctors'     },
     { to: '/admin/departments', label: 'Departments' },
     { to: '/admin/complaints',  label: 'Complaints'  },
+    { to: '/admin/settings',    label: 'Slot Settings' },
   ],
 }
 
@@ -62,7 +62,7 @@ const dotStyle = {
 
 export default function Sidebar() {
   const { user } = useAuth()
-  const links = NAV_LINKS[user?.role] || []
+  const links = user ? [...(NAV_LINKS[user.role] || []), { to: '/profile', label: 'My Profile' }] : []
 
   return (
     <aside style={sidebarStyle}>

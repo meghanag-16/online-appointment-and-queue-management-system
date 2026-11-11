@@ -12,9 +12,13 @@ public interface AppointmentService {
     AppointmentResponse getAppointment(Long appointmentId);
     List<AppointmentResponse> getAppointmentsForPatient(String patientId);
     List<AppointmentResponse> getAppointmentsForDoctor(String doctorId);
+    /** Cancels and frees the slot. Patients must do it before the cutoff; staff any time before the visit. */
     AppointmentResponse cancelAppointment(Long appointmentId);
+    /** Moves the appointment to another open slot of the same doctor (same cutoff rule as cancel). */
+    AppointmentResponse rescheduleAppointment(Long appointmentId, Long newSlotId);
     /** All appointments, optionally for one date (receptionist/administrator). */
     List<AppointmentResponse> getAll(LocalDate date);
+    /** Status change following the allowed transitions; CANCELLED also frees the slot. */
     AppointmentResponse updateStatus(Long appointmentId, String status);
     AppointmentStatsResponse getStats();
 }

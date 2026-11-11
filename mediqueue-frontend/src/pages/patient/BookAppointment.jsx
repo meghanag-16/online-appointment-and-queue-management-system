@@ -1,185 +1,109 @@
-import { useState } from 'react'
-import { useNavigate } from 'react-router-dom'
+import { useEffect, useState } from 'react'
+import { useNavigate, useSearchParams } from 'react-router-dom'
 import PageLayout from '../../components/layout/PageLayout'
 import PageTitle from '../../components/common/PageTitle'
-import { useAuth } from '../../context/AuthContext'
+import DoctorPicker from '../../components/booking/DoctorPicker'
+import SlotPicker from '../../components/booking/SlotPicker'
+import AlternateSlots from '../../components/booking/AlternateSlots'
 import axiosInstance, { errorMessage } from '../../api/axiosInstance'
 import { ENDPOINTS } from '../../api/endpoints'
+import { formatSlot } from '../../utils/dates'
 
-function formatDateTime(dt) {
-  if (!dt) return ''
-  const d = new Date(dt)
-  return d.toLocaleString('en-IN', {
-    day: '2-digit', month: 'short', year: 'numeric',
-    hour: '2-digit', minute: '2-digit', hour12: true,
-  })
-}
-
+/** Patient booking: pick a doctor → pick a slot → book. ?doctorId= preselects a doctor (from Find Doctors). */
 export default function BookAppointment() {
-  const { user }   = useAuth()
-  const navigate   = useNavigate()
+  const navigate = useNavigate()
+  const [params] = useSearchParams()
 
-  const [doctorId, setDoctorId]         = useState('')
-  const [slots, setSlots]               = useState([])
-  const [selectedSlot, setSelectedSlot] = useState(null)
-  const [slotsLoading, setSlotsLoading] = useState(false)
-  const [slotsError, setSlotsError]     = useState('')
-
-  const [appointmentDate, setAppointmentDate] = useState('')
-  const [reasonForVisit, setReasonForVisit]   = useState('')
-  const [loading, setLoading]   = useState(false)
-  const [error, setError]       = useState('')
-  const [success, setSuccess]   = useState('')
+  const [doctor, setDoctor] = useState(null)
+  const [slot, setSlot] = useState(null)
+  const [reasonForVisit, setReasonForVisit] = useState('')
+  const [loading, setLoading] = useState(false)
+  const [error, setError] = useState('')
+  const [success, setSuccess] = useState('')
   const [alternates, setAlternates] = useState([])
+  const [refreshKey, setRefreshKey] = useState(0)
+  const [cutoff, setCutoff] = useState(null)
 
-  async function fetchSlots() {
-    if (!doctorId.trim()) { setSlotsError('Please enter a Doctor ID first.'); return }
-    setSlotsLoading(true); setSlotsError(''); setSlots([]); setSelectedSlot(null)
-    try {
-      const res = await axiosInstance.get(`/doctors/${doctorId.trim()}/slots`)
-      if (res.data.length === 0) setSlotsError('No available slots for this doctor.')
-      setSlots(res.data)
-    } catch (err) {
-      setSlotsError(errorMessage(err, 'Could not fetch slots. Please check the Doctor ID.'))
-    } finally { setSlotsLoading(false) }
+  useEffect(() => {
+    axiosInstance.get(ENDPOINTS.SLOT_SETTINGS).then(res => setCutoff(res.data.changeCutoffHours)).catch(() => {})
+    const preselected = params.get('doctorId')
+    if (preselected) {
+      axiosInstance.get(ENDPOINTS.DOCTORS_SEARCH()).then(res => {
+        const d = res.data.find(x => x.userId === preselected)
+        if (d) setDoctor(d)
+      }).catch(() => {})
+    }
+  }, []) // eslint-disable-line react-hooks/exhaustive-deps
+
+  function chooseDoctor(d) {
+    setDoctor(d); setSlot(null); setError(''); setAlternates([])
   }
 
   async function handleSubmit(e) {
     e.preventDefault()
-    if (!selectedSlot) { setError('Please select a time slot.'); return }
+    if (!slot) { setError('Please select a time slot.'); return }
     setLoading(true); setError(''); setSuccess(''); setAlternates([])
     try {
       await axiosInstance.post(ENDPOINTS.APPOINTMENTS, {
-        patientId: user.userId,
-        doctorId: doctorId.trim(),
-        slotId: selectedSlot.slotId,
-        appointmentDate,
+        doctorId: doctor.userId,
+        slotId: slot.slotId,
         reasonForVisit,
-        priority: 'NORMAL',
-        createdByRole: 'PATIENT',
       })
-      setSuccess('Appointment booked successfully!')
+      setSuccess(`Booked with ${doctor.name} on ${formatSlot(slot.startTime)}.`)
       setTimeout(() => navigate('/patient/appointments'), 1500)
     } catch (err) {
       setError(errorMessage(err, 'Booking failed. Please try again.'))
-      if (err.response?.data?.alternateSlots) setAlternates(err.response.data.alternateSlots)
+      setAlternates(err.response?.data?.alternateSlots || [])
+      setSlot(null)
+      setRefreshKey(k => k + 1)   // reload the times: the one we chose is gone
     } finally { setLoading(false) }
+  }
+
+  function pickAlternate(alt) {
+    if (alt.doctorId !== doctor?.userId) {
+      setDoctor({ userId: alt.doctorId, name: alt.doctorName, departmentName: alt.departmentName })
+    }
+    setSlot({ slotId: alt.slotId, startTime: alt.startTime, endTime: alt.endTime })
+    setAlternates([]); setError('')
   }
 
   return (
     <PageLayout>
-      <PageTitle title="Book Appointment" subtitle="Select a doctor and available time slot" />
-      <div className="card" style={{ maxWidth: 560 }}>
-        {error   && <div className="alert alert-error"   style={{ marginBottom: 16 }}>{error}</div>}
-        {success && <div className="alert alert-success" style={{ marginBottom: 16 }}>{success}</div>}
+      <PageTitle title="Book Appointment" subtitle="Choose a doctor, then an open time" />
 
-        <form onSubmit={handleSubmit}>
-          {/* Doctor ID + Fetch Slots */}
-          <div className="form-group">
-            <label>Doctor ID</label>
-            <div style={{ display: 'flex', gap: 8 }}>
-              <input className="form-control" placeholder="Enter doctor ID (from Find Doctors)"
-                value={doctorId} onChange={e => { setDoctorId(e.target.value); setSlots([]); setSelectedSlot(null) }}
-                required style={{ flex: 1 }} />
-              <button type="button" className="btn btn-primary"
-                onClick={fetchSlots} disabled={slotsLoading}
-                style={{ whiteSpace: 'nowrap' }}>
-                {slotsLoading ? 'Loading…' : 'Get Slots'}
-              </button>
-            </div>
-          </div>
+      <div className="card" style={{ marginBottom: 20 }}>
+        <h3 style={{ marginBottom: 12 }}>1. Choose a doctor</h3>
+        <DoctorPicker selectedDoctorId={doctor?.userId} onSelect={chooseDoctor} />
+      </div>
 
-          {slotsError && (
-            <p style={{ color: 'var(--color-error, red)', fontSize: '0.85rem', marginBottom: 12 }}>
-              {slotsError}
-            </p>
-          )}
+      {doctor && (
+        <form className="card" onSubmit={handleSubmit} style={{ maxWidth: 760 }}>
+          <h3 style={{ marginBottom: 4 }}>2. Choose a time with {doctor.name}</h3>
+          <p style={{ fontSize: '0.82rem', color: 'var(--color-text-muted)', marginBottom: 14 }}>
+            {cutoff != null && `You can cancel or reschedule up to ${cutoff} hour${cutoff === 1 ? '' : 's'} before the appointment.`}
+          </p>
+          {error && <div className="alert alert-error">{error}</div>}
+          {success && <div className="alert alert-success">{success}</div>}
 
-          {/* Slot picker */}
-          {slots.length > 0 && (
-            <div className="form-group">
-              <label>Available Time Slots</label>
-              <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
-                {slots.map(slot => {
-                  const isSelected = selectedSlot?.slotId === slot.slotId
-                  return (
-                    <div key={slot.slotId}
-                      onClick={() => setSelectedSlot(slot)}
-                      style={{
-                        padding: '10px 14px',
-                        borderRadius: 8,
-                        border: `2px solid ${isSelected ? 'var(--color-accent)' : 'var(--color-border-tertiary, #ddd)'}`,
-                        background: isSelected ? 'var(--color-accent-light, #fdf0f4)' : 'var(--color-bg-card, #fff)',
-                        cursor: 'pointer',
-                        transition: 'all 0.15s',
-                      }}>
-                      <div style={{ fontWeight: 600, fontSize: '0.9rem' }}>
-                        🕐 {formatDateTime(slot.startTime)} — {formatDateTime(slot.endTime)}
-                      </div>
-                      <div style={{ fontSize: '0.78rem', color: 'var(--color-text-muted)', marginTop: 2 }}>
-                        Slot ID: {slot.slotId}
-                      </div>
-                    </div>
-                  )
-                })}
-              </div>
-            </div>
-          )}
+          <SlotPicker doctorId={doctor.userId} selectedSlotId={slot?.slotId} onSelect={s => { setSlot(s); setError('') }}
+            refreshKey={refreshKey} />
+          <AlternateSlots alternates={alternates} onPick={pickAlternate} />
 
-          {/* Appointment Date */}
-          <div className="form-group">
-            <label>Appointment Date</label>
-            <input className="form-control" type="date"
-              value={appointmentDate} onChange={e => setAppointmentDate(e.target.value)} required />
-          </div>
-
-          {/* Reason */}
-          <div className="form-group">
-            <label>Reason for Visit</label>
-            <textarea className="form-control" rows={3}
+          <div className="form-group" style={{ marginTop: 16 }}>
+            <label htmlFor="reason">Reason for visit</label>
+            <textarea id="reason" className="form-control" rows={3} maxLength={2000}
               placeholder="Describe your symptoms or reason for visit…"
               value={reasonForVisit} onChange={e => setReasonForVisit(e.target.value)} />
           </div>
 
-          <button type="submit" className="btn btn-primary"
+          {slot && <p style={{ marginBottom: 12 }}>Selected: <strong>{formatSlot(slot.startTime)}</strong></p>}
+          <button type="submit" className="btn btn-primary" data-testid="book-btn"
             style={{ width: '100%', justifyContent: 'center', padding: '12px' }}
-            disabled={loading || !selectedSlot}>
+            disabled={loading || !slot || !!success}>
             {loading ? 'Booking…' : 'Book Appointment'}
           </button>
         </form>
-
-        {/* Alternate slots on failure */}
-        {alternates.length > 0 && (
-          <div style={{ marginTop: 24 }}>
-            <p style={{ fontWeight: 600, marginBottom: 12, color: 'var(--color-accent)' }}>
-              Suggested Alternate Slots
-            </p>
-            {alternates.map(alt => (
-              <div key={alt.slotId} className="card"
-                style={{ marginBottom: 8, padding: '12px 16px', border: '1.5px solid var(--color-accent)',
-                  cursor: 'pointer' }}
-                onClick={() => {
-                  setDoctorId(alt.doctorId)
-                  setSelectedSlot({ slotId: alt.slotId, startTime: alt.startTime, endTime: alt.endTime })
-                  setSlots([{ slotId: alt.slotId, startTime: alt.startTime, endTime: alt.endTime }])
-                  setAlternates([])
-                  setError('')
-                }}>
-                <p style={{ fontWeight: 500 }}>{alt.doctorName}</p>
-                <p style={{ fontSize: '0.82rem', color: 'var(--color-text-muted)' }}>
-                  {alt.reason?.replace('_', ' ')}
-                </p>
-                <p style={{ fontSize: '0.82rem' }}>
-                  🕐 {formatDateTime(alt.startTime)} — {formatDateTime(alt.endTime)}
-                </p>
-                <p style={{ fontSize: '0.75rem', color: 'var(--color-text-muted)' }}>
-                  Click to select this slot
-                </p>
-              </div>
-            ))}
-          </div>
-        )}
-      </div>
+      )}
     </PageLayout>
   )
 }

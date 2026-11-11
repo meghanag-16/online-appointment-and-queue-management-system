@@ -15,6 +15,10 @@ export const getAllDepartments = () =>
 export const addDepartment = (departmentData) =>
   axiosInstance.post('/admin/departments', departmentData);
 
+/** Slot length, working hours/days, booking window and cancel/reschedule cutoff. */
+export const updateSlotSettings = (settings) =>
+  axiosInstance.put('/admin/settings/slots', settings);
+
 export const getAuditLogs = () =>
   axiosInstance.get('/admin/audit');
 
@@ -28,6 +32,6 @@ export const getAllUsers = () =>
 export const createUser = (userData) =>
   axiosInstance.post('/users', userData);
 
-/** status: ACTIVE | SUSPENDED | DEACTIVATED | PENDING_APPROVAL */
+/** status: ACTIVE | SUSPENDED | DEACTIVATED */
 export const updateUserStatus = (userId, status) =>
   axiosInstance.patch(`/users/${userId}/status`, { status });

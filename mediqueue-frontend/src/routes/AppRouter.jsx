@@ -10,7 +10,6 @@ import RegisterPage from '../pages/auth/RegisterPage'
 import PatientDashboard    from '../pages/patient/PatientDashboard'
 import PatientAppointments from '../pages/patient/PatientAppointments'
 import BookAppointment     from '../pages/patient/BookAppointment'
-import PatientDoctorSearch from '../pages/patient/PatientDoctorSearch'
 import PatientBilling      from '../pages/patient/PatientBilling'
 import PatientRecords      from '../pages/patient/PatientRecords'
 import PatientComplaints   from '../pages/patient/PatientComplaints'
@@ -35,10 +34,12 @@ import AdminUsers      from '../pages/admin/AdminUsers'
 import AdminDoctors    from '../pages/admin/AdminDoctors'
 import AdminDepartments from '../pages/admin/AdminDepartments'
 import AdminComplaints  from '../pages/admin/AdminComplaints'
+import AdminSettings    from '../pages/admin/AdminSettings'
 
 // Shared
 import NotFound      from '../pages/shared/NotFound'
 import Unauthorized  from '../pages/shared/Unauthorized'
+import ProfilePage   from '../pages/shared/ProfilePage'
 
 /** Redirects to login if not authenticated, or to Unauthorized if role not allowed */
 function PrivateRoute({ children, allowedRoles }) {
@@ -74,7 +75,8 @@ export default function AppRouter() {
         <Route path="/patient/dashboard"   element={<PrivateRoute allowedRoles={['PATIENT']}><PatientDashboard /></PrivateRoute>} />
         <Route path="/patient/appointments" element={<PrivateRoute allowedRoles={['PATIENT']}><PatientAppointments /></PrivateRoute>} />
         <Route path="/patient/book"         element={<PrivateRoute allowedRoles={['PATIENT']}><BookAppointment /></PrivateRoute>} />
-        <Route path="/patient/doctors"      element={<PrivateRoute allowedRoles={['PATIENT']}><PatientDoctorSearch /></PrivateRoute>} />
+        {/* Doctor search lives on the Book Slot page; keep old links working */}
+        <Route path="/patient/doctors"      element={<Navigate to="/patient/book" replace />} />
         <Route path="/patient/billing"      element={<PrivateRoute allowedRoles={['PATIENT']}><PatientBilling /></PrivateRoute>} />
         <Route path="/patient/records"      element={<PrivateRoute allowedRoles={['PATIENT']}><PatientRecords /></PrivateRoute>} />
         <Route path="/patient/complaints"   element={<PrivateRoute allowedRoles={['PATIENT']}><PatientComplaints /></PrivateRoute>} />
@@ -99,6 +101,10 @@ export default function AppRouter() {
         <Route path="/admin/doctors"     element={<PrivateRoute allowedRoles={['ADMINISTRATOR']}><AdminDoctors /></PrivateRoute>} />
         <Route path="/admin/departments" element={<PrivateRoute allowedRoles={['ADMINISTRATOR']}><AdminDepartments /></PrivateRoute>} />
         <Route path="/admin/complaints"  element={<PrivateRoute allowedRoles={['ADMINISTRATOR']}><AdminComplaints /></PrivateRoute>} />
+        <Route path="/admin/settings"    element={<PrivateRoute allowedRoles={['ADMINISTRATOR']}><AdminSettings /></PrivateRoute>} />
+
+        {/* Every role: edit own details and password */}
+        <Route path="/profile" element={<PrivateRoute><ProfilePage /></PrivateRoute>} />
 
         {/* Shared */}
         <Route path="/unauthorized" element={<Unauthorized />} />

@@ -4,13 +4,15 @@ A web-based hospital system that streamlines doctor appointments, manages a virt
 
 MediQueue gives every user a secure login, and the features they see depend on their role:
 
-- **Patient** — searches for doctors, books time slots (with alternate slots suggested when the chosen one is unavailable), views appointments, bills and medical records, and raises complaints.
-- **Doctor** — sees a dashboard and daily queue, views appointments, and issues digital prescriptions.
+- **Patient** — signs up, finds doctors by department, name/specialization and available day, books a time slot (with clickable alternate slots when the chosen one is taken), cancels or reschedules up to a cutoff before the visit, views bills and medical records, and raises complaints.
+- **Doctor** — sees a dashboard and daily queue, views appointments and marks them In Progress / Completed / No Show, and issues digital prescriptions.
 - **Lab Technician** — uploads diagnostic reports (PDF / images) against an appointment.
-- **Receptionist** — views and filters all appointments, updates their status, and books appointments on behalf of walk-in or phone patients, including high-priority cases.
-- **Administrator** — onboards and deactivates doctors, manages departments, views all users, and resolves patient complaints.
+- **Receptionist** — views and filters all appointments, moves them through the allowed statuses, cancels or reschedules them, and books on behalf of walk-in or phone patients (patient and doctor pickers), including high-priority cases.
+- **Administrator** — creates all doctor and staff accounts, deactivates users, manages departments, sets the slot schedule (slot length, hours, break, working days, booking window, cancel cutoff), and resolves patient complaints.
 
-Doctor time slots are generated automatically: 5 one-hour slots per day (09:00, 10:00, 11:00, 14:00, 15:00) for every active doctor, for the next 7 days, refreshed daily at midnight. Bills are generated when an appointment is booked, using the Strategy pattern (standard, emergency and follow-up rates).
+Every user has a **My Profile** page to edit their own details and change their password.
+
+Doctor time slots are generated automatically for every active doctor from the administrator's **Slot Settings** (default: 30-minute slots, 09:00–17:00 with a 13:00–14:00 break, Monday–Saturday, 7 days ahead; patients may cancel or reschedule until 2 hours before). Slots are topped up at startup and every night, and regenerated when the settings change; booked appointments keep their time. All dates and times use the hospital time zone (Asia/Kolkata, set with `APP_TIMEZONE`). Bills are generated when an appointment is booked, using the Strategy pattern (standard, emergency and follow-up rates).
 
 ## Project structure
 
@@ -106,8 +108,10 @@ Requires Java 17+, Maven, Node.js 20+ and MySQL 8.
 Fresh databases get everything from `schema.sql`. If your database was created earlier, run the files in `db/migrations/` once:
 
 ```bash
-mysql -u root -p mediqueue < db/migrations/add_pending_approval_status.sql
+mysql -u root -p mediqueue < db/migrations/phase2_scheduling_and_booking.sql
 ```
+
+With Docker: `docker exec -i mediqueue-db mysql -uroot -proot mediqueue < db/migrations/phase2_scheduling_and_booking.sql` (or start fresh with `docker compose down -v`).
 
 ### Demo accounts
 
@@ -115,8 +119,8 @@ On the first start against an empty database, demo data is created automatically
 
 ### Accounts and access
 
-- Anyone can sign up from the Register page. Patients can log in straight away. Doctor, lab technician, receptionist and administrator sign-ups are created as **pending approval** and can log in only after an administrator clicks **Approve** on the Users page.
-- Administrators can also create users of any role (Users page) or onboard doctors (Doctors page). Both use the same form and the same fields as self-registration, so accounts look the same however they were created.
+- Only **patients** can sign up (Register page); they are logged in straight away.
+- Doctor, lab technician, receptionist and administrator accounts are created **only by an administrator** (Users page, or Doctors page for doctors). They sign in with the username and initial password the administrator gives them, and can change their details and password under **My Profile**.
 - Patients see only their own data. Doctors see only patients on their own appointments. Lab technicians work with appointments and reports but cannot issue prescriptions. Receptionists and administrators can see everything.
 - Suspended or deactivated users are logged out on their next request. An expired login (after 24 hours) sends you back to the login page.
 
@@ -133,10 +137,10 @@ cd mediqueue-frontend && npx cypress run   # end-to-end tests (app must be runni
 The project is under active development. Known limitations at present:
 
 - The doctor's virtual queue is not yet populated automatically, so the queue view and "In Queue" count stay empty; priority-based reordering is not active yet.
-- Patients cannot yet reschedule appointments, cancel from their own page, view prescriptions, or download lab reports.
+- Patients cannot yet view prescriptions or download lab reports.
+- Cancelled appointments keep a pending bill (refunds come with the billing rework).
 - Doctors cannot yet open a patient's medical history; medical records are not updated after a consultation.
 - Lab technicians can upload reports, but there is no download link yet, and file types are not restricted to PDF and images.
 - Notifications (reminders, report-ready, prescription alerts) are only printed to the server log; no email or SMS is sent.
-- Doctor search matches specialization only (not department, name or availability).
-- Admin slot-duration settings, queue-priority override and the audit log are not implemented yet.
+- Queue-priority override and the audit log are not implemented yet.
 - Several Cypress tests are out of date with the current pages and fail.

@@ -14,7 +14,8 @@ const COLOR_MAP = {
   ACTIVE:       { bg: '#e8f8ee', color: '#27ae60' },
   SUSPENDED:    { bg: '#fff3e0', color: '#e67e22' },
   DEACTIVATED:  { bg: '#fde8e8', color: '#e74c3c' },
-  PENDING_APPROVAL: { bg: '#e8f4fd', color: '#2980b9' },
+  HIGH_PRIORITY: { bg: '#fde8ef', color: '#e7557e' },
+  NORMAL:       { bg: '#f0f0f0', color: '#666' },
 }
 
 export default function StatusBadge({ status }) {

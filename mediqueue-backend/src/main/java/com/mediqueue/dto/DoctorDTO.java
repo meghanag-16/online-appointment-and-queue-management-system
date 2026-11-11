@@ -4,6 +4,7 @@ import com.mediqueue.entity.Doctor;
 
 import java.math.BigDecimal;
 import java.time.LocalDate;
+import java.time.LocalDateTime;
 
 /** Safe view of a doctor (no password hash, no lazy entity graph) used by every doctor endpoint. */
 public class DoctorDTO {
@@ -21,6 +22,8 @@ public class DoctorDTO {
     private String departmentId;
     private String departmentName;
     private String accountStatus;
+    /** Earliest open slot (on the searched day, if a date was given); null = none. Set by doctor search. */
+    private LocalDateTime nextAvailableSlot;
 
     public DoctorDTO() {}
 
@@ -92,4 +95,7 @@ public class DoctorDTO {
 
     public String getAccountStatus() { return accountStatus; }
     public void setAccountStatus(String accountStatus) { this.accountStatus = accountStatus; }
+
+    public LocalDateTime getNextAvailableSlot() { return nextAvailableSlot; }
+    public void setNextAvailableSlot(LocalDateTime nextAvailableSlot) { this.nextAvailableSlot = nextAvailableSlot; }
 }

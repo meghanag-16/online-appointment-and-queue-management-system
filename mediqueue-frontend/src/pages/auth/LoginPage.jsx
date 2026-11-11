@@ -79,10 +79,13 @@ export default function LoginPage() {
         </form>
 
         <p style={{ textAlign: 'center', marginTop: 20, fontSize: '0.875rem', color: 'var(--color-text-muted)' }}>
-          Don't have an account?{' '}
+          New patient?{' '}
           <Link to="/register" style={{ color: 'var(--color-accent)', fontWeight: 500 }}>
             Register
           </Link>
+        </p>
+        <p style={{ textAlign: 'center', marginTop: 6, fontSize: '0.8rem', color: 'var(--color-text-muted)' }}>
+          Doctors and staff: sign in with the username and password given by the hospital administrator.
         </p>
       </div>
     </div>

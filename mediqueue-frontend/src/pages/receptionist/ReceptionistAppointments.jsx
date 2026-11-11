@@ -3,233 +3,206 @@ import PageLayout from '../../components/layout/PageLayout'
 import PageTitle from '../../components/common/PageTitle'
 import Spinner from '../../components/common/Spinner'
 import StatusBadge from '../../components/common/StatusBadge'
+import PatientPicker from '../../components/booking/PatientPicker'
+import DoctorPicker from '../../components/booking/DoctorPicker'
+import SlotPicker from '../../components/booking/SlotPicker'
+import AlternateSlots from '../../components/booking/AlternateSlots'
+import RescheduleDialog from '../../components/booking/RescheduleDialog'
+import AppointmentStatusSelect from '../../components/booking/AppointmentStatusSelect'
 import axiosInstance, { errorMessage } from '../../api/axiosInstance'
+import { ENDPOINTS } from '../../api/endpoints'
+import { formatSlot, formatTime } from '../../utils/dates'
+import { formatEnum } from '../../utils/formatters'
 
-const STATUS_OPTIONS = ['BOOKED','CONFIRMED','IN_PROGRESS','COMPLETED','CANCELLED','NO_SHOW']
+const STATUS_OPTIONS = ['BOOKED', 'CONFIRMED', 'IN_PROGRESS', 'COMPLETED', 'CANCELLED', 'NO_SHOW']
 
 export default function ReceptionistAppointments() {
   const [appointments, setAppointments] = useState([])
-  const [loading, setLoading]           = useState(true)
-  const [filterDate, setFilterDate]     = useState('')
+  const [loading, setLoading] = useState(true)
+  const [filterDate, setFilterDate] = useState('')
   const [filterStatus, setFilterStatus] = useState('')
-  const [filterName, setFilterName]     = useState('')
+  const [filterName, setFilterName] = useState('')
+  const [message, setMessage] = useState('')
+  const [error, setError] = useState('')
+  const [rescheduling, setRescheduling] = useState(null)
 
   // Book-for-patient form
   const [showBook, setShowBook] = useState(false)
-  const [doctors, setDoctors]   = useState([])
-  const [slots, setSlots]       = useState([])
-  const [bookForm, setBookForm] = useState({
-    patientId: '', doctorId: '', slotId: '', appointmentDate: '', reasonForVisit: '', priority: 'NORMAL'
-  })
-  const [bookMsg, setBookMsg]   = useState('')
-  const [bookErr, setBookErr]   = useState('')
-  const [slotsLoading, setSL]   = useState(false)
+  const [patient, setPatient] = useState(null)
+  const [doctor, setDoctor] = useState(null)
+  const [slot, setSlot] = useState(null)
+  const [reason, setReason] = useState('')
+  const [priority, setPriority] = useState('NORMAL')
+  const [bookErr, setBookErr] = useState('')
+  const [alternates, setAlternates] = useState([])
+  const [refreshKey, setRefreshKey] = useState(0)
+  const [booking, setBooking] = useState(false)
 
-  useEffect(() => { fetchAppointments(); fetchDoctors() }, [])
+  useEffect(() => { fetchAppointments() }, [filterDate]) // eslint-disable-line react-hooks/exhaustive-deps
 
   async function fetchAppointments() {
     setLoading(true)
     try {
-      const url = filterDate ? `/appointments/all?date=${filterDate}` : '/appointments/all'
-      const res = await axiosInstance.get(url)
+      const res = await axiosInstance.get(ENDPOINTS.APPOINTMENTS_ALL(filterDate))
       setAppointments(res.data)
-    } catch { setAppointments([]) }
-    finally { setLoading(false) }
+    } catch (err) {
+      setAppointments([]); setError(errorMessage(err, 'Could not load appointments.'))
+    } finally { setLoading(false) }
   }
 
-  async function fetchDoctors() {
+  async function handleStatusChange(a, status) {
+    if (status === 'CANCELLED' && !window.confirm(`Cancel ${a.patientName}'s appointment? The slot will be freed.`)) return
+    setMessage(''); setError('')
     try {
-      const res = await axiosInstance.get('/doctors/search?q=')
-      setDoctors(res.data)
-    } catch { setDoctors([]) }
-  }
-
-  async function fetchSlots(doctorId) {
-    if (!doctorId) return
-    setSL(true); setSlots([])
-    try {
-      const res = await axiosInstance.get(`/doctors/${doctorId}/slots`)
-      setSlots(res.data)
-    } catch { setSlots([]) }
-    finally { setSL(false) }
-  }
-
-  async function handleStatusChange(id, status) {
-    try {
-      await axiosInstance.patch(`/appointments/${id}/status`, { status })
+      await axiosInstance.patch(ENDPOINTS.UPDATE_STATUS(a.appointmentId), { status })
+      setMessage(`Appointment ${a.appointmentId} marked ${formatEnum(status)}.`)
       fetchAppointments()
-    } catch (err) { alert(errorMessage(err, 'Could not update the status.')) }
+    } catch (err) { setError(errorMessage(err, 'Could not update the status.')) }
   }
 
-  async function handleCancel(id) {
-    if (!window.confirm('Cancel this appointment?')) return
+  async function handleCancel(a) {
+    if (!window.confirm(`Cancel ${a.patientName}'s appointment on ${formatSlot(a.startTime)}?`)) return
+    setMessage(''); setError('')
     try {
-      await axiosInstance.patch(`/appointments/${id}/cancel`)
+      await axiosInstance.patch(ENDPOINTS.CANCEL_APPOINTMENT(a.appointmentId))
+      setMessage('Appointment cancelled and the slot freed.')
       fetchAppointments()
-    } catch (err) { alert(errorMessage(err, 'Could not cancel the appointment.')) }
+    } catch (err) { setError(errorMessage(err, 'Could not cancel the appointment.')) }
   }
 
-  async function handleBook() {
-    if (!bookForm.patientId || !bookForm.doctorId || !bookForm.slotId || !bookForm.appointmentDate) {
-      setBookErr('Patient ID, Doctor, Slot, and Date are required.'); return
-    }
-    setBookErr(''); setBookMsg('')
+  function resetBooking() {
+    setPatient(null); setDoctor(null); setSlot(null); setReason(''); setPriority('NORMAL')
+    setBookErr(''); setAlternates([])
+  }
+
+  async function handleBook(e) {
+    e.preventDefault()
+    if (!patient || !doctor || !slot) { setBookErr('Choose a patient, a doctor and a time slot.'); return }
+    setBookErr(''); setMessage(''); setAlternates([]); setBooking(true)
     try {
-      await axiosInstance.post('/appointments', {
-        ...bookForm,
-        slotId: Number(bookForm.slotId),
-        createdByRole: 'RECEPTIONIST'
+      const res = await axiosInstance.post(ENDPOINTS.APPOINTMENTS, {
+        patientId: patient.userId, doctorId: doctor.userId, slotId: slot.slotId,
+        reasonForVisit: reason, priority,
       })
-      setBookMsg('Appointment booked successfully!')
-      setBookForm({ patientId: '', doctorId: '', slotId: '', appointmentDate: '', reasonForVisit: '', priority: 'NORMAL' })
-      setSlots([])
+      setMessage(`Booked ${res.data.patientName} with ${res.data.doctorName} on ${formatSlot(res.data.startTime)}.`)
+      resetBooking(); setShowBook(false)
       fetchAppointments()
     } catch (err) {
       setBookErr(errorMessage(err, 'Booking failed.'))
-    }
+      setAlternates(err.response?.data?.alternateSlots || [])
+      setSlot(null); setRefreshKey(k => k + 1)
+    } finally { setBooking(false) }
   }
 
-  function formatTime(dt) {
-    if (!dt) return '—'
-    return new Date(dt).toLocaleTimeString('en-IN', { hour: '2-digit', minute: '2-digit' })
+  function pickAlternate(alt) {
+    if (alt.doctorId !== doctor?.userId) setDoctor({ userId: alt.doctorId, name: alt.doctorName })
+    setSlot({ slotId: alt.slotId, startTime: alt.startTime, endTime: alt.endTime })
+    setAlternates([]); setBookErr('')
   }
 
-  // Filtered list
   const filtered = appointments.filter(a => {
     const matchStatus = !filterStatus || a.status === filterStatus
-    const matchName   = !filterName   || 
-      a.patientName?.toLowerCase().includes(filterName.toLowerCase()) ||
-      a.doctorName?.toLowerCase().includes(filterName.toLowerCase())
+    const q = filterName.toLowerCase()
+    const matchName = !q || a.patientName?.toLowerCase().includes(q) || a.doctorName?.toLowerCase().includes(q)
     return matchStatus && matchName
   })
 
-  const inputStyle = { padding: '9px 12px', border: '1px solid #ddd', borderRadius: 6, fontSize: 14, width: '100%', marginBottom: 10 }
+  const labelStyle = { fontSize: 12, color: 'var(--color-text-muted)', display: 'block', marginBottom: 4 }
+  const filterInput = { padding: '8px 12px', border: '1px solid var(--color-border)', borderRadius: 6, fontSize: 14 }
 
   return (
     <PageLayout>
       <PageTitle title="Appointments" subtitle="View, manage and book appointments" />
+      {message && <div className="alert alert-success">{message}</div>}
+      {error && <div className="alert alert-error">{error}</div>}
 
-      {/* Filters */}
       <div style={{ display: 'flex', gap: 12, flexWrap: 'wrap', marginBottom: 20, alignItems: 'flex-end' }}>
         <div>
-          <label style={{ fontSize: 12, color: 'var(--color-text-muted)', display: 'block', marginBottom: 4 }}>Filter by Date</label>
-          <input type="date" value={filterDate}
-            onChange={e => setFilterDate(e.target.value)}
-            style={{ padding: '8px 12px', border: '1px solid #ddd', borderRadius: 6, fontSize: 14 }} />
+          <label style={labelStyle} htmlFor="f-date">Filter by Date</label>
+          <input id="f-date" type="date" value={filterDate} onChange={e => setFilterDate(e.target.value)} style={filterInput} />
         </div>
         <div>
-          <label style={{ fontSize: 12, color: 'var(--color-text-muted)', display: 'block', marginBottom: 4 }}>Filter by Status</label>
-          <select value={filterStatus} onChange={e => setFilterStatus(e.target.value)}
-            style={{ padding: '8px 12px', border: '1px solid #ddd', borderRadius: 6, fontSize: 14 }}>
+          <label style={labelStyle} htmlFor="f-status">Filter by Status</label>
+          <select id="f-status" value={filterStatus} onChange={e => setFilterStatus(e.target.value)} style={filterInput}>
             <option value="">All Statuses</option>
-            {STATUS_OPTIONS.map(s => <option key={s} value={s}>{s.replace('_',' ')}</option>)}
+            {STATUS_OPTIONS.map(s => <option key={s} value={s}>{formatEnum(s)}</option>)}
           </select>
         </div>
         <div>
-          <label style={{ fontSize: 12, color: 'var(--color-text-muted)', display: 'block', marginBottom: 4 }}>Search Name</label>
-          <input placeholder="Patient or doctor name" value={filterName}
-            onChange={e => setFilterName(e.target.value)}
-            style={{ padding: '8px 12px', border: '1px solid #ddd', borderRadius: 6, fontSize: 14 }} />
+          <label style={labelStyle} htmlFor="f-name">Search Name</label>
+          <input id="f-name" placeholder="Patient or doctor name" value={filterName}
+            onChange={e => setFilterName(e.target.value)} style={filterInput} />
         </div>
-        <button className="btn btn-primary" onClick={fetchAppointments}
-          style={{ padding: '8px 18px' }}>
-          Refresh
-        </button>
-        <button onClick={() => { setShowBook(b => !b); setBookMsg(''); setBookErr('') }}
-          style={{ padding: '8px 18px', background: showBook ? '#eee' : 'var(--color-dark)',
-            color: showBook ? '#333' : '#fff', border: 'none', borderRadius: 6, cursor: 'pointer', fontWeight: 600 }}>
+        <button className="btn btn-outline" onClick={fetchAppointments}>Refresh</button>
+        <button className={showBook ? 'btn btn-outline' : 'btn btn-dark'} data-testid="book-for-patient"
+          onClick={() => { setShowBook(b => !b); resetBooking() }}>
           {showBook ? '✕ Close' : '+ Book for Patient'}
         </button>
       </div>
 
-      {/* Book appointment form */}
       {showBook && (
-        <div className="card" style={{ marginBottom: 24, maxWidth: 600 }}>
-          <h3 style={{ marginBottom: 16 }}>Book Appointment for Patient</h3>
-          {bookMsg && <p style={{ color: 'green', marginBottom: 10 }}>{bookMsg}</p>}
-          {bookErr && <p style={{ color: 'red',   marginBottom: 10 }}>{bookErr}</p>}
+        <form className="card" style={{ marginBottom: 24 }} onSubmit={handleBook}>
+          <h3 style={{ marginBottom: 16 }}>Book appointment for a patient</h3>
+          {bookErr && <div className="alert alert-error">{bookErr}</div>}
 
-          <input style={inputStyle} placeholder="Patient ID (e.g. USR-XXXXXXXX)"
-            value={bookForm.patientId} onChange={e => setBookForm(p => ({...p, patientId: e.target.value}))} />
-
-          <select style={inputStyle} value={bookForm.doctorId}
-            onChange={e => {
-              const did = e.target.value
-              setBookForm(p => ({...p, doctorId: did, slotId: ''}))
-              if (did) fetchSlots(did)
-            }}>
-            <option value="">Select Doctor</option>
-            {doctors.map(d => (
-              <option key={d.userId} value={d.userId}>{d.name} — {d.specialization}</option>
-            ))}
-          </select>
-
-          {slotsLoading && <p style={{ fontSize: 13, color: 'var(--color-text-muted)' }}>Loading slots…</p>}
-          {slots.length > 0 && (
-            <select style={inputStyle} value={bookForm.slotId}
-              onChange={e => setBookForm(p => ({...p, slotId: e.target.value}))}>
-              <option value="">Select Time Slot</option>
-              {slots.map(s => (
-                <option key={s.slotId} value={s.slotId}>
-                  {new Date(s.startTime).toLocaleDateString('en-IN', { day:'2-digit', month:'short' })}
-                  {' '}{formatTime(s.startTime)} – {formatTime(s.endTime)}
-                </option>
-              ))}
-            </select>
+          <div className="form-group">
+            <label>1. Patient</label>
+            <PatientPicker selected={patient} onSelect={setPatient} />
+          </div>
+          <div className="form-group">
+            <label>2. Doctor</label>
+            <DoctorPicker compact selectedDoctorId={doctor?.userId}
+              onSelect={d => { setDoctor(d); setSlot(null); setAlternates([]) }} />
+          </div>
+          {doctor && (
+            <div className="form-group">
+              <label>3. Time with {doctor.name}</label>
+              <SlotPicker doctorId={doctor.userId} selectedSlotId={slot?.slotId} onSelect={setSlot} refreshKey={refreshKey} />
+            </div>
           )}
+          <AlternateSlots alternates={alternates} onPick={pickAlternate} />
 
-          <input type="date" style={inputStyle} value={bookForm.appointmentDate}
-            onChange={e => setBookForm(p => ({...p, appointmentDate: e.target.value}))} />
-
-          <textarea style={{ ...inputStyle, resize: 'vertical' }} rows={2}
-            placeholder="Reason for visit"
-            value={bookForm.reasonForVisit}
-            onChange={e => setBookForm(p => ({...p, reasonForVisit: e.target.value}))} />
-
-          <select style={inputStyle} value={bookForm.priority}
-            onChange={e => setBookForm(p => ({...p, priority: e.target.value}))}>
-            <option value="NORMAL">Normal Priority</option>
-            <option value="HIGH_PRIORITY">High Priority</option>
-          </select>
-
+          <div style={{ display: 'grid', gridTemplateColumns: '2fr 1fr', gap: 12, marginTop: 12 }}>
+            <div className="form-group">
+              <label htmlFor="b-reason">Reason for visit</label>
+              <textarea id="b-reason" className="form-control" rows={2} maxLength={2000}
+                value={reason} onChange={e => setReason(e.target.value)} />
+            </div>
+            <div className="form-group">
+              <label htmlFor="b-priority">Priority</label>
+              <select id="b-priority" className="form-control" value={priority} onChange={e => setPriority(e.target.value)}>
+                <option value="NORMAL">Normal</option>
+                <option value="HIGH_PRIORITY">High priority</option>
+              </select>
+            </div>
+          </div>
+          {slot && <p style={{ marginBottom: 12 }}>Selected: <strong>{formatSlot(slot.startTime)}</strong></p>}
           <div style={{ textAlign: 'right' }}>
-            <button onClick={handleBook}
-              style={{ padding: '10px 20px', background: 'var(--color-accent)', color: '#fff',
-                border: 'none', borderRadius: 6, fontWeight: 700, cursor: 'pointer' }}>
-              Book Appointment
+            <button type="submit" className="btn btn-primary" disabled={booking || !patient || !doctor || !slot}>
+              {booking ? 'Booking…' : 'Book Appointment'}
             </button>
           </div>
-        </div>
+        </form>
       )}
 
-      {/* Appointments table */}
       {loading ? <Spinner /> : (
         <div className="card" style={{ padding: 0 }}>
-          <div style={{ padding: '14px 20px', borderBottom: '1px solid var(--color-border-tertiary)',
+          <div style={{ padding: '14px 20px', borderBottom: '1px solid var(--color-border)',
             display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-            <h3 style={{ margin: 0 }}>All Appointments</h3>
+            <h3 style={{ margin: 0 }}>{filterDate ? `Appointments on ${filterDate}` : 'All Appointments'}</h3>
             <span style={{ fontSize: 13, color: 'var(--color-text-muted)' }}>{filtered.length} records</span>
           </div>
           <div className="table-wrapper">
             <table>
               <thead>
                 <tr>
-                  <th>ID</th>
-                  <th>Patient</th>
-                  <th>Doctor</th>
-                  <th>Date</th>
-                  <th>Time</th>
-                  <th>Reason</th>
-                  <th>Priority</th>
-                  <th>Status</th>
-                  <th>Actions</th>
+                  <th>ID</th><th>Patient</th><th>Doctor</th><th>Date</th><th>Time</th>
+                  <th>Reason</th><th>Priority</th><th>Status</th><th>Actions</th>
                 </tr>
               </thead>
               <tbody>
                 {filtered.length === 0 && (
-                  <tr><td colSpan={9} style={{ textAlign: 'center', padding: 24, color: 'var(--color-text-muted)' }}>
-                    No appointments found
-                  </td></tr>
+                  <tr><td colSpan={9} style={{ textAlign: 'center', padding: 24, color: 'var(--color-text-muted)' }}>No appointments found</td></tr>
                 )}
                 {filtered.map(a => (
                   <tr key={a.appointmentId}>
@@ -240,32 +213,14 @@ export default function ReceptionistAppointments() {
                     </td>
                     <td style={{ fontSize: 13 }}>{a.doctorName}</td>
                     <td style={{ fontSize: 13 }}>{a.appointmentDate || '—'}</td>
-                    <td style={{ fontSize: 12 }}>
-                      {a.startTime ? `${formatTime(a.startTime)} – ${formatTime(a.endTime)}` : '—'}
-                    </td>
-                    <td style={{ fontSize: 12, maxWidth: 120 }}>{a.reasonForVisit || '—'}</td>
-                    <td>
-                      <span style={{ fontSize: 11, padding: '2px 8px', borderRadius: 12,
-                        background: a.priority === 'HIGH_PRIORITY' ? '#fde8ef' : '#f0f0f0',
-                        color: a.priority === 'HIGH_PRIORITY' ? 'var(--color-accent)' : '#666' }}>
-                        {a.priority?.replace('_', ' ') || 'NORMAL'}
-                      </span>
-                    </td>
-                    <td>
-                      <select value={a.status}
-                        onChange={e => handleStatusChange(a.appointmentId, e.target.value)}
-                        style={{ padding: '4px 6px', borderRadius: 5, border: '1px solid #ddd', fontSize: 12 }}>
-                        {STATUS_OPTIONS.map(s => <option key={s} value={s}>{s.replace('_',' ')}</option>)}
-                      </select>
-                    </td>
-                    <td>
-                      {a.status !== 'CANCELLED' && a.status !== 'COMPLETED' && (
-                        <button onClick={() => handleCancel(a.appointmentId)}
-                          style={{ padding: '4px 10px', fontSize: 12, background: '#fee', color: '#c0392b',
-                            border: '1px solid #f5c6cb', borderRadius: 5, cursor: 'pointer' }}>
-                          Cancel
-                        </button>
-                      )}
+                    <td style={{ fontSize: 12 }}>{a.startTime ? `${formatTime(a.startTime)} – ${formatTime(a.endTime)}` : '—'}</td>
+                    <td style={{ fontSize: 12, maxWidth: 140 }}>{a.reasonForVisit || '—'}</td>
+                    <td><StatusBadge status={a.priority || 'NORMAL'} /></td>
+                    <td><StatusBadge status={a.status} /></td>
+                    <td style={{ whiteSpace: 'nowrap' }}>
+                      <AppointmentStatusSelect appointment={a} onChange={handleStatusChange} />{' '}
+                      {a.canReschedule && <button className="btn btn-outline btn-sm" onClick={() => setRescheduling(a)}>Reschedule</button>}{' '}
+                      {a.canCancel && <button className="btn btn-outline btn-sm" style={{ color: 'var(--color-danger)' }} onClick={() => handleCancel(a)}>Cancel</button>}
                     </td>
                   </tr>
                 ))}
@@ -273,6 +228,11 @@ export default function ReceptionistAppointments() {
             </table>
           </div>
         </div>
+      )}
+
+      {rescheduling && (
+        <RescheduleDialog appointment={rescheduling} onClose={() => setRescheduling(null)}
+          onDone={(u) => { setRescheduling(null); setMessage(`Moved to ${formatSlot(u.startTime)}.`); fetchAppointments() }} />
       )}
     </PageLayout>
   )

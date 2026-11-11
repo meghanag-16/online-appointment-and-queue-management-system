@@ -28,16 +28,22 @@ export function AuthProvider({ children }) {
     return userData
   }, [])
 
-  /**
-   * Returns the server response. When the account needs administrator approval there is no
-   * token: nothing is stored and the caller shows res.message instead of logging in.
-   */
+  /** Patient sign-up; the new patient is logged in straight away. */
   const register = useCallback(async (payload) => {
     const res = await registerUser(payload)
-    if (!res.data?.token) return res.data
     const userData = store(res.data)
     setUser(userData)
     return userData
+  }, [])
+
+  /** Keep the stored name in sync after the user edits their profile. */
+  const updateUser = useCallback((changes) => {
+    setUser(prev => {
+      if (!prev) return prev
+      const next = { ...prev, ...changes }
+      localStorage.setItem(USER_KEY, JSON.stringify(next))
+      return next
+    })
   }, [])
 
   const logout = useCallback(() => {
@@ -47,7 +53,7 @@ export function AuthProvider({ children }) {
   }, [])
 
   return (
-    <AuthContext.Provider value={{ user, login, logout, register, isAuthenticated: !!user }}>
+    <AuthContext.Provider value={{ user, login, logout, register, updateUser, isAuthenticated: !!user }}>
       {children}
     </AuthContext.Provider>
   )

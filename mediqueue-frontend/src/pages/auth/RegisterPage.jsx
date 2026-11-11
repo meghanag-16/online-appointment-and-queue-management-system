@@ -1,57 +1,33 @@
-import { useState } from 'react'
 import { useNavigate, Link } from 'react-router-dom'
 import { useAuth } from '../../context/AuthContext'
 import { getHomeForRole } from '../../utils/roleRoutes'
-import UserProfileForm, { ALL_ROLES } from '../../components/forms/UserProfileForm'
+import UserProfileForm from '../../components/forms/UserProfileForm'
 
 /**
- * Public sign-up. Uses the same UserProfileForm (and backend RegisterRequest) as administrator
- * user creation, so self-registered and admin-created users have identical fields per role.
- * Patients can log in straight away; staff accounts wait for administrator approval.
+ * Public sign-up — patients only. Doctors, lab technicians, receptionists and administrators
+ * are created by the hospital administrator and sign in with the credentials they were given.
  */
 export default function RegisterPage() {
   const { register } = useAuth()
   const navigate = useNavigate()
-  const [pendingMessage, setPendingMessage] = useState('')
 
   async function handleRegister(payload) {
     const result = await register(payload)
-    if (result?.token) {
-      navigate(getHomeForRole(result.role), { replace: true })
-    } else if (result) {
-      setPendingMessage(result.message ||
-        'Account created. An administrator must approve it before you can log in.')
-    }
+    navigate(getHomeForRole(result.role), { replace: true })
   }
-
-  const staffNote = (role) => role !== 'PATIENT'
-    ? 'Staff accounts must be approved by an administrator before you can log in.'
-    : null
 
   return (
     <div style={outerStyle}>
       <div style={panelStyle} className="animate-in">
         <div style={{ textAlign: 'center', marginBottom: 28 }}>
           <div style={logoStyle}>M</div>
-          <h1 style={headingStyle}>Create Account</h1>
+          <h1 style={headingStyle}>Create Patient Account</h1>
           <p style={{ color: 'var(--color-text-muted)', fontSize: '0.9rem' }}>
-            Register to access MediQueue
+            Register to book appointments with MediQueue
           </p>
         </div>
 
-        {pendingMessage ? (
-          <div className="alert alert-success" role="status">
-            {pendingMessage}{' '}
-            <Link to="/login" style={{ fontWeight: 600 }}>Go to sign in</Link>
-          </div>
-        ) : (
-          <UserProfileForm
-            roles={ALL_ROLES}
-            submitLabel="Register"
-            roleNote={staffNote}
-            onSubmit={handleRegister}
-          />
-        )}
+        <UserProfileForm fixedRole="PATIENT" submitLabel="Register" onSubmit={handleRegister} />
 
         <p style={{ textAlign: 'center', marginTop: 20, fontSize: '0.875rem', color: 'var(--color-text-muted)' }}>
           Already have an account?{' '}

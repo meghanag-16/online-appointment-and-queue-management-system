@@ -15,8 +15,9 @@ import java.math.BigDecimal;
 import java.time.LocalDate;
 
 /**
- * The ONE user-profile definition, shared by public self-registration and by administrator
+ * The ONE user-profile definition, shared by public patient sign-up and by administrator
  * user creation, so both paths collect and store exactly the same fields for every role.
+ * Only patients can sign up publicly; every other role is created by an administrator.
  *
  * Common fields apply to all roles. Patient fields are stored only for PATIENT, doctor fields
  * only for DOCTOR; role-specific "required" rules are enforced in UserAccountService.
@@ -42,7 +43,7 @@ public class RegisterRequest {
     @Size(min = 8, max = 100, message = "Password must be at least 8 characters")
     private String password;
 
-    @NotNull(message = "Role is required")
+    /** Public sign-up: optional and must be PATIENT. Administrator creation: required. */
     private UserRole role;
 
     @NotBlank(message = "Gender is required")

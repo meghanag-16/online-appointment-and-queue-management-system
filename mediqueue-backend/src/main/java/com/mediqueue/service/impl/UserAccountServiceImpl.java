@@ -1,6 +1,8 @@
 package com.mediqueue.service.impl;
 
+import com.mediqueue.dto.ChangePasswordRequest;
 import com.mediqueue.dto.RegisterRequest;
+import com.mediqueue.dto.UpdateProfileRequest;
 import com.mediqueue.dto.UserDTO;
 import com.mediqueue.entity.Department;
 import com.mediqueue.entity.Doctor;
@@ -10,11 +12,13 @@ import com.mediqueue.entity.enums.AccountStatus;
 import com.mediqueue.entity.enums.UserRole;
 import com.mediqueue.exception.BadRequestException;
 import com.mediqueue.exception.DuplicateResourceException;
+import com.mediqueue.exception.ForbiddenException;
 import com.mediqueue.exception.ResourceNotFoundException;
 import com.mediqueue.factory.UserFactory;
 import com.mediqueue.repository.DepartmentRepository;
 import com.mediqueue.repository.UserRepository;
 import com.mediqueue.security.CurrentUserService;
+import com.mediqueue.service.SlotService;
 import com.mediqueue.service.UserAccountService;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
@@ -32,36 +36,44 @@ public class UserAccountServiceImpl implements UserAccountService {
     private final UserFactory userFactory;
     private final PasswordEncoder passwordEncoder;
     private final CurrentUserService currentUser;
+    private final SlotService slotService;
 
     public UserAccountServiceImpl(UserRepository userRepository,
                                   DepartmentRepository departmentRepository,
                                   UserFactory userFactory,
                                   PasswordEncoder passwordEncoder,
-                                  CurrentUserService currentUser) {
+                                  CurrentUserService currentUser,
+                                  SlotService slotService) {
         this.userRepository = userRepository;
         this.departmentRepository = departmentRepository;
         this.userFactory = userFactory;
         this.passwordEncoder = passwordEncoder;
         this.currentUser = currentUser;
+        this.slotService = slotService;
     }
 
     @Override
-    public User selfRegister(RegisterRequest request) {
-        AccountStatus status = request.getRole() == UserRole.PATIENT
-            ? AccountStatus.ACTIVE
-            : AccountStatus.PENDING_APPROVAL;
-        return createUser(request, status);
+    public User registerPatient(RegisterRequest request) {
+        if (request.getRole() != null && request.getRole() != UserRole.PATIENT) {
+            throw new ForbiddenException("Only patients can sign up. Doctor and staff accounts are "
+                + "created by the hospital administrator.");
+        }
+        request.setRole(UserRole.PATIENT);
+        return createUser(request);
     }
 
     @Override
     public User createByAdmin(RegisterRequest request) {
-        return createUser(request, AccountStatus.ACTIVE);
+        if (request.getRole() == null) throw new BadRequestException("Role is required");
+        User user = createUser(request);
+        // A newly onboarded doctor can be booked straight away (no wait for the nightly run).
+        if (user instanceof Doctor doctor) slotService.generateForDoctor(doctor);
+        return user;
     }
 
-    @Override
-    public User createUser(RegisterRequest req, AccountStatus initialStatus) {
+    private User createUser(RegisterRequest req) {
         String username = req.getUsername().trim();
-        String email = req.getEmail().trim().toLowerCase(Locale.ROOT);
+        String email = normaliseEmail(req.getEmail());
 
         // ── uniqueness guards (409 instead of a raw SQL error) ─────────────
         if (userRepository.existsByUsername(username)) {
@@ -90,7 +102,7 @@ public class UserAccountServiceImpl implements UserAccountService {
         user.setGender(req.getGender());
         user.setPhoneNumber(req.getPhoneNumber().trim());
         user.setDateOfBirth(req.getDateOfBirth());
-        user.setAccountStatus(initialStatus);
+        user.setAccountStatus(AccountStatus.ACTIVE);
 
         // ── role-specific fields ───────────────────────────────────────────
         if (user instanceof Patient patient) {
@@ -127,13 +139,53 @@ public class UserAccountServiceImpl implements UserAccountService {
     }
 
     @Override
+    public Object updateOwnProfile(UpdateProfileRequest req) {
+        User user = currentUser.entity();
+
+        String email = normaliseEmail(req.getEmail());
+        if (!email.equalsIgnoreCase(user.getEmail()) && userRepository.existsByEmail(email)) {
+            throw new DuplicateResourceException("Email already registered: " + email);
+        }
+
+        user.setName(req.getName().trim());
+        user.setEmail(email);
+        user.setGender(req.getGender());
+        user.setPhoneNumber(req.getPhoneNumber().trim());
+        user.setDateOfBirth(req.getDateOfBirth());
+
+        if (user instanceof Patient patient) {
+            patient.setBloodGroup(blankToNull(req.getBloodGroup()));
+            patient.setAllergies(blankToNull(req.getAllergies()));
+            patient.setChronicConditions(blankToNull(req.getChronicConditions()));
+            patient.setEmergencyContact(blankToNull(req.getEmergencyContact()));
+        }
+        if (user instanceof Doctor doctor) {
+            doctor.setQualification(blankToNull(req.getQualification()));
+        }
+        return UserDTO.profileOf(userRepository.save(user));
+    }
+
+    @Override
+    public void changeOwnPassword(ChangePasswordRequest req) {
+        User user = currentUser.entity();
+        if (!passwordEncoder.matches(req.currentPassword(), user.getPassword())) {
+            throw new BadRequestException("Current password is incorrect");
+        }
+        if (passwordEncoder.matches(req.newPassword(), user.getPassword())) {
+            throw new BadRequestException("New password must be different from the current one");
+        }
+        user.setPassword(passwordEncoder.encode(req.newPassword()));
+        userRepository.save(user);
+    }
+
+    @Override
     public UserDTO updateStatus(String userId, String status) {
         AccountStatus newStatus;
         try {
             newStatus = AccountStatus.valueOf(status.trim().toUpperCase(Locale.ROOT));
         } catch (IllegalArgumentException e) {
             throw new BadRequestException("Invalid account status: " + status
-                + " (allowed: ACTIVE, SUSPENDED, DEACTIVATED, PENDING_APPROVAL)");
+                + " (allowed: ACTIVE, SUSPENDED, DEACTIVATED)");
         }
         if (userId.equals(currentUser.userId()) && newStatus != AccountStatus.ACTIVE) {
             throw new BadRequestException("You cannot suspend or deactivate your own account");
@@ -141,8 +193,17 @@ public class UserAccountServiceImpl implements UserAccountService {
         User user = userRepository.findById(userId)
             .orElseThrow(() -> new ResourceNotFoundException("User not found: " + userId));
         user.setAccountStatus(newStatus);
-        return UserDTO.from(userRepository.save(user));
+        User saved = userRepository.save(user);
+
+        // An inactive doctor cannot be booked: withdraw their open slots; reactivation brings them back.
+        if (saved instanceof Doctor doctor) {
+            if (newStatus == AccountStatus.ACTIVE) slotService.generateForDoctor(doctor);
+            else slotService.withdrawOpenSlots(doctor.getUserId());
+        }
+        return UserDTO.from(saved);
     }
+
+    private static String normaliseEmail(String email) { return email.trim().toLowerCase(Locale.ROOT); }
 
     private static boolean isBlank(String s) { return s == null || s.isBlank(); }
 

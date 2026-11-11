@@ -44,7 +44,7 @@ jobs:
         working-directory: mediqueue-backend
         run: mvn clean verify
         env:
-          SPRING_DATASOURCE_URL: jdbc:mysql://127.0.0.1:3306/mediqueue?useSSL=false&serverTimezone=UTC&allowPublicKeyRetrieval=true
+          SPRING_DATASOURCE_URL: jdbc:mysql://127.0.0.1:3306/mediqueue?useSSL=false&serverTimezone=Asia/Kolkata&allowPublicKeyRetrieval=true
           SPRING_DATASOURCE_USERNAME: root
           SPRING_DATASOURCE_PASSWORD: root
           SPRING_JPA_HIBERNATE_DDL_AUTO: validate

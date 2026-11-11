@@ -212,21 +212,10 @@ describe('RegisterPage', () => {
     expect(screen.getByPlaceholderText(/min. 8/i)).toBeInTheDocument()
   })
 
-  test('renders role selector with PATIENT as default', () => {
+  test('has no role selector (only patients can sign up)', () => {
     render(<RegisterPage />)
-    const select = screen.getByLabelText(/role/i)
-    expect(select.value).toBe('PATIENT')
-  })
-
-  test('role selector has all 5 roles', () => {
-    render(<RegisterPage />)
-    const select = screen.getByLabelText(/role/i)
-    const options = within(select).getAllByRole('option')
-    expect(options).toHaveLength(5)
-    const values = options.map(o => o.value)
-    expect(values).toContain('PATIENT')
-    expect(values).toContain('DOCTOR')
-    expect(values).toContain('ADMINISTRATOR')
+    expect(screen.queryByLabelText(/role/i)).not.toBeInTheDocument()
+    expect(screen.getByText(/create patient account/i)).toBeInTheDocument()
   })
 
   test('calls register with correct payload on submit', async () => {

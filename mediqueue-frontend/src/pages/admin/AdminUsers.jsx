@@ -30,7 +30,7 @@ export default function AdminUsers() {
     }
   }
 
-  // Same form and same backend fields as self-registration; admin-created accounts are active at once.
+  // The only way to create doctor, lab technician, receptionist and administrator accounts.
   async function handleCreate(payload) {
     setMessage(''); setError('')
     const res = await createUser(payload)
@@ -52,18 +52,11 @@ export default function AdminUsers() {
     }
   }
 
-  const pending = users.filter(u => u.accountStatus === 'PENDING_APPROVAL')
-
   return (
     <PageLayout>
-      <PageTitle title="User Management" subtitle="Create users, approve sign-ups and manage account status" />
+      <PageTitle title="User Management" subtitle="Create staff accounts and manage account status. Patients sign up themselves." />
       {message && <div className="alert alert-success">{message}</div>}
       {error && <div className="alert alert-error">{error}</div>}
-      {pending.length > 0 && (
-        <div className="alert alert-info">
-          {pending.length} staff sign-up{pending.length > 1 ? 's are' : ' is'} waiting for approval. Use “Approve” below.
-        </div>
-      )}
 
       <div style={{ marginBottom: 16 }}>
         <button className="btn btn-primary" onClick={() => setShowCreate(s => !s)}>
@@ -77,7 +70,7 @@ export default function AdminUsers() {
             roles={ALL_ROLES}
             submitLabel="Create User"
             passwordLabel="Initial Password"
-            passwordHint="Min. 8 characters — share it with the user"
+            passwordHint="Min. 8 characters — share it with the user; they can change it under My Profile"
             onSubmit={handleCreate}
           />
         </div>
@@ -103,7 +96,7 @@ export default function AdminUsers() {
                           <>
                             {u.accountStatus !== 'ACTIVE' && (
                               <button className="btn btn-primary btn-sm" onClick={() => changeStatus(u, 'ACTIVE')}>
-                                {u.accountStatus === 'PENDING_APPROVAL' ? 'Approve' : 'Activate'}
+                                Activate
                               </button>
                             )}{' '}
                             {u.accountStatus === 'ACTIVE' && (

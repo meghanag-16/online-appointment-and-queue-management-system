@@ -3,10 +3,7 @@ package com.mediqueue.dto;
 import com.mediqueue.entity.enums.AccountStatus;
 import com.mediqueue.entity.enums.UserRole;
 
-/**
- * Login/registration result. {@code token} is null when the account cannot log in yet
- * (a self-registered staff account awaiting administrator approval); {@code message} says why.
- */
+/** Login/registration result: the JWT plus who the user is. */
 public class AuthResponse {
     private String token;
     private String userId;
