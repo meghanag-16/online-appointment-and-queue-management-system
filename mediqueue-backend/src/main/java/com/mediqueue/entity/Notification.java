@@ -5,11 +5,16 @@ import com.mediqueue.entity.enums.NotificationType;
 import jakarta.persistence.*;
 import java.time.LocalDateTime;
 
+/**
+ * One message to one user. Every notification is stored (so it shows in the user's bell) together
+ * with the result of handing it to the delivery channel (email/SMS sender).
+ */
 @Entity
 @Table(name = "notifications")
 public class Notification {
 
     @Id
+    @GeneratedValue(strategy = GenerationType.IDENTITY)
     @Column(name = "notification_id")
     private Long notificationId;
 
@@ -31,16 +36,18 @@ public class Notification {
     @Column(name = "delivery_status")
     private DeliveryStatus deliveryStatus = DeliveryStatus.PENDING;
 
-    public Notification() {}
+    @Column(name = "is_read", nullable = false)
+    private boolean read = false;
 
-    public Notification(Long notificationId, User recipient, NotificationType type, String message, LocalDateTime timestamp, DeliveryStatus deliveryStatus) {
-        this.notificationId = notificationId;
-        this.recipient = recipient;
-        this.type = type;
-        this.message = message;
-        this.timestamp = timestamp;
-        this.deliveryStatus = deliveryStatus;
-    }
+    /** The appointment this is about, if any (used so a reminder is sent only once). */
+    @Column(name = "appointment_id")
+    private Long appointmentId;
+
+    /** Which sender delivered it, e.g. "CONSOLE" or "EMAIL". */
+    @Column(name = "channel", length = 20)
+    private String channel;
+
+    public Notification() {}
 
     public Long getNotificationId() { return notificationId; }
     public void setNotificationId(Long notificationId) { this.notificationId = notificationId; }
@@ -59,6 +66,15 @@ public class Notification {
 
     public DeliveryStatus getDeliveryStatus() { return deliveryStatus; }
     public void setDeliveryStatus(DeliveryStatus deliveryStatus) { this.deliveryStatus = deliveryStatus; }
+
+    public boolean isRead() { return read; }
+    public void setRead(boolean read) { this.read = read; }
+
+    public Long getAppointmentId() { return appointmentId; }
+    public void setAppointmentId(Long appointmentId) { this.appointmentId = appointmentId; }
+
+    public String getChannel() { return channel; }
+    public void setChannel(String channel) { this.channel = channel; }
 
     @PrePersist
     public void prePersist() {

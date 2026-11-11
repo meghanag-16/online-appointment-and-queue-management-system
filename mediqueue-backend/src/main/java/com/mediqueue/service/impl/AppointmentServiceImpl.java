@@ -30,7 +30,6 @@ import com.mediqueue.security.AccessGuard;
 import com.mediqueue.security.AuthenticatedUser;
 import com.mediqueue.security.CurrentUserService;
 import com.mediqueue.service.AppointmentService;
-import com.mediqueue.service.BillingService;
 import com.mediqueue.service.SlotService;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
@@ -74,7 +73,6 @@ public class AppointmentServiceImpl implements AppointmentService {
     /** Doctors run the consultation; confirming and cancelling is the front desk's job. */
     private static final Set<AppointmentStatus> DOCTOR_TARGETS = EnumSet.of(IN_PROGRESS, COMPLETED, NO_SHOW);
 
-    private final BillingService billingService;
     private final AppointmentRepository appointmentRepository;
     private final PatientRepository patientRepository;
     private final TimeSlotRepository timeSlotRepository;
@@ -87,7 +85,6 @@ public class AppointmentServiceImpl implements AppointmentService {
     public AppointmentServiceImpl(AppointmentRepository appointmentRepository,
                                   PatientRepository patientRepository,
                                   TimeSlotRepository timeSlotRepository,
-                                  BillingService billingService,
                                   SlotService slotService,
                                   CurrentUserService currentUser,
                                   AccessGuard accessGuard,
@@ -96,7 +93,6 @@ public class AppointmentServiceImpl implements AppointmentService {
         this.appointmentRepository = appointmentRepository;
         this.patientRepository = patientRepository;
         this.timeSlotRepository = timeSlotRepository;
-        this.billingService = billingService;
         this.slotService = slotService;
         this.currentUser = currentUser;
         this.accessGuard = accessGuard;
@@ -147,8 +143,8 @@ public class AppointmentServiceImpl implements AppointmentService {
         appointment.setAppointmentStatus(BOOKED);
 
         Appointment saved = appointmentRepository.saveAndFlush(appointment);
-        billingService.generateBill(saved.getAppointmentId(), "STANDARD");
-        events.publish(AppointmentEvent.of(AppointmentEventType.BOOKED, saved.getAppointmentId()));   // → queue
+        // Observers: the queue adds the patient, billing creates the bill, the patient is notified, the audit log records it.
+        events.publish(AppointmentEvent.of(AppointmentEventType.BOOKED, saved.getAppointmentId()));
         return toResponse(saved, context());
     }
 

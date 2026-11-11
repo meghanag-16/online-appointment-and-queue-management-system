@@ -20,6 +20,13 @@ const COLOR_MAP = {
   IN_CONSULTATION: { bg: '#f0e6ff', color: '#8e44ad' },
   FINISHED:     { bg: '#e8f8ee', color: '#27ae60' },
   NORMAL:       { bg: '#f0f0f0', color: '#666' },
+  VOID:         { bg: '#f0f0f0', color: '#7f8c8d' },
+  OPEN:         { bg: '#fff3e0', color: '#e67e22' },
+  UNDER_REVIEW: { bg: '#e8f4fd', color: '#2980b9' },
+  RESOLVED:     { bg: '#e8f8ee', color: '#27ae60' },
+  STANDARD:     { bg: '#f0f0f0', color: '#555' },
+  EMERGENCY:    { bg: '#fde8e8', color: '#e74c3c' },
+  FOLLOW_UP:    { bg: '#e8f8ee', color: '#27ae60' },
 }
 
 export default function StatusBadge({ status }) {

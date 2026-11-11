@@ -1,5 +1,6 @@
 package com.mediqueue.entity;
 
+import com.mediqueue.entity.enums.BillingType;
 import com.mediqueue.entity.enums.PaymentStatus;
 import jakarta.persistence.*;
 import java.math.BigDecimal;
@@ -31,16 +32,15 @@ public class Bill {
     @Column(name = "generated_at")
     private LocalDateTime generatedAt;
 
-    public Bill() {}
+    /** The pricing rule (billing strategy) that produced the amount. */
+    @Enumerated(EnumType.STRING)
+    @Column(name = "billing_type", nullable = false)
+    private BillingType billingType = BillingType.STANDARD;
 
-    public Bill(Long billId, Appointment appointment, BigDecimal totalAmount, PaymentStatus paymentStatus, String paymentMethod, LocalDateTime generatedAt) {
-        this.billId = billId;
-        this.appointment = appointment;
-        this.totalAmount = totalAmount;
-        this.paymentStatus = paymentStatus;
-        this.paymentMethod = paymentMethod;
-        this.generatedAt = generatedAt;
-    }
+    @Column(name = "paid_at")
+    private LocalDateTime paidAt;
+
+    public Bill() {}
 
     public Long getBillId() { return billId; }
     public void setBillId(Long billId) { this.billId = billId; }
@@ -59,6 +59,12 @@ public class Bill {
 
     public LocalDateTime getGeneratedAt() { return generatedAt; }
     public void setGeneratedAt(LocalDateTime generatedAt) { this.generatedAt = generatedAt; }
+
+    public BillingType getBillingType() { return billingType; }
+    public void setBillingType(BillingType billingType) { this.billingType = billingType; }
+
+    public LocalDateTime getPaidAt() { return paidAt; }
+    public void setPaidAt(LocalDateTime paidAt) { this.paidAt = paidAt; }
 
     @PrePersist
     public void prePersist() {

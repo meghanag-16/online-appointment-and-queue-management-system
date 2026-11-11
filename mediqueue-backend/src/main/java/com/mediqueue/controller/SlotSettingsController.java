@@ -1,5 +1,7 @@
 package com.mediqueue.controller;
 
+import com.mediqueue.audit.AuditAction;
+import com.mediqueue.audit.AuditService;
 import com.mediqueue.dto.SlotSettingsDTO;
 import com.mediqueue.service.SlotService;
 import jakarta.validation.Valid;
@@ -12,9 +14,11 @@ import org.springframework.web.bind.annotation.*;
 public class SlotSettingsController {
 
     private final SlotService slotService;
+    private final AuditService auditService;
 
-    public SlotSettingsController(SlotService slotService) {
+    public SlotSettingsController(SlotService slotService, AuditService auditService) {
         this.slotService = slotService;
+        this.auditService = auditService;
     }
 
     /** Any logged-in user: booking pages show working hours and the cancel/reschedule cutoff. */
@@ -27,6 +31,10 @@ public class SlotSettingsController {
     @PutMapping("/admin/settings/slots")
     @PreAuthorize("hasRole('ADMINISTRATOR')")
     public ResponseEntity<SlotSettingsDTO> update(@Valid @RequestBody SlotSettingsDTO request) {
-        return ResponseEntity.ok(slotService.updateSettings(request));
+        SlotSettingsDTO saved = slotService.updateSettings(request);
+        auditService.record(AuditAction.SLOT_SETTINGS_CHANGED, "SLOT_SETTINGS", 1,
+            saved.slotMinutes() + "-minute slots, " + saved.dayStart() + "–" + saved.dayEnd()
+                + ", booking window " + saved.bookingWindowDays() + " days, cutoff " + saved.changeCutoffHours() + " h");
+        return ResponseEntity.ok(saved);
     }
 }

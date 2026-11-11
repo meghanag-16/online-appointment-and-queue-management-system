@@ -4,17 +4,21 @@ A web-based hospital system that streamlines doctor appointments, manages a virt
 
 MediQueue gives every user a secure login, and the features they see depend on their role:
 
-- **Patient** — signs up, finds doctors by department, name/specialization and available day, books a time slot (with clickable alternate slots when the chosen one is taken), cancels or reschedules up to a cutoff before the visit, sees prescriptions as soon as they are issued, views bills and their medical record, and raises complaints.
+- **Patient** — signs up, finds doctors by department, name/specialization and available day, books a time slot (with clickable alternate slots when the chosen one is taken), cancels or reschedules up to a cutoff before the visit, sees prescriptions as soon as they are issued, views and downloads lab reports, views bills and their medical record, raises complaints (optionally about an appointment or bill) and follows them until resolved, and gets notifications in the bell (booking, reminder, report ready, prescription, complaint updates).
 - **Doctor** — runs a live daily queue (call next, start, finish, no-show), opens a patient's history (allergies, past diagnoses, prescriptions, visits) for patients on their own appointments, and issues digital prescriptions that complete the visit and update the patient's medical record.
-- **Lab Technician** — uploads diagnostic reports (PDF / images) against an appointment.
-- **Receptionist** — views and filters all appointments, moves them through the allowed statuses, cancels or reschedules them, books on behalf of walk-in or phone patients (patient and doctor pickers), and marks patients high priority, which reorders the doctor's queue at once.
-- **Administrator** — creates all doctor and staff accounts, deactivates users, manages departments, sets the slot schedule (slot length, hours, break, working days, booking window, cancel cutoff), can override the order of any doctor's queue, and resolves patient complaints.
+- **Lab Technician** — finds an appointment by appointment ID, patient ID or name and uploads a report (PDF, PNG or JPEG, up to 10 MB); the patient is notified and can download it.
+- **Receptionist** — views and filters all appointments, moves them through the allowed statuses, cancels or reschedules them, books on behalf of walk-in or phone patients (patient and doctor pickers), marks patients high priority, which reorders the doctor's queue at once, and collects payments on the Billing screen (mark paid with the method, failed, or refunded).
+- **Administrator** — creates all doctor and staff accounts (with a generated temporary password the user must change at first login), resets passwords, activates, suspends or deactivates users, manages departments, sets the slot schedule (slot length, hours, break, working days, booking window, cancel cutoff), can override the order of any doctor's queue, reviews and resolves complaints (Open → Under review → Resolved, with a saved note), sends general alerts, and reads the audit log of key actions.
 
 Every user has a **My Profile** page to edit their own details and change their password.
 
 **Virtual queue.** Every booking joins the doctor's queue for that day. Appointment changes reach the queue through the Observer pattern (`event/AppointmentEventPublisher` notifies `QueueManager`), so booking, cancelling, rescheduling, status and priority changes all update it straight away. Order: patients already called or in consultation stay at the front; waiting patients go high priority first, then by slot time; an administrator override pins a waiting patient to a chosen position. Queue screens refresh every 5 seconds.
 
-Doctor time slots are generated automatically for every active doctor from the administrator's **Slot Settings** (default: 30-minute slots, 09:00–17:00 with a 13:00–14:00 break, Monday–Saturday, 7 days ahead; patients may cancel or reschedule until 2 hours before). Slots are topped up at startup and every night, and regenerated when the settings change; booked appointments keep their time. All dates and times use the hospital time zone (Asia/Kolkata, set with `APP_TIMEZONE`). Bills are generated when an appointment is booked, using the Strategy pattern (standard, emergency and follow-up rates).
+Doctor time slots are generated automatically for every active doctor from the administrator's **Slot Settings** (default: 30-minute slots, 09:00–17:00 with a 13:00–14:00 break, Monday–Saturday, 7 days ahead; patients may cancel or reschedule until 2 hours before). Slots are topped up at startup and every night, and regenerated when the settings change; booked appointments keep their time. All dates and times use the hospital time zone (Asia/Kolkata, set with `APP_TIMEZONE`).
+
+**Billing.** A bill is created when an appointment is booked. The rate is chosen by the Strategy pattern (`billing/BillingStrategySelector`, stateless): **emergency** (150% of the fee) for high-priority visits, **follow-up** (50%) when the same doctor set a follow-up date at an earlier visit and this visit is no more than 7 days after it, **standard** (100%) otherwise. An unpaid bill is re-priced if the priority or time changes; when the visit is cancelled an unpaid bill becomes **Void** and a paid one **Refunded**.
+
+**Notifications.** `service/facade/NotificationFacade` stores every notification (shown in each user's bell) with its delivery status, and hands it to a pluggable `NotificationSender`. The development sender writes to the server log; a real email/SMS provider can be added as another `NotificationSender` marked `@Primary`. Patients get one reminder about 24 hours before each booked or confirmed appointment (a job checks every 5 minutes; `APP_REMINDER_HOURS_BEFORE`, `APP_REMINDER_INTERVAL_MS`). Billing, notifications and the audit log follow appointment changes as further observers of `AppointmentEventPublisher`.
 
 ## Project structure
 
@@ -36,7 +40,9 @@ online-appointment-and-queue-management-system/
 │       │   ├── dto/              # request / response objects
 │       │   ├── billing/          # billing strategies (Strategy pattern)
 │       │   ├── factory/          # UserFactory (Factory pattern)
-│       │   ├── scheduler/        # SlotScheduler — automatic time-slot generation
+│       │   ├── scheduler/        # SlotScheduler (time slots) and ReminderScheduler (appointment reminders)
+│       │   ├── audit/            # audit log of key actions
+│       │   ├── lab/              # lab report file checks
 │       │   ├── security/         # JWT authentication filter and utilities
 │       │   ├── config/           # security, CORS, demo data seeder
 │       │   └── exception/        # custom exceptions and global handler
@@ -112,6 +118,7 @@ Fresh databases get everything from `schema.sql`. If your database was created e
 ```bash
 mysql -u root -p mediqueue < db/migrations/scheduling_and_booking.sql
 mysql -u root -p mediqueue < db/migrations/queue_and_clinical_records.sql
+mysql -u root -p mediqueue < db/migrations/lab_notifications_billing_admin.sql
 ```
 
 Run them in that order; skip any you have already run. With Docker: `docker exec -i mediqueue-db mysql -uroot -proot mediqueue < db/migrations/<file>.sql` (or start fresh with `docker compose down -v`).
@@ -123,8 +130,9 @@ On the first start against an empty database, demo data is created automatically
 ### Accounts and access
 
 - Only **patients** can sign up (Register page); they are logged in straight away.
-- Doctor, lab technician, receptionist and administrator accounts are created **only by an administrator** (Users page, or Doctors page for doctors). They sign in with the username and initial password the administrator gives them, and can change their details and password under **My Profile**.
+- Doctor, lab technician, receptionist and administrator accounts are created **only by an administrator** (Users page, or Doctors page for doctors). The administrator gets a one-time **temporary password** to hand over; at first login the user must choose their own password before anything else works. The administrator can issue a new temporary password with **Reset password**. Users change their details and password under **My Profile**.
 - Patients see only their own data. Doctors see only patients on their own appointments. Lab technicians work with appointments and reports but cannot issue prescriptions. Receptionists and administrators can see everything.
+- Uploaded lab report files are stored under `APP_UPLOAD_DIR` (default `uploads/`, a Docker volume in Compose) and can be downloaded only by the patient, their doctor, the lab, receptionists and administrators.
 - Suspended or deactivated users are logged out on their next request. An expired login (after 24 hours) sends you back to the login page.
 
 ### Running the tests
@@ -139,9 +147,6 @@ cd mediqueue-frontend && npx cypress run   # end-to-end tests (app must be runni
 
 The project is under active development. Known limitations at present:
 
-- Patients cannot yet download lab reports.
-- Cancelled appointments keep a pending bill (refunds come with the billing rework).
-- Lab technicians can upload reports, but there is no download link yet, and file types are not restricted to PDF and images.
-- Notifications (reminders, report-ready, prescription alerts) are only printed to the server log; they are not stored or sent by email/SMS yet.
-- The audit log is not implemented yet.
+- Notifications are stored and shown in the app, but external delivery only writes to the server log; no email or SMS provider is connected yet.
+- Payments are recorded by the front desk; there is no online payment.
 - Several Cypress tests are out of date with the current pages and fail.

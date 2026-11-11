@@ -20,7 +20,7 @@ export default function LoginPage() {
     setLoading(true)
     try {
       const user = await login(form.username, form.password)
-      navigate(getHomeForRole(user.role), { replace: true })
+      navigate(user.mustChangePassword ? '/change-password' : getHomeForRole(user.role), { replace: true })
     } catch (err) {
       setError(err.response?.data?.error || 'Invalid username or password')
     } finally {

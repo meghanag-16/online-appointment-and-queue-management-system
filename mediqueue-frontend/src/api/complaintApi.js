@@ -1,13 +1,13 @@
-import axiosInstance from './axiosInstance';
+import axiosInstance from './axiosInstance'
+import { ENDPOINTS } from './endpoints'
 
-export const raiseComplaint = (complaintData) =>
-  axiosInstance.post('/complaints', complaintData);
+/** { issueType, description, appointmentId?, billId? } */
+export const raiseComplaint = (complaintData) => axiosInstance.post(ENDPOINTS.COMPLAINTS, complaintData)
 
-export const getAllComplaints = () =>
-  axiosInstance.get('/complaints/all');
+export const getMyComplaints = () => axiosInstance.get(ENDPOINTS.COMPLAINTS_MINE)
 
-export const getComplaintById = (complaintId) =>
-  axiosInstance.get(`/complaints/${complaintId}`);
+export const getAllComplaints = (status = '') => axiosInstance.get(ENDPOINTS.COMPLAINTS_ALL(status))
 
-export const resolveComplaint = (complaintId, resolution) =>
-  axiosInstance.put(`/complaints/${complaintId}/resolve`, { resolution });
+/** status: UNDER_REVIEW | RESOLVED; a note is required to resolve. */
+export const updateComplaintStatus = (complaintId, status, note) =>
+  axiosInstance.patch(ENDPOINTS.COMPLAINT_STATUS(complaintId), { status, note })

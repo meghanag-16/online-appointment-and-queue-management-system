@@ -58,7 +58,9 @@ public class AuthServiceImpl implements AuthService {
 
     private AuthResponse tokenFor(User user) {
         String token = jwtUtil.generateToken(user.getUsername(), user.getRole().name());
-        return new AuthResponse(token, user.getUserId(), user.getUsername(), user.getName(),
+        AuthResponse response = new AuthResponse(token, user.getUserId(), user.getUsername(), user.getName(),
             user.getRole(), user.getAccountStatus(), null);
+        response.setMustChangePassword(user.isMustChangePassword());
+        return response;
     }
 }

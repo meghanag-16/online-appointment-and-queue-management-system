@@ -85,7 +85,7 @@ public class PrescriptionServiceImpl implements PrescriptionService {
         }
 
         medicalRecordService.appendConsultation(saved);
-        notificationFacade.sendPrescriptionAvailable(appointment.getPatient().getEmail(), appointment.getPatient().getName());
+        notificationFacade.prescriptionAvailable(saved);   // PRESCRIPTION_AVAILABLE, stored and sent
         return PrescriptionResponse.from(saved);
     }
 

@@ -4,7 +4,8 @@ import PageTitle from '../../components/common/PageTitle'
 import StatusBadge from '../../components/common/StatusBadge'
 import Spinner from '../../components/common/Spinner'
 import UserProfileForm, { ALL_ROLES } from '../../components/forms/UserProfileForm'
-import { getAllUsers, createUser, updateUserStatus } from '../../api/adminApi'
+import { getAllUsers, createUser, updateUserStatus, resetUserPassword } from '../../api/adminApi'
+import TemporaryPasswordNotice from '../../components/common/TemporaryPasswordNotice'
 import { errorMessage } from '../../api/axiosInstance'
 import { useAuth } from '../../context/AuthContext'
 
@@ -15,6 +16,7 @@ export default function AdminUsers() {
   const [error, setError] = useState('')
   const [message, setMessage] = useState('')
   const [showCreate, setShowCreate] = useState(false)
+  const [credentials, setCredentials] = useState(null)
 
   useEffect(() => { load() }, [])
 
@@ -32,11 +34,23 @@ export default function AdminUsers() {
 
   // The only way to create doctor, lab technician, receptionist and administrator accounts.
   async function handleCreate(payload) {
-    setMessage(''); setError('')
+    setMessage(''); setError(''); setCredentials(null)
     const res = await createUser(payload)
-    setMessage(`${res.data.name} (${res.data.role.replace(/_/g, ' ')}) created. They can log in as "${res.data.username}".`)
+    const u = res.data.user
+    setCredentials({ name: `${u.name} (${(u.role || payload.role).replace(/_/g, ' ').toLowerCase()})`, username: u.username, password: res.data.temporaryPassword })
     setShowCreate(false)
     load()
+  }
+
+  async function resetPassword(u) {
+    if (!window.confirm(`Give ${u.name} a new temporary password? Their current password will stop working.`)) return
+    setMessage(''); setError(''); setCredentials(null)
+    try {
+      const res = await resetUserPassword(u.userId)
+      setCredentials({ name: u.name, username: u.username, password: res.data.temporaryPassword })
+    } catch (err) {
+      setError(errorMessage(err, 'Could not reset the password.'))
+    }
   }
 
   async function changeStatus(u, status) {
@@ -57,6 +71,7 @@ export default function AdminUsers() {
       <PageTitle title="User Management" subtitle="Create staff accounts and manage account status. Patients sign up themselves." />
       {message && <div className="alert alert-success">{message}</div>}
       {error && <div className="alert alert-error">{error}</div>}
+      {credentials && <TemporaryPasswordNotice {...credentials} onClose={() => setCredentials(null)} />}
 
       <div style={{ marginBottom: 16 }}>
         <button className="btn btn-primary" onClick={() => setShowCreate(s => !s)}>
@@ -65,12 +80,14 @@ export default function AdminUsers() {
       </div>
       {showCreate && (
         <div className="card" style={{ maxWidth: 560, marginBottom: 20 }}>
-          <h3 style={{ marginBottom: 16 }}>Create User</h3>
+          <h3 style={{ marginBottom: 4 }}>Create User</h3>
+          <p style={{ fontSize: '0.85rem', color: 'var(--color-text-muted)', marginBottom: 16 }}>
+            A temporary password is generated for them; they must change it when they first log in.
+          </p>
           <UserProfileForm
             roles={ALL_ROLES}
             submitLabel="Create User"
-            passwordLabel="Initial Password"
-            passwordHint="Min. 8 characters — share it with the user; they can change it under My Profile"
+            showPassword={false}
             onSubmit={handleCreate}
           />
         </div>
@@ -104,7 +121,8 @@ export default function AdminUsers() {
                             )}{' '}
                             {u.accountStatus !== 'DEACTIVATED' && (
                               <button className="btn btn-outline btn-sm" onClick={() => changeStatus(u, 'DEACTIVATED')}>Deactivate</button>
-                            )}
+                            )}{' '}
+                            <button className="btn btn-outline btn-sm" onClick={() => resetPassword(u)}>Reset password</button>
                           </>
                         )}
                       </td>

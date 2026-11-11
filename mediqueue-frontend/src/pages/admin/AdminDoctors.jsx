@@ -1,15 +1,18 @@
 import { useState, useEffect } from "react";
 import { getAllDoctors, onboardDoctor, deactivateDoctor } from "../../api/adminApi";
 import { errorMessage } from "../../api/axiosInstance";
+import { drName } from "../../utils/formatters";
 import PageLayout from "../../components/layout/PageLayout";
 import PageTitle from "../../components/common/PageTitle";
 import StatusBadge from "../../components/common/StatusBadge";
 import UserProfileForm from "../../components/forms/UserProfileForm";
+import TemporaryPasswordNotice from "../../components/common/TemporaryPasswordNotice";
 
 export default function AdminDoctors() {
   const [doctors, setDoctors] = useState([]);
   const [message, setMessage] = useState("");
   const [error, setError] = useState("");
+  const [credentials, setCredentials] = useState(null);
 
   useEffect(() => { fetchDoctors(); }, []);
 
@@ -25,9 +28,10 @@ export default function AdminDoctors() {
 
   // Same form and same backend fields as doctor self-registration (no hard-coded password).
   const handleOnboard = async (payload) => {
-    setMessage(""); setError("");
+    setMessage(""); setError(""); setCredentials(null);
     const res = await onboardDoctor(payload);
-    setMessage(`Dr. ${res.data.name} onboarded. They can log in as "${res.data.username}" with the password you set.`);
+    const d = res.data.user;
+    setCredentials({ name: drName(d.name), username: d.username, password: res.data.temporaryPassword });
     fetchDoctors();
   };
 
@@ -49,14 +53,17 @@ export default function AdminDoctors() {
       <div style={{ maxWidth: "900px", margin: "0 auto" }}>
         {message && <div className="alert alert-success">{message}</div>}
         {error   && <div className="alert alert-error">{error}</div>}
+        {credentials && <TemporaryPasswordNotice {...credentials} onClose={() => setCredentials(null)} />}
 
         <div className="card" style={{ marginBottom: "20px" }}>
-          <h3 style={{ marginBottom: "16px" }}>Onboard New Doctor</h3>
+          <h3 style={{ marginBottom: "4px" }}>Onboard New Doctor</h3>
+          <p style={{ fontSize: "0.85rem", color: "var(--color-text-muted)", marginBottom: "16px" }}>
+            Choose their department; a temporary password is generated, which they must change at first login.
+          </p>
           <UserProfileForm
             fixedRole="DOCTOR"
             submitLabel="Onboard Doctor"
-            passwordLabel="Initial Password"
-            passwordHint="Min. 8 characters — share it with the doctor"
+            showPassword={false}
             resetOnSuccess
             onSubmit={handleOnboard}
           />

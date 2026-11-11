@@ -47,6 +47,6 @@ public class DashboardController {
 
     @GetMapping("/complaints")
     public ResponseEntity<List<ComplaintResponse>> getAllComplaints() {
-        return ResponseEntity.ok(complaintService.getAll());
+        return ResponseEntity.ok(complaintService.getAll(null));
     }
 }

@@ -2,6 +2,7 @@ package com.mediqueue.controller;
 
 import com.mediqueue.dto.ComplaintRequest;
 import com.mediqueue.dto.ComplaintResponse;
+import com.mediqueue.dto.ComplaintStatusRequest;
 import com.mediqueue.service.ComplaintService;
 import jakarta.validation.Valid;
 import org.springframework.http.HttpStatus;
@@ -10,7 +11,6 @@ import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.web.bind.annotation.*;
 
 import java.util.List;
-import java.util.Map;
 
 @RestController
 @RequestMapping("/api/v1/complaints")
@@ -28,17 +28,23 @@ public class ComplaintController {
         return ResponseEntity.status(HttpStatus.CREATED).body(complaintService.raise(request));
     }
 
-    @GetMapping("/all")
-    @PreAuthorize("hasRole('ADMINISTRATOR')")
-    public ResponseEntity<List<ComplaintResponse>> getAllComplaints() {
-        return ResponseEntity.ok(complaintService.getAll());
+    @GetMapping("/mine")
+    @PreAuthorize("hasRole('PATIENT')")
+    public ResponseEntity<List<ComplaintResponse>> myComplaints() {
+        return ResponseEntity.ok(complaintService.getMine());
     }
 
-    @PutMapping("/{complaintId}/resolve")
+    /** ?status=OPEN | UNDER_REVIEW | RESOLVED (optional). */
+    @GetMapping("/all")
     @PreAuthorize("hasRole('ADMINISTRATOR')")
-    public ResponseEntity<ComplaintResponse> resolveComplaint(@PathVariable String complaintId,
-                                                              @RequestBody(required = false) Map<String, String> payload) {
-        String resolution = payload != null ? payload.get("resolution") : null;
-        return ResponseEntity.ok(complaintService.resolve(complaintId, resolution));
+    public ResponseEntity<List<ComplaintResponse>> getAllComplaints(@RequestParam(required = false) String status) {
+        return ResponseEntity.ok(complaintService.getAll(status));
+    }
+
+    @PatchMapping("/{complaintId}/status")
+    @PreAuthorize("hasRole('ADMINISTRATOR')")
+    public ResponseEntity<ComplaintResponse> updateStatus(@PathVariable String complaintId,
+                                                          @Valid @RequestBody ComplaintStatusRequest request) {
+        return ResponseEntity.ok(complaintService.updateStatus(complaintId, request));
     }
 }
