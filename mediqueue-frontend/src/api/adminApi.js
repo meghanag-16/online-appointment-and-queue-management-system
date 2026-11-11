@@ -20,3 +20,14 @@ export const getAuditLogs = () =>
 
 export const overrideQueue = (queueData) =>
   axiosInstance.put('/admin/queue/override', queueData);
+
+export const getAllUsers = () =>
+  axiosInstance.get('/users');
+
+/** Create a user of any role with the same fields as self-registration. */
+export const createUser = (userData) =>
+  axiosInstance.post('/users', userData);
+
+/** status: ACTIVE | SUSPENDED | DEACTIVATED | PENDING_APPROVAL */
+export const updateUserStatus = (userId, status) =>
+  axiosInstance.patch(`/users/${userId}/status`, { status });

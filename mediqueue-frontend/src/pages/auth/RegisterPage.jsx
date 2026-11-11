@@ -2,46 +2,31 @@ import { useState } from 'react'
 import { useNavigate, Link } from 'react-router-dom'
 import { useAuth } from '../../context/AuthContext'
 import { getHomeForRole } from '../../utils/roleRoutes'
+import UserProfileForm, { ALL_ROLES } from '../../components/forms/UserProfileForm'
 
-const ROLES = ['PATIENT', 'DOCTOR', 'LAB_TECHNICIAN', 'RECEPTIONIST', 'ADMINISTRATOR']
-
+/**
+ * Public sign-up. Uses the same UserProfileForm (and backend RegisterRequest) as administrator
+ * user creation, so self-registered and admin-created users have identical fields per role.
+ * Patients can log in straight away; staff accounts wait for administrator approval.
+ */
 export default function RegisterPage() {
   const { register } = useAuth()
-  const navigate      = useNavigate()
+  const navigate = useNavigate()
+  const [pendingMessage, setPendingMessage] = useState('')
 
-  // ✅ ONLY CHANGE: added 3 fields
-  const [form, setForm] = useState({
-    name: '',
-    username: '',
-    email: '',
-    password: '',
-    role: 'PATIENT',
-    gender: '',
-    phone: '',
-    dob: ''
-  })
-
-  const [error, setError]     = useState('')
-  const [loading, setLoading] = useState(false)
-
-  function set(field) {
-    return e => setForm(f => ({ ...f, [field]: e.target.value }))
-  }
-
-  async function handleSubmit(e) {
-    e.preventDefault()
-    setError('')
-    setLoading(true)
-    try {
-      // ✅ ONLY CHANGE: send extra fields
-      const user = await register(form)
-      navigate(getHomeForRole(user.role), { replace: true })
-    } catch (err) {
-      setError(err.response?.data?.error || 'Registration failed. Please try again.')
-    } finally {
-      setLoading(false)
+  async function handleRegister(payload) {
+    const result = await register(payload)
+    if (result?.token) {
+      navigate(getHomeForRole(result.role), { replace: true })
+    } else if (result) {
+      setPendingMessage(result.message ||
+        'Account created. An administrator must approve it before you can log in.')
     }
   }
+
+  const staffNote = (role) => role !== 'PATIENT'
+    ? 'Staff accounts must be approved by an administrator before you can log in.'
+    : null
 
   return (
     <div style={outerStyle}>
@@ -54,92 +39,19 @@ export default function RegisterPage() {
           </p>
         </div>
 
-        {error && <div className="alert alert-error">{error}</div>}
-
-        <form onSubmit={handleSubmit}>
-          <div className="form-group">
-            <label>Full Name</label>
-            <input className="form-control" placeholder="Your full name"
-              value={form.name} onChange={set('name')} required />
+        {pendingMessage ? (
+          <div className="alert alert-success" role="status">
+            {pendingMessage}{' '}
+            <Link to="/login" style={{ fontWeight: 600 }}>Go to sign in</Link>
           </div>
-
-          <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 16 }}>
-            <div className="form-group">
-              <label>Username</label>
-              <input className="form-control" placeholder="username"
-                value={form.username} onChange={set('username')} required />
-            </div>
-            <div className="form-group">
-              <label htmlFor="role-select">Role</label>
-              <select
-                id="role-select"
-                className="form-control"
-                value={form.role}
-                onChange={set('role')}
-              >
-                {ROLES.map(r => (
-                  <option key={r} value={r}>{r.replace(/_/g, ' ')}</option>
-                ))}
-              </select>
-            </div>
-          </div>
-
-          <div className="form-group">
-            <label>Email</label>
-            <input className="form-control" type="email" placeholder="you@example.com"
-              value={form.email} onChange={set('email')} required />
-          </div>
-
-          <div className="form-group">
-            <label>Password</label>
-            <input className="form-control" type="password" placeholder="Min. 8 characters"
-              value={form.password} onChange={set('password')} required minLength={8} />
-          </div>
-
-          {/* ✅ NEW FIELDS (ONLY ADDED, NOTHING MODIFIED) */}
-
-          <div className="form-group">
-            <label htmlFor="gender-select">Gender</label>
-            <select
-              id="gender-select"
-              className="form-control"
-              value={form.gender} onChange={set('gender')} required>
-              <option value="">Select Gender</option>
-              <option value="MALE">Male</option>
-              <option value="FEMALE">Female</option>
-              <option value="OTHER">Other</option>
-            </select>
-          </div>
-
-          <div className="form-group">
-            <label htmlFor="phone-input">Phone Number</label>
-            <input
-              id="phone-input"
-              className="form-control"
-              placeholder="Enter phone number"
-              value={form.phone} onChange={set('phone')} required
-            />
-          </div>
-
-          <div className="form-group">
-            <label htmlFor="dob-input">Date of Birth</label>
-            <input
-              id="dob-input"
-              className="form-control"
-              type="date"
-              value={form.dob} onChange={set('dob')} required
-            />
-          </div>
-
-          <button
-            type="submit"
-            className="btn btn-primary"
-            style={{ width: '100%', justifyContent: 'center', marginTop: 8, padding: '12px' }}
-            disabled={loading}
-          >
-            {loading ? 'Creating account…' : 'Register'}
-          </button>
-        </form>
+        ) : (
+          <UserProfileForm
+            roles={ALL_ROLES}
+            submitLabel="Register"
+            roleNote={staffNote}
+            onSubmit={handleRegister}
+          />
+        )}
 
         <p style={{ textAlign: 'center', marginTop: 20, fontSize: '0.875rem', color: 'var(--color-text-muted)' }}>
           Already have an account?{' '}
@@ -160,7 +72,7 @@ const outerStyle = {
 }
 const panelStyle = {
   background: 'var(--color-white)', borderRadius: 16,
-  padding: '40px 36px', width: '100%', maxWidth: 480,
+  padding: '40px 36px', width: '100%', maxWidth: 520,
   boxShadow: 'var(--shadow-lg)',
 }
 const logoStyle = {
