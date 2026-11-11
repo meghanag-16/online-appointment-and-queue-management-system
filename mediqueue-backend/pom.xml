@@ -21,7 +21,7 @@
         <java.version>17</java.version>
         <jjwt.version>0.12.6</jjwt.version>
         <!-- lint / format tooling -->
-        <spotless.version>2.44.4</spotless.version>
+        <spotless.version>3.11.0</spotless.version>
         <google-java-format.version>1.28.0</google-java-format.version>
         <maven-checkstyle-plugin.version>3.6.0</maven-checkstyle-plugin.version>
         <checkstyle.version>10.26.1</checkstyle.version>
