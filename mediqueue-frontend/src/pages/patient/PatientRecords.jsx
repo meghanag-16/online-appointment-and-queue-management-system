@@ -2,7 +2,7 @@ import { useEffect, useState } from 'react'
 import PageLayout from '../../components/layout/PageLayout'
 import PageTitle from '../../components/common/PageTitle'
 import Spinner from '../../components/common/Spinner'
-import axiosInstance from '../../api/axiosInstance'
+import axiosInstance, { errorMessage } from '../../api/axiosInstance'
 import { useAuth } from '../../context/AuthContext'
 
 export default function PatientRecords() {
@@ -32,20 +32,15 @@ export default function PatientRecords() {
       const formData = new FormData()
       formData.append("file", file)
 
+      // Shared API client (token attached, real error message). The records-upload endpoint
+      // does not exist yet; the server now says so instead of the request failing silently.
       try {
-        const res = await fetch("http://localhost:8080/api/records/upload", {
-          method: "POST",
-          body: formData
+        await axiosInstance.post("/records/upload", formData, {
+          headers: { "Content-Type": "multipart/form-data" },
         })
-
-        if (res.ok) {
-          alert("Uploaded successfully")
-        } else {
-          alert("Upload failed")
-        }
+        alert("Uploaded successfully")
       } catch (err) {
-        console.error(err)
-        alert("Error uploading")
+        alert(errorMessage(err, "Upload failed"))
       }
     }
 

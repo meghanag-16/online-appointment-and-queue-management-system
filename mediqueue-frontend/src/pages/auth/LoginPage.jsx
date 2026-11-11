@@ -6,6 +6,9 @@ import { getHomeForRole } from '../../utils/roleRoutes'
 export default function LoginPage() {
   const { login } = useAuth()
   const navigate   = useNavigate()
+  const params     = new URLSearchParams(window.location.search)
+  // Set by axiosInstance when a request came back 401 (session expired / account locked)
+  const expiredReason = params.get('expired') ? (params.get('reason') || 'Your session has expired. Please log in again.') : ''
 
   const [form, setForm]       = useState({ username: '', password: '' })
   const [error, setError]     = useState('')
@@ -37,6 +40,7 @@ export default function LoginPage() {
           </p>
         </div>
 
+        {expiredReason && !error && <div className="alert alert-info">{expiredReason}</div>}
         {error && <div className="alert alert-error">{error}</div>}
 
         <form onSubmit={handleSubmit}>

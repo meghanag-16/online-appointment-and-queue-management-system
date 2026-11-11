@@ -101,10 +101,24 @@ Requires Java 17+, Maven, Node.js 20+ and MySQL 8.
    ```
    Open http://localhost:5173 (the dev server proxies `/api` to the backend on port 8080).
 
+### Upgrading an existing database
+
+Fresh databases get everything from `schema.sql`. If your database was created earlier, run the files in `db/migrations/` once:
+
+```bash
+mysql -u root -p mediqueue < db/migrations/add_pending_approval_status.sql
+```
 
 ### Demo accounts
 
 On the first start against an empty database, demo data is created automatically: an administrator (`admin`), a receptionist (`reception`), a lab technician (`labtech`), a patient (`patient`), five departments, and ten doctors (`dr.mehta`, `dr.iyer`, `dr.rao`, `dr.khan`, `dr.nair`, `dr.das`, `dr.sharma`, `dr.reddy`, `dr.bose`, `dr.pillai`). The passwords are the `APP_SEED_ADMIN_PASSWORD` and `APP_SEED_DEFAULT_PASSWORD` values in `.env.example`. Set `APP_SEED_ENABLED=false` to turn this off.
+
+### Accounts and access
+
+- Anyone can sign up from the Register page. Patients can log in straight away. Doctor, lab technician, receptionist and administrator sign-ups are created as **pending approval** and can log in only after an administrator clicks **Approve** on the Users page.
+- Administrators can also create users of any role (Users page) or onboard doctors (Doctors page). Both use the same form and the same fields as self-registration, so accounts look the same however they were created.
+- Patients see only their own data. Doctors see only patients on their own appointments. Lab technicians work with appointments and reports but cannot issue prescriptions. Receptionists and administrators can see everything.
+- Suspended or deactivated users are logged out on their next request. An expired login (after 24 hours) sends you back to the login page.
 
 ### Running the tests
 
@@ -121,10 +135,8 @@ The project is under active development. Known limitations at present:
 - The doctor's virtual queue is not yet populated automatically, so the queue view and "In Queue" count stay empty; priority-based reordering is not active yet.
 - Patients cannot yet reschedule appointments, cancel from their own page, view prescriptions, or download lab reports.
 - Doctors cannot yet open a patient's medical history; medical records are not updated after a consultation.
-- The lab technician upload page is not wired to the backend yet.
+- Lab technicians can upload reports, but there is no download link yet, and file types are not restricted to PDF and images.
 - Notifications (reminders, report-ready, prescription alerts) are only printed to the server log; no email or SMS is sent.
 - Doctor search matches specialization only (not department, name or availability).
 - Admin slot-duration settings, queue-priority override and the audit log are not implemented yet.
-- Users created by the administrator and users who register themselves do not yet collect the same profile fields.
-- Access control is role-based only; a user can request another user's records by changing the ID in the URL.
 - Several Cypress tests are out of date with the current pages and fail.

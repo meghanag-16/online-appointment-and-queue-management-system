@@ -1,5 +1,6 @@
 import Sidebar from './Sidebar'
 import Navbar from './Navbar'
+import AccessDeniedBanner from '../common/AccessDeniedBanner'
 
 export default function PageLayout({ children }) {
   return (
@@ -12,6 +13,7 @@ export default function PageLayout({ children }) {
           padding: 'calc(var(--navbar-h) + 32px) 36px 48px',
           minHeight: '100vh',
         }} className="animate-in">
+          <AccessDeniedBanner />
           {children}
         </main>
       </div>

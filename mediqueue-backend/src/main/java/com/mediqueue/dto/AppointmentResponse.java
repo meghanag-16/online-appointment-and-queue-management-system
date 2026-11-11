@@ -13,6 +13,8 @@ public class AppointmentResponse {
     private String doctorId;
     private String doctorName;
     private Long slotId;
+    private LocalDateTime startTime;
+    private LocalDateTime endTime;
     private LocalDate appointmentDate;
     private String reasonForVisit;
     private AppointmentStatus status;
@@ -52,6 +54,12 @@ public class AppointmentResponse {
 
     public Long getSlotId() { return slotId; }
     public void setSlotId(Long slotId) { this.slotId = slotId; }
+
+    public LocalDateTime getStartTime() { return startTime; }
+    public void setStartTime(LocalDateTime startTime) { this.startTime = startTime; }
+
+    public LocalDateTime getEndTime() { return endTime; }
+    public void setEndTime(LocalDateTime endTime) { this.endTime = endTime; }
 
     public LocalDate getAppointmentDate() { return appointmentDate; }
     public void setAppointmentDate(LocalDate appointmentDate) { this.appointmentDate = appointmentDate; }

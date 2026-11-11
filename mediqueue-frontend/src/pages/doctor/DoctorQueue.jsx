@@ -2,7 +2,7 @@ import { useEffect, useState } from 'react'
 import PageLayout from '../../components/layout/PageLayout'
 import PageTitle from '../../components/common/PageTitle'
 import Spinner from '../../components/common/Spinner'
-import axiosInstance from '../../api/axiosInstance'
+import axiosInstance, { errorMessage } from '../../api/axiosInstance'
 import { useAuth } from '../../context/AuthContext'
 import { formatDate } from '../../utils/formatters'
 
@@ -20,7 +20,7 @@ export default function DoctorQueue() {
         const res = await axiosInstance.get(`/doctor/queue/${user.userId}`)
         setQueue(res.data)
       } catch (err) {
-        setError('Unable to load queue data.')
+        setError(errorMessage(err, 'Unable to load queue data.'))
       } finally {
         setLoading(false)
       }

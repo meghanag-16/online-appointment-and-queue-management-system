@@ -1,42 +1,48 @@
 import { createContext, useContext, useState, useCallback } from 'react'
-import axiosInstance from '../api/axiosInstance'
-import { ENDPOINTS } from '../api/endpoints'
+import { loginUser, registerUser } from '../api/authApi'
+import { TOKEN_KEY, USER_KEY } from '../api/axiosInstance'
 
 const AuthContext = createContext(null)
+
+function store(data) {
+  const userData = { token: data.token, userId: data.userId, username: data.username, name: data.name, role: data.role }
+  localStorage.setItem(TOKEN_KEY, data.token)
+  localStorage.setItem(USER_KEY, JSON.stringify(userData))
+  return userData
+}
 
 export function AuthProvider({ children }) {
   const [user, setUser] = useState(() => {
     try {
-      const stored = localStorage.getItem('mq_user')
-      return stored ? JSON.parse(stored) : null
+      const stored = localStorage.getItem(USER_KEY)
+      return stored && localStorage.getItem(TOKEN_KEY) ? JSON.parse(stored) : null
     } catch {
       return null
     }
   })
 
   const login = useCallback(async (username, password) => {
-    const res = await axiosInstance.post(ENDPOINTS.LOGIN, { username, password })
-    const { token, userId, role } = res.data
-    const userData = { token, userId, username, role }
-    localStorage.setItem('mq_token', token)
-    localStorage.setItem('mq_user', JSON.stringify(userData))
+    const res = await loginUser({ username, password })
+    const userData = store(res.data)
     setUser(userData)
     return userData
   }, [])
 
+  /**
+   * Returns the server response. When the account needs administrator approval there is no
+   * token: nothing is stored and the caller shows res.message instead of logging in.
+   */
   const register = useCallback(async (payload) => {
-    const res = await axiosInstance.post(ENDPOINTS.REGISTER, payload)
-    const { token, userId, username, role } = res.data
-    const userData = { token, userId, username, role }
-    localStorage.setItem('mq_token', token)
-    localStorage.setItem('mq_user', JSON.stringify(userData))
+    const res = await registerUser(payload)
+    if (!res.data?.token) return res.data
+    const userData = store(res.data)
     setUser(userData)
     return userData
   }, [])
 
   const logout = useCallback(() => {
-    localStorage.removeItem('mq_token')
-    localStorage.removeItem('mq_user')
+    localStorage.removeItem(TOKEN_KEY)
+    localStorage.removeItem(USER_KEY)
     setUser(null)
   }, [])
 

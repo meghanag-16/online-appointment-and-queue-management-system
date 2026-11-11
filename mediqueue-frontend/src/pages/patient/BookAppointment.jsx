@@ -3,7 +3,7 @@ import { useNavigate } from 'react-router-dom'
 import PageLayout from '../../components/layout/PageLayout'
 import PageTitle from '../../components/common/PageTitle'
 import { useAuth } from '../../context/AuthContext'
-import axiosInstance from '../../api/axiosInstance'
+import axiosInstance, { errorMessage } from '../../api/axiosInstance'
 import { ENDPOINTS } from '../../api/endpoints'
 
 function formatDateTime(dt) {
@@ -39,8 +39,8 @@ export default function BookAppointment() {
       const res = await axiosInstance.get(`/doctors/${doctorId.trim()}/slots`)
       if (res.data.length === 0) setSlotsError('No available slots for this doctor.')
       setSlots(res.data)
-    } catch {
-      setSlotsError('Could not fetch slots. Please check the Doctor ID.')
+    } catch (err) {
+      setSlotsError(errorMessage(err, 'Could not fetch slots. Please check the Doctor ID.'))
     } finally { setSlotsLoading(false) }
   }
 
@@ -61,7 +61,7 @@ export default function BookAppointment() {
       setSuccess('Appointment booked successfully!')
       setTimeout(() => navigate('/patient/appointments'), 1500)
     } catch (err) {
-      setError(err.response?.data?.error || 'Booking failed. Please try again.')
+      setError(errorMessage(err, 'Booking failed. Please try again.'))
       if (err.response?.data?.alternateSlots) setAlternates(err.response.data.alternateSlots)
     } finally { setLoading(false) }
   }
