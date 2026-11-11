@@ -1,0 +1,10 @@
+# Store and check out text files with LF line endings on every OS, so the formatters
+# (Spotless, Prettier) give the same result on Windows and in CI.
+* text=auto eol=lf
+*.bat text eol=crlf
+*.cmd text eol=crlf
+*.png binary
+*.jpg binary
+*.jpeg binary
+*.pdf binary
+*.jar binary
