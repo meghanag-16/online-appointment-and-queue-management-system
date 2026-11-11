@@ -86,7 +86,7 @@ export default function ReceptionistDashboard() {
 
           <div className="card" style={{ padding: 0 }}>
             <div style={{ padding: '16px 20px', borderBottom: '1px solid var(--color-border)' }}>
-              <h3 style={{ margin: 0 }}>Today's Appointments</h3>
+              <h3 style={{ margin: 0 }}>Today&apos;s Appointments</h3>
             </div>
             <div className="table-wrapper">
               <table>

@@ -20,7 +20,7 @@ export default function NotFound() {
       >
         Page not found
       </h1>
-      <p style={{ color: 'var(--color-text-muted)' }}>The page you're looking for doesn't exist.</p>
+      <p style={{ color: 'var(--color-text-muted)' }}>The page you&apos;re looking for doesn&apos;t exist.</p>
       <Link to="/" className="btn btn-primary">
         Go Home
       </Link>

@@ -226,30 +226,42 @@ export default function ReceptionistAppointments() {
           {bookErr && <div className="alert alert-error">{bookErr}</div>}
 
           <div className="form-group">
-            <label>1. Patient</label>
-            <PatientPicker selected={patient} onSelect={setPatient} />
+            <span className="form-label" id="b-patient">
+              1. Patient
+            </span>
+            <div role="group" aria-labelledby="b-patient">
+              <PatientPicker selected={patient} onSelect={setPatient} />
+            </div>
           </div>
           <div className="form-group">
-            <label>2. Doctor</label>
-            <DoctorPicker
-              compact
-              selectedDoctorId={doctor?.userId}
-              onSelect={d => {
-                setDoctor(d)
-                setSlot(null)
-                setAlternates([])
-              }}
-            />
+            <span className="form-label" id="b-doctor">
+              2. Doctor
+            </span>
+            <div role="group" aria-labelledby="b-doctor">
+              <DoctorPicker
+                compact
+                selectedDoctorId={doctor?.userId}
+                onSelect={d => {
+                  setDoctor(d)
+                  setSlot(null)
+                  setAlternates([])
+                }}
+              />
+            </div>
           </div>
           {doctor && (
             <div className="form-group">
-              <label>3. Time with {doctor.name}</label>
-              <SlotPicker
-                doctorId={doctor.userId}
-                selectedSlotId={slot?.slotId}
-                onSelect={setSlot}
-                refreshKey={refreshKey}
-              />
+              <span className="form-label" id="b-slot">
+                3. Time with {doctor.name}
+              </span>
+              <div role="group" aria-labelledby="b-slot">
+                <SlotPicker
+                  doctorId={doctor.userId}
+                  selectedSlotId={slot?.slotId}
+                  onSelect={setSlot}
+                  refreshKey={refreshKey}
+                />
+              </div>
             </div>
           )}
           <AlternateSlots alternates={alternates} onPick={pickAlternate} />

@@ -136,7 +136,7 @@ export default function PatientComplaints() {
           <h3 style={{ marginBottom: 12 }}>My complaints</h3>
           {complaints.length === 0 && (
             <div className="card">
-              <p style={{ color: 'var(--color-text-muted)', margin: 0 }}>You haven't raised any complaints.</p>
+              <p style={{ color: 'var(--color-text-muted)', margin: 0 }}>You haven&apos;t raised any complaints.</p>
             </div>
           )}
           {complaints.map(c => (
@@ -161,7 +161,7 @@ export default function PatientComplaints() {
               </small>
               {c.resolution && (
                 <div className="alert alert-info" style={{ marginTop: 10, marginBottom: 0 }}>
-                  <strong>Hospital's response:</strong> {c.resolution}
+                  <strong>Hospital&apos;s response:</strong> {c.resolution}
                 </div>
               )}
             </div>

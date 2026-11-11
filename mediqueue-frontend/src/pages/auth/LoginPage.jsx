@@ -53,6 +53,7 @@ export default function LoginPage() {
               value={form.username}
               onChange={e => setForm(f => ({ ...f, username: e.target.value }))}
               required
+              // eslint-disable-next-line jsx-a11y/no-autofocus -- the page is just this form
               autoFocus
             />
           </div>

@@ -18,7 +18,7 @@ export default function Unauthorized() {
       >
         Access Denied
       </h1>
-      <p style={{ color: 'var(--color-text-muted)' }}>You don't have permission to view this page.</p>
+      <p style={{ color: 'var(--color-text-muted)' }}>You don&apos;t have permission to view this page.</p>
       <Link to="/" className="btn btn-primary">
         Go Home
       </Link>

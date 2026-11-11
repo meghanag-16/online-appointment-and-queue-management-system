@@ -1,3 +1,4 @@
+import { useEscapeKey } from '../../hooks/useEscapeKey'
 import { useState } from 'react'
 import axiosInstance, { errorMessage } from '../../api/axiosInstance'
 import { ENDPOINTS } from '../../api/endpoints'
@@ -15,6 +16,7 @@ export default function RescheduleDialog({ appointment, onClose, onDone }) {
   const [alternates, setAlternates] = useState([])
   const [saving, setSaving] = useState(false)
   const [refreshKey, setRefreshKey] = useState(0)
+  useEscapeKey(onClose)
 
   async function confirm() {
     if (!slot) return
@@ -37,8 +39,8 @@ export default function RescheduleDialog({ appointment, onClose, onDone }) {
   }
 
   return (
-    <div style={overlay} role="dialog" aria-modal="true" aria-labelledby="reschedule-title" onClick={onClose}>
-      <div className="card" style={panel} onClick={e => e.stopPropagation()}>
+    <div style={overlay} role="presentation" onClick={e => e.target === e.currentTarget && onClose()}>
+      <div className="card" style={panel} role="dialog" aria-modal="true" aria-labelledby="reschedule-title">
         <h3 id="reschedule-title" style={{ marginBottom: 4 }}>
           Reschedule appointment
         </h3>

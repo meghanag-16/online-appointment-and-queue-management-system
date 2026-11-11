@@ -143,6 +143,19 @@ cd mediqueue-frontend && npm test          # frontend unit tests
 cd mediqueue-frontend && npx cypress run   # end-to-end tests (app must be running)
 ```
 
+### Formatting and linting
+
+Both halves are auto-formatted and linted, and CI fails a pull request that is not clean.
+
+```bash
+cd mediqueue-backend && mvn spotless:apply              # format Java (google-java-format, AOSP style)
+cd mediqueue-backend && mvn spotless:check checkstyle:check
+cd mediqueue-frontend && npm run format                 # format with Prettier
+cd mediqueue-frontend && npm run lint                   # ESLint: React, hooks and accessibility rules
+```
+
+`mvn verify` also runs the format check and Checkstyle. Line endings are LF everywhere (`.gitattributes`), so the same files pass on Windows and in CI.
+
 ## API reference
 
 All endpoints are under `/api/v1` and, except sign-up, login and the department list, need `Authorization: Bearer <token>`. Errors share one JSON shape: `{timestamp, status, error, path, fieldErrors?}` (plus `alternateSlots` on a 409 for a taken slot). Roles: P patient, D doctor, L lab technician, R receptionist, A administrator. "Own" means the server also checks the record belongs to the caller (a doctor: their own patients).

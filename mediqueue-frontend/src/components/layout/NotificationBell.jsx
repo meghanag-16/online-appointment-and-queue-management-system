@@ -125,18 +125,26 @@ export default function NotificationBell() {
             <p style={{ padding: 16, margin: 0, color: 'var(--color-text-muted)' }}>No notifications yet.</p>
           )}
           {inbox.items.map(n => (
-            <div
+            <button
+              type="button"
               key={n.notificationId}
               onClick={() => markRead(n)}
               data-testid={`notification-${n.notificationId}`}
+              title={n.read ? undefined : 'Mark as read'}
               style={{
+                display: 'block',
+                width: '100%',
+                textAlign: 'left',
+                font: 'inherit',
+                color: 'inherit',
+                border: 'none',
                 padding: '10px 14px',
                 borderBottom: '1px solid var(--color-border)',
                 cursor: n.read ? 'default' : 'pointer',
                 background: n.read ? 'transparent' : 'var(--color-accent-soft)',
               }}
             >
-              <div
+              <span
                 style={{
                   display: 'flex',
                   justifyContent: 'space-between',
@@ -147,9 +155,9 @@ export default function NotificationBell() {
               >
                 <span style={{ fontWeight: 600 }}>{formatEnum(n.type)}</span>
                 <span>{formatDateTime(n.timestamp)}</span>
-              </div>
-              <div style={{ fontSize: '0.85rem' }}>{n.message}</div>
-            </div>
+              </span>
+              <span style={{ display: 'block', fontSize: '0.85rem' }}>{n.message}</span>
+            </button>
           ))}
         </div>
       )}

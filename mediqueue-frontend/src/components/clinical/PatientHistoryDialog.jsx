@@ -1,3 +1,4 @@
+import { useEscapeKey } from '../../hooks/useEscapeKey'
 import { useEffect, useState } from 'react'
 import axiosInstance, { errorMessage } from '../../api/axiosInstance'
 import { ENDPOINTS } from '../../api/endpoints'
@@ -13,6 +14,7 @@ import { formatTime } from '../../utils/dates'
 export default function PatientHistoryDialog({ patientId, patientName, onClose }) {
   const [history, setHistory] = useState(null)
   const [error, setError] = useState('')
+  useEscapeKey(onClose)
 
   useEffect(() => {
     axiosInstance
@@ -22,8 +24,15 @@ export default function PatientHistoryDialog({ patientId, patientName, onClose }
   }, [patientId])
 
   return (
-    <div style={overlay} role="dialog" aria-modal="true" aria-labelledby="history-title" onClick={onClose}>
-      <div className="card" style={panel} onClick={e => e.stopPropagation()} data-testid="patient-history">
+    <div style={overlay} role="presentation" onClick={e => e.target === e.currentTarget && onClose()}>
+      <div
+        className="card"
+        style={panel}
+        role="dialog"
+        aria-modal="true"
+        aria-labelledby="history-title"
+        data-testid="patient-history"
+      >
         <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 12 }}>
           <h3 id="history-title" style={{ margin: 0 }}>
             Patient history — {history?.name || patientName}

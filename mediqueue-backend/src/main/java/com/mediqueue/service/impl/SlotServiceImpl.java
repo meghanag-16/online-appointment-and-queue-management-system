@@ -103,7 +103,8 @@ public class SlotServiceImpl implements SlotService {
         if (!r.dayStart().isBefore(r.dayEnd())) {
             throw new BadRequestException("End of day must be after start of day");
         }
-        boolean hasBreakStart = r.breakStart() != null, hasBreakEnd = r.breakEnd() != null;
+        boolean hasBreakStart = r.breakStart() != null;
+        boolean hasBreakEnd = r.breakEnd() != null;
         if (hasBreakStart != hasBreakEnd) {
             throw new BadRequestException("Give both a break start and a break end, or neither");
         }

@@ -1,5 +1,4 @@
-import React from 'react'
-import { render, screen, fireEvent, waitFor, within } from '@testing-library/react'
+import { render, screen, fireEvent, waitFor } from '@testing-library/react'
 import '@testing-library/jest-dom'
 
 // ── Mock react-router-dom ─────────────────────────────────────────────────────
@@ -41,8 +40,6 @@ jest.mock('../api/axiosInstance', () => ({
     patch: jest.fn(),
   },
 }))
-
-import axiosInstance from '../api/axiosInstance'
 
 // ─────────────────────────────────────────────────────────────────────────────
 // Component imports
@@ -272,7 +269,7 @@ describe('RegisterPage', () => {
 // ─────────────────────────────────────────────────────────────────────────────
 // formatters utility
 // ─────────────────────────────────────────────────────────────────────────────
-import { formatDate, formatCurrency, formatEnum, formatDateTime } from '../utils/formatters'
+import { formatDate, formatCurrency, formatEnum } from '../utils/formatters'
 
 describe('formatters', () => {
   test('formatDate handles null/undefined', () => {

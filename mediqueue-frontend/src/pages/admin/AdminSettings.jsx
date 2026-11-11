@@ -167,8 +167,10 @@ export default function AdminSettings() {
         )}
 
         <div className="form-group">
-          <label>Working days</label>
-          <div style={{ display: 'flex', flexWrap: 'wrap', gap: 8 }}>
+          <span className="form-label" id="s-days">
+            Working days
+          </span>
+          <div role="group" aria-labelledby="s-days" style={{ display: 'flex', flexWrap: 'wrap', gap: 8 }}>
             {DAYS.map(d => (
               <label key={d} style={{ display: 'flex', gap: 4, alignItems: 'center', fontSize: '0.88rem' }}>
                 <input type="checkbox" checked={form.workingDays.includes(d)} onChange={() => toggleDay(d)} />
