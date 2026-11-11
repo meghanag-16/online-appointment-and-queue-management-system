@@ -34,6 +34,8 @@ public class AppointmentResponse {
     private LocalDateTime changeDeadline;
     /** Statuses the current user may move this appointment to. */
     private List<AppointmentStatus> allowedStatuses = List.of();
+    /** A prescription has been issued for this appointment. */
+    private boolean hasPrescription;
 
     public AppointmentResponse() {}
 
@@ -93,6 +95,9 @@ public class AppointmentResponse {
 
     public List<AppointmentStatus> getAllowedStatuses() { return allowedStatuses; }
     public void setAllowedStatuses(List<AppointmentStatus> allowedStatuses) { this.allowedStatuses = allowedStatuses; }
+
+    public boolean isHasPrescription() { return hasPrescription; }
+    public void setHasPrescription(boolean hasPrescription) { this.hasPrescription = hasPrescription; }
 
     /** A suggested open slot offered when the requested one is taken. */
     public static class AlternateSlot {

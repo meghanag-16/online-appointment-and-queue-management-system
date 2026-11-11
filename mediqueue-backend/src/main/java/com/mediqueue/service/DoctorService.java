@@ -2,7 +2,6 @@ package com.mediqueue.service;
 
 import com.mediqueue.dto.DoctorDTO;
 import com.mediqueue.dto.DoctorDashboardResponse;
-import com.mediqueue.dto.QueueEntryResponse;
 import com.mediqueue.dto.SlotResponse;
 
 import java.time.LocalDate;
@@ -19,5 +18,4 @@ public interface DoctorService {
     List<DoctorDTO> searchDoctors(String query, String departmentId, LocalDate date);
 
     DoctorDashboardResponse getDashboard(String doctorId);
-    List<QueueEntryResponse> getTodayQueue(String doctorId);
 }

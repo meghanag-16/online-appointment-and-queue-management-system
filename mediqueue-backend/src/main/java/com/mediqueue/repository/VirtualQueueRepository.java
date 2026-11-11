@@ -6,9 +6,10 @@ import org.springframework.data.jpa.repository.JpaRepository;
 
 import java.time.LocalDate;
 import java.util.List;
+import java.util.Optional;
 
 public interface VirtualQueueRepository extends JpaRepository<VirtualQueue, Long> {
-    List<VirtualQueue> findByDoctor_UserIdAndQueueDateOrderByQueuePositionAsc(String doctorId, LocalDate date);
-    int countByDoctor_UserIdAndQueueDate(String doctorId, LocalDate date);
+    List<VirtualQueue> findByDoctor_UserIdAndQueueDate(String doctorId, LocalDate date);
+    Optional<VirtualQueue> findByAppointment_AppointmentId(Long appointmentId);
     long countByDoctor_UserIdAndQueueDateAndVisitStatus(String doctorId, LocalDate date, QueueStatus status);
 }

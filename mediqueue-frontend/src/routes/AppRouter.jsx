@@ -13,6 +13,7 @@ import BookAppointment     from '../pages/patient/BookAppointment'
 import PatientBilling      from '../pages/patient/PatientBilling'
 import PatientRecords      from '../pages/patient/PatientRecords'
 import PatientComplaints   from '../pages/patient/PatientComplaints'
+import PatientPrescriptions from '../pages/patient/PatientPrescriptions'
 
 // Doctor pages
 import DoctorDashboard    from '../pages/doctor/DoctorDashboard'
@@ -40,6 +41,7 @@ import AdminSettings    from '../pages/admin/AdminSettings'
 import NotFound      from '../pages/shared/NotFound'
 import Unauthorized  from '../pages/shared/Unauthorized'
 import ProfilePage   from '../pages/shared/ProfilePage'
+import QueueBoard    from '../pages/shared/QueueBoard'
 
 /** Redirects to login if not authenticated, or to Unauthorized if role not allowed */
 function PrivateRoute({ children, allowedRoles }) {
@@ -80,6 +82,7 @@ export default function AppRouter() {
         <Route path="/patient/billing"      element={<PrivateRoute allowedRoles={['PATIENT']}><PatientBilling /></PrivateRoute>} />
         <Route path="/patient/records"      element={<PrivateRoute allowedRoles={['PATIENT']}><PatientRecords /></PrivateRoute>} />
         <Route path="/patient/complaints"   element={<PrivateRoute allowedRoles={['PATIENT']}><PatientComplaints /></PrivateRoute>} />
+        <Route path="/patient/prescriptions" element={<PrivateRoute allowedRoles={['PATIENT']}><PatientPrescriptions /></PrivateRoute>} />
 
         {/* Doctor */}
         <Route path="/doctor/dashboard"     element={<PrivateRoute allowedRoles={['DOCTOR']}><DoctorDashboard /></PrivateRoute>} />
@@ -94,6 +97,7 @@ export default function AppRouter() {
         {/* Receptionist */}
         <Route path="/receptionist/dashboard"    element={<PrivateRoute allowedRoles={['RECEPTIONIST']}><ReceptionistDashboard /></PrivateRoute>} />
         <Route path="/receptionist/appointments" element={<PrivateRoute allowedRoles={['RECEPTIONIST']}><ReceptionistAppointments /></PrivateRoute>} />
+        <Route path="/receptionist/queue"        element={<PrivateRoute allowedRoles={['RECEPTIONIST']}><QueueBoard /></PrivateRoute>} />
 
         {/* Admin */}
         <Route path="/admin/dashboard"   element={<PrivateRoute allowedRoles={['ADMINISTRATOR']}><AdminDashboard /></PrivateRoute>} />
@@ -102,6 +106,7 @@ export default function AppRouter() {
         <Route path="/admin/departments" element={<PrivateRoute allowedRoles={['ADMINISTRATOR']}><AdminDepartments /></PrivateRoute>} />
         <Route path="/admin/complaints"  element={<PrivateRoute allowedRoles={['ADMINISTRATOR']}><AdminComplaints /></PrivateRoute>} />
         <Route path="/admin/settings"    element={<PrivateRoute allowedRoles={['ADMINISTRATOR']}><AdminSettings /></PrivateRoute>} />
+        <Route path="/admin/queue"       element={<PrivateRoute allowedRoles={['ADMINISTRATOR']}><QueueBoard /></PrivateRoute>} />
 
         {/* Every role: edit own details and password */}
         <Route path="/profile" element={<PrivateRoute><ProfilePage /></PrivateRoute>} />

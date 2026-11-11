@@ -19,7 +19,11 @@ import com.mediqueue.exception.DuplicateResourceException;
 import com.mediqueue.exception.ForbiddenException;
 import com.mediqueue.exception.ResourceNotFoundException;
 import com.mediqueue.exception.SlotUnavailableException;
+import com.mediqueue.event.AppointmentEvent;
+import com.mediqueue.event.AppointmentEventPublisher;
+import com.mediqueue.event.AppointmentEventType;
 import com.mediqueue.repository.AppointmentRepository;
+import com.mediqueue.repository.PrescriptionRepository;
 import com.mediqueue.repository.PatientRepository;
 import com.mediqueue.repository.TimeSlotRepository;
 import com.mediqueue.security.AccessGuard;
@@ -37,6 +41,7 @@ import java.util.ArrayList;
 import java.util.Comparator;
 import java.util.EnumMap;
 import java.util.EnumSet;
+import java.util.HashSet;
 import java.util.List;
 import java.util.Locale;
 import java.util.Map;
@@ -76,6 +81,8 @@ public class AppointmentServiceImpl implements AppointmentService {
     private final SlotService slotService;
     private final CurrentUserService currentUser;
     private final AccessGuard accessGuard;
+    private final AppointmentEventPublisher events;
+    private final PrescriptionRepository prescriptionRepository;
 
     public AppointmentServiceImpl(AppointmentRepository appointmentRepository,
                                   PatientRepository patientRepository,
@@ -83,7 +90,9 @@ public class AppointmentServiceImpl implements AppointmentService {
                                   BillingService billingService,
                                   SlotService slotService,
                                   CurrentUserService currentUser,
-                                  AccessGuard accessGuard) {
+                                  AccessGuard accessGuard,
+                                  AppointmentEventPublisher events,
+                                  PrescriptionRepository prescriptionRepository) {
         this.appointmentRepository = appointmentRepository;
         this.patientRepository = patientRepository;
         this.timeSlotRepository = timeSlotRepository;
@@ -91,6 +100,8 @@ public class AppointmentServiceImpl implements AppointmentService {
         this.slotService = slotService;
         this.currentUser = currentUser;
         this.accessGuard = accessGuard;
+        this.events = events;
+        this.prescriptionRepository = prescriptionRepository;
     }
 
     // ── booking ──────────────────────────────────────────────────────────────
@@ -135,8 +146,9 @@ public class AppointmentServiceImpl implements AppointmentService {
         appointment.setCreatedByRole(byPatient ? CreatedByRole.PATIENT : CreatedByRole.RECEPTIONIST);
         appointment.setAppointmentStatus(BOOKED);
 
-        Appointment saved = appointmentRepository.save(appointment);
+        Appointment saved = appointmentRepository.saveAndFlush(appointment);
         billingService.generateBill(saved.getAppointmentId(), "STANDARD");
+        events.publish(AppointmentEvent.of(AppointmentEventType.BOOKED, saved.getAppointmentId()));   // → queue
         return toResponse(saved, context());
     }
 
@@ -198,7 +210,9 @@ public class AppointmentServiceImpl implements AppointmentService {
         Context ctx = context();
         requireChangeAllowed(a, ctx, "cancelled");
         cancel(a);
-        return toResponse(appointmentRepository.save(a), ctx);
+        Appointment saved = appointmentRepository.saveAndFlush(a);
+        events.publish(AppointmentEvent.of(AppointmentEventType.CANCELLED, saved.getAppointmentId()));
+        return toResponse(saved, ctx);
     }
 
     @Override
@@ -220,12 +234,15 @@ public class AppointmentServiceImpl implements AppointmentService {
         requireBookable(newSlot, false);
         requireNoClash(a.getPatient().getUserId(), newSlot, ctx.me().is(UserRole.PATIENT));
 
+        LocalDate previousDate = a.getAppointmentDate();
         if (oldSlot != null) releaseSlot(oldSlot);
         newSlot.setStatus(SlotStatus.BOOKED);
         a.setSlot(newSlot);
         a.setAppointmentDate(newSlot.getStartTime().toLocalDate());
         a.setAppointmentStatus(BOOKED);   // a new time needs to be confirmed again
-        return toResponse(appointmentRepository.save(a), ctx);
+        Appointment saved = appointmentRepository.saveAndFlush(a);
+        events.publish(AppointmentEvent.rescheduled(saved.getAppointmentId(), saved.getDoctor().getUserId(), previousDate));
+        return toResponse(saved, ctx);
     }
 
     /** Status (BOOKED/CONFIRMED), the slot not started yet, and — for patients — before the cutoff. */
@@ -288,17 +305,31 @@ public class AppointmentServiceImpl implements AppointmentService {
         } else {
             a.setAppointmentStatus(target);
         }
-        return toResponse(appointmentRepository.save(a), ctx);
+        Appointment saved = appointmentRepository.saveAndFlush(a);
+        events.publish(AppointmentEvent.of(AppointmentEventType.STATUS_CHANGED, saved.getAppointmentId()));
+        return toResponse(saved, ctx);
     }
 
-    /** Visits can't start before their day, and a no-show can only be recorded once the slot has begun. */
-    private static String timingProblem(Appointment a, AppointmentStatus target, LocalDateTime now) {
-        if ((target == IN_PROGRESS || target == COMPLETED)
-                && a.getAppointmentDate() != null && a.getAppointmentDate().isAfter(now.toLocalDate())) {
-            return "This appointment is on " + a.getAppointmentDate() + "; it can't be started before that day";
+    // ── priority ─────────────────────────────────────────────────────────────
+
+    @Override
+    public AppointmentResponse updatePriority(Long appointmentId, String priority) {
+        Appointment a = find(appointmentId);
+        accessGuard.requireAppointmentWrite(a);
+        if (!LIVE.contains(a.getAppointmentStatus())) {
+            throw new BadRequestException("Priority can only be changed for booked, confirmed or in-progress appointments");
         }
-        if (target == NO_SHOW && a.getSlot() != null && a.getSlot().getStartTime().isAfter(now)) {
-            return "A no-show can only be recorded after the appointment time has started";
+        a.setPriority(parsePriority(priority));
+        Appointment saved = appointmentRepository.saveAndFlush(a);
+        events.publish(AppointmentEvent.of(AppointmentEventType.PRIORITY_CHANGED, saved.getAppointmentId()));   // queue reorders
+        return toResponse(saved, context());
+    }
+
+    /** Visits can't be started, completed or marked as a no-show before the appointment's day. */
+    private static String timingProblem(Appointment a, AppointmentStatus target, LocalDateTime now) {
+        if ((target == IN_PROGRESS || target == COMPLETED || target == NO_SHOW)
+                && a.getAppointmentDate() != null && a.getAppointmentDate().isAfter(now.toLocalDate())) {
+            return "This appointment is on " + a.getAppointmentDate() + "; that can't be recorded before that day";
         }
         return null;
     }
@@ -394,11 +425,28 @@ public class AppointmentServiceImpl implements AppointmentService {
 
     private List<AppointmentResponse> toResponses(List<Appointment> appointments, Comparator<AppointmentResponse> order) {
         Context ctx = context();
-        return appointments.stream().map(a -> toResponse(a, ctx)).sorted(order).toList();
+        List<Long> ids = appointments.stream().map(Appointment::getAppointmentId).toList();
+        Set<Long> withPrescription = ids.isEmpty() ? Set.of()
+            : new HashSet<>(prescriptionRepository.findAppointmentIdsWithPrescription(ids));
+        return appointments.stream()
+            .map(a -> withPrescription(toResponse(a, ctx, false), withPrescription.contains(a.getAppointmentId())))
+            .sorted(order).toList();
+    }
+
+    private static AppointmentResponse withPrescription(AppointmentResponse r, boolean has) {
+        r.setHasPrescription(has);
+        return r;
     }
 
     private AppointmentResponse toResponse(Appointment a, Context ctx) {
+        return toResponse(a, ctx, true);
+    }
+
+    private AppointmentResponse toResponse(Appointment a, Context ctx, boolean lookUpPrescription) {
         AppointmentResponse r = new AppointmentResponse();
+        if (lookUpPrescription && a.getAppointmentId() != null) {
+            r.setHasPrescription(prescriptionRepository.existsByAppointment_AppointmentId(a.getAppointmentId()));
+        }
         r.setAppointmentId(a.getAppointmentId());
         r.setPatientId(a.getPatient().getUserId());
         r.setPatientName(a.getPatient().getName());

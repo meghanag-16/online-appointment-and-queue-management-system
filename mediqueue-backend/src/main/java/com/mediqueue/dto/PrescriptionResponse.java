@@ -8,6 +8,7 @@ import java.time.LocalDateTime;
 public record PrescriptionResponse(
     Long prescriptionId,
     Long appointmentId,
+    LocalDate appointmentDate,
     String patientId,
     String patientName,
     String doctorId,
@@ -21,7 +22,7 @@ public record PrescriptionResponse(
     public static PrescriptionResponse from(Prescription p) {
         var a = p.getAppointment();
         return new PrescriptionResponse(
-            p.getPrescriptionId(), a.getAppointmentId(),
+            p.getPrescriptionId(), a.getAppointmentId(), a.getAppointmentDate(),
             a.getPatient().getUserId(), a.getPatient().getName(),
             a.getDoctor().getUserId(), a.getDoctor().getName(),
             p.getDiagnosisNotes(), p.getMedicationList(), p.getAdvice(),

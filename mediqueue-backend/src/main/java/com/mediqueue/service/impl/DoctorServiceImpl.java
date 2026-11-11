@@ -2,9 +2,7 @@ package com.mediqueue.service.impl;
 
 import com.mediqueue.dto.DoctorDTO;
 import com.mediqueue.dto.DoctorDashboardResponse;
-import com.mediqueue.dto.QueueEntryResponse;
 import com.mediqueue.dto.SlotResponse;
-import com.mediqueue.entity.Appointment;
 import com.mediqueue.entity.Doctor;
 import com.mediqueue.entity.TimeSlot;
 import com.mediqueue.entity.enums.AccountStatus;
@@ -133,25 +131,5 @@ public class DoctorServiceImpl implements DoctorService {
             appointmentRepository.countWithoutPrescription(doctorId, today, PRESCRIBABLE_STATUSES),
             appointmentRepository.countByDoctor_UserIdAndAppointmentDateAndAppointmentStatus(
                 doctorId, today, AppointmentStatus.COMPLETED));
-    }
-
-    @Override
-    public List<QueueEntryResponse> getTodayQueue(String doctorId) {
-        accessGuard.requireDoctorSelfOrStaff(doctorId);
-        return virtualQueueRepository
-            .findByDoctor_UserIdAndQueueDateOrderByQueuePositionAsc(doctorId, LocalDate.now())
-            .stream()
-            .map(entry -> {
-                Appointment a = entry.getAppointment();
-                return new QueueEntryResponse(
-                    entry.getQueueId(),
-                    a != null ? a.getAppointmentId() : null,
-                    a != null && a.getPatient() != null ? a.getPatient().getName() : "Unknown",
-                    a != null ? a.getAppointmentDate() : null,
-                    a != null ? a.getPriority() : null,
-                    entry.getQueuePosition(),
-                    entry.getVisitStatus());
-            })
-            .toList();
     }
 }

@@ -3,6 +3,7 @@ package com.mediqueue.entity;
 import com.mediqueue.entity.enums.QueueStatus;
 import jakarta.persistence.*;
 import java.time.LocalDate;
+import java.time.LocalDateTime;
 
 @Entity
 @Table(name = "virtual_queue")
@@ -30,6 +31,14 @@ public class VirtualQueue {
     @Enumerated(EnumType.STRING)
     @Column(name = "visit_status")
     private QueueStatus visitStatus = QueueStatus.WAITING;
+
+    /** When the doctor called this patient in (CALLED / IN_CONSULTATION are ordered by this). */
+    @Column(name = "called_at")
+    private LocalDateTime calledAt;
+
+    /** Administrator override: keep this waiting patient at this position (null = normal order). */
+    @Column(name = "override_position")
+    private Integer overridePosition;
 
     public VirtualQueue() {}
 
@@ -59,4 +68,10 @@ public class VirtualQueue {
 
     public QueueStatus getVisitStatus() { return visitStatus; }
     public void setVisitStatus(QueueStatus visitStatus) { this.visitStatus = visitStatus; }
+
+    public LocalDateTime getCalledAt() { return calledAt; }
+    public void setCalledAt(LocalDateTime calledAt) { this.calledAt = calledAt; }
+
+    public Integer getOverridePosition() { return overridePosition; }
+    public void setOverridePosition(Integer overridePosition) { this.overridePosition = overridePosition; }
 }

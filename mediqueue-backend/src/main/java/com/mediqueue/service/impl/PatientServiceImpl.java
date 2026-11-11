@@ -2,6 +2,12 @@ package com.mediqueue.service.impl;
 
 import com.mediqueue.dto.MedicalRecordResponse;
 import com.mediqueue.dto.PatientDashboardResponse;
+import com.mediqueue.dto.PatientHistoryResponse;
+import com.mediqueue.entity.MedicalRecord;
+import com.mediqueue.entity.Patient;
+import com.mediqueue.exception.ResourceNotFoundException;
+import com.mediqueue.service.AppointmentService;
+import com.mediqueue.service.PrescriptionService;
 import com.mediqueue.dto.PatientSummaryDTO;
 import com.mediqueue.entity.enums.AccountStatus;
 import com.mediqueue.repository.PatientRepository;
@@ -22,6 +28,7 @@ import org.springframework.transaction.annotation.Transactional;
 import java.time.LocalDate;
 import java.util.List;
 import java.util.Locale;
+import java.time.Period;
 
 @Service
 @Transactional(readOnly = true)
@@ -37,6 +44,8 @@ public class PatientServiceImpl implements PatientService {
     private final MedicalRecordRepository medicalRecordRepository;
     private final AccessGuard accessGuard;
     private final PatientRepository patientRepository;
+    private final PrescriptionService prescriptionService;
+    private final AppointmentService appointmentService;
 
     public PatientServiceImpl(AppointmentRepository appointmentRepository,
                               BillRepository billRepository,
@@ -44,7 +53,9 @@ public class PatientServiceImpl implements PatientService {
                               LabReportRepository labReportRepository,
                               MedicalRecordRepository medicalRecordRepository,
                               AccessGuard accessGuard,
-                              PatientRepository patientRepository) {
+                              PatientRepository patientRepository,
+                              PrescriptionService prescriptionService,
+                              AppointmentService appointmentService) {
         this.appointmentRepository = appointmentRepository;
         this.billRepository = billRepository;
         this.complaintRepository = complaintRepository;
@@ -52,6 +63,24 @@ public class PatientServiceImpl implements PatientService {
         this.medicalRecordRepository = medicalRecordRepository;
         this.accessGuard = accessGuard;
         this.patientRepository = patientRepository;
+        this.prescriptionService = prescriptionService;
+        this.appointmentService = appointmentService;
+    }
+
+    @Override
+    public PatientHistoryResponse getHistory(String patientId) {
+        accessGuard.requirePatientAccess(patientId);
+        Patient p = patientRepository.findById(patientId)
+            .orElseThrow(() -> new ResourceNotFoundException("Patient not found: " + patientId));
+        MedicalRecord record = medicalRecordRepository.findByPatient_UserId(patientId).orElse(null);
+        Integer age = p.getDateOfBirth() != null ? Period.between(p.getDateOfBirth(), LocalDate.now()).getYears() : null;
+        return new PatientHistoryResponse(
+            p.getUserId(), p.getName(), p.getGender(), p.getDateOfBirth(), age, p.getPhoneNumber(),
+            p.getBloodGroup(), p.getAllergies(), p.getChronicConditions(), p.getEmergencyContact(),
+            record != null && record.getDiagnoses() != null ? record.getDiagnoses() : NO_DIAGNOSES,
+            record != null && record.getObservations() != null ? record.getObservations() : NO_OBSERVATIONS,
+            prescriptionService.getByPatient(patientId),
+            appointmentService.getAppointmentsForPatient(patientId));
     }
 
     @Override

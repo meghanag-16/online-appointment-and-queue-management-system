@@ -60,6 +60,16 @@ export default function ReceptionistAppointments() {
     } catch (err) { setError(errorMessage(err, 'Could not update the status.')) }
   }
 
+  async function togglePriority(a) {
+    const next = a.priority === 'HIGH_PRIORITY' ? 'NORMAL' : 'HIGH_PRIORITY'
+    setMessage(''); setError('')
+    try {
+      await axiosInstance.patch(ENDPOINTS.APPOINTMENT_PRIORITY(a.appointmentId), { priority: next })
+      setMessage(`${a.patientName} is now ${next === 'HIGH_PRIORITY' ? 'high priority — moved up in the queue' : 'normal priority'}.`)
+      fetchAppointments()
+    } catch (err) { setError(errorMessage(err, 'Could not change the priority.')) }
+  }
+
   async function handleCancel(a) {
     if (!window.confirm(`Cancel ${a.patientName}'s appointment on ${formatSlot(a.startTime)}?`)) return
     setMessage(''); setError('')
@@ -219,6 +229,11 @@ export default function ReceptionistAppointments() {
                     <td><StatusBadge status={a.status} /></td>
                     <td style={{ whiteSpace: 'nowrap' }}>
                       <AppointmentStatusSelect appointment={a} onChange={handleStatusChange} />{' '}
+                      {['BOOKED', 'CONFIRMED', 'IN_PROGRESS'].includes(a.status) && (
+                        <button className="btn btn-outline btn-sm" onClick={() => togglePriority(a)} data-testid={`priority-${a.appointmentId}`}>
+                          {a.priority === 'HIGH_PRIORITY' ? 'Unmark priority' : 'Mark high priority'}
+                        </button>
+                      )}{' '}
                       {a.canReschedule && <button className="btn btn-outline btn-sm" onClick={() => setRescheduling(a)}>Reschedule</button>}{' '}
                       {a.canCancel && <button className="btn btn-outline btn-sm" style={{ color: 'var(--color-danger)' }} onClick={() => handleCancel(a)}>Cancel</button>}
                     </td>

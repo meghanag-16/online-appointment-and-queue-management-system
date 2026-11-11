@@ -20,4 +20,8 @@ public interface PatientRepository extends JpaRepository<Patient, String> {
         order by p.name
         """)
     List<Patient> search(@Param("term") String likeTerm, @Param("status") AccountStatus status, Pageable page);
+
+    /** Patients that have no medical record yet. */
+    @Query("select p from Patient p where not exists (select r.recordId from MedicalRecord r where r.patient = p)")
+    List<Patient> findPatientsWithoutMedicalRecord();
 }

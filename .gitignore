@@ -2,8 +2,9 @@
 mediqueue-backend/target/
 mediqueue-frontend/dist/
 
-# ── Dependencies ──
+# ── Dependencies and tool caches ──
 node_modules/
+.vite/
 
 # ── Runtime data ──
 mediqueue-backend/uploads/
@@ -25,5 +26,5 @@ mediqueue-frontend/cypress/videos/
 .DS_Store
 Thumbs.db
 
-# ── Claude Code local state ──
+# ── Local editor/tool state ──
 .claude/

@@ -2,6 +2,7 @@ package com.mediqueue.controller;
 
 import com.mediqueue.dto.MedicalRecordResponse;
 import com.mediqueue.dto.PatientDashboardResponse;
+import com.mediqueue.dto.PatientHistoryResponse;
 import com.mediqueue.dto.PatientSummaryDTO;
 import com.mediqueue.service.PatientService;
 import org.springframework.http.ResponseEntity;
@@ -31,6 +32,13 @@ public class PatientController {
     @PreAuthorize("hasAnyRole('PATIENT','ADMINISTRATOR')")
     public ResponseEntity<PatientDashboardResponse> getPatientDashboard(@PathVariable String patientId) {
         return ResponseEntity.ok(patientService.getDashboard(patientId));
+    }
+
+    /** Full clinical history: the patient, their treating doctors, or staff. */
+    @GetMapping("/history/{patientId}")
+    @PreAuthorize("hasAnyRole('PATIENT','DOCTOR','RECEPTIONIST','ADMINISTRATOR')")
+    public ResponseEntity<PatientHistoryResponse> getPatientHistory(@PathVariable String patientId) {
+        return ResponseEntity.ok(patientService.getHistory(patientId));
     }
 
     /** DOCTOR added: a doctor may read the history of patients on their own appointments. */

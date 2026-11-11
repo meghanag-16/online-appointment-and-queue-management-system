@@ -4,6 +4,7 @@ import PageTitle from '../../components/common/PageTitle'
 import StatusBadge from '../../components/common/StatusBadge'
 import Spinner from '../../components/common/Spinner'
 import AppointmentStatusSelect from '../../components/booking/AppointmentStatusSelect'
+import PatientHistoryDialog from '../../components/clinical/PatientHistoryDialog'
 import { useAuth } from '../../context/AuthContext'
 import axiosInstance, { errorMessage } from '../../api/axiosInstance'
 import { ENDPOINTS } from '../../api/endpoints'
@@ -16,6 +17,7 @@ export default function DoctorAppointments() {
   const [data, setData] = useState(null)
   const [error, setError] = useState('')
   const [message, setMessage] = useState('')
+  const [history, setHistory] = useState(null)
 
   useEffect(() => { load() }, [user.userId]) // eslint-disable-line react-hooks/exhaustive-deps
 
@@ -57,7 +59,10 @@ export default function DoctorAppointments() {
                     <td>{a.reasonForVisit || '—'}</td>
                     <td><StatusBadge status={a.priority || 'NORMAL'} /></td>
                     <td><StatusBadge status={a.status} /></td>
-                    <td><AppointmentStatusSelect appointment={a} onChange={changeStatus} /></td>
+                    <td style={{ whiteSpace: 'nowrap' }}>
+                      <AppointmentStatusSelect appointment={a} onChange={changeStatus} />{' '}
+                      <button className="btn btn-outline btn-sm" onClick={() => setHistory(a)}>History</button>
+                    </td>
                   </tr>
                 ))}
               </tbody>
@@ -65,6 +70,7 @@ export default function DoctorAppointments() {
           </div>
         </div>
       )}
+      {history && <PatientHistoryDialog patientId={history.patientId} patientName={history.patientName} onClose={() => setHistory(null)} />}
     </PageLayout>
   )
 }

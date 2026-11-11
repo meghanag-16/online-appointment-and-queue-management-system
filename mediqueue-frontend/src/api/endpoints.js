@@ -15,6 +15,7 @@ export const ENDPOINTS = {
   CANCEL_APPOINTMENT:      (id)  => `/appointments/${id}/cancel`,
   UPDATE_STATUS:           (id)  => `/appointments/${id}/status`,
   RESCHEDULE_APPOINTMENT:  (id)  => `/appointments/${id}/reschedule`,
+  APPOINTMENT_PRIORITY:    (id)  => `/appointments/${id}/priority`,
 
   // Billing
   GENERATE_BILL:    (apptId, type) => `/billing/generate/${apptId}?billingType=${type}`,
@@ -34,6 +35,22 @@ export const ENDPOINTS = {
     return qs ? `/doctors/search?${qs}` : '/doctors/search'
   },
   DOCTOR_SLOTS:   (id, date) => date ? `/doctors/${id}/slots?date=${date}` : `/doctors/${id}/slots`,
+
+  // Virtual queue
+  QUEUE:           (doctorId, date) => date ? `/queue/doctor/${doctorId}?date=${date}` : `/queue/doctor/${doctorId}`,
+  QUEUE_CALL_NEXT: (doctorId) => `/queue/doctor/${doctorId}/call-next`,
+  QUEUE_START:     (queueId)  => `/queue/entries/${queueId}/start`,
+  QUEUE_FINISH:    (queueId)  => `/queue/entries/${queueId}/finish`,
+  QUEUE_NO_SHOW:   (queueId)  => `/queue/entries/${queueId}/no-show`,
+  QUEUE_POSITION:  (queueId)  => `/queue/entries/${queueId}/position`,
+
+  // Clinical
+  PATIENT_HISTORY:          (pid) => `/patient/history/${pid}`,
+  PATIENT_RECORDS:          (pid) => `/patient/records/${pid}`,
+  PRESCRIPTIONS:            '/prescriptions',
+  PRESCRIPTIONS_BY_PATIENT: (pid) => `/prescriptions/patient/${pid}`,
+  PRESCRIPTIONS_BY_DOCTOR:  (did) => `/prescriptions/doctor/${did}`,
+  PRESCRIPTION_BY_APPT:     (aid) => `/prescriptions/appointment/${aid}`,
 
   // Patients (front desk picker)
   PATIENT_SEARCH: (q) => `/patient/search?q=${encodeURIComponent(q)}`,

@@ -39,6 +39,14 @@ export default function ReceptionistDashboard() {
     } finally { setLoading(false) }
   }
 
+  async function togglePriority(a) {
+    const next = a.priority === 'HIGH_PRIORITY' ? 'NORMAL' : 'HIGH_PRIORITY'
+    try {
+      await axiosInstance.patch(ENDPOINTS.APPOINTMENT_PRIORITY(a.appointmentId), { priority: next })
+      fetchAll()
+    } catch (err) { setError(errorMessage(err, 'Could not change the priority.')) }
+  }
+
   async function handleStatus(a, status) {
     if (status === 'CANCELLED' && !window.confirm(`Cancel ${a.patientName}'s appointment?`)) return
     try {
@@ -68,11 +76,11 @@ export default function ReceptionistDashboard() {
             <div className="table-wrapper">
               <table>
                 <thead>
-                  <tr><th>ID</th><th>Patient</th><th>Doctor</th><th>Time</th><th>Reason</th><th>Status</th><th>Update</th></tr>
+                  <tr><th>ID</th><th>Patient</th><th>Doctor</th><th>Time</th><th>Reason</th><th>Priority</th><th>Status</th><th>Update</th></tr>
                 </thead>
                 <tbody>
                   {today.length === 0 && (
-                    <tr><td colSpan={7} style={{ textAlign: 'center', padding: 24, color: 'var(--color-text-muted)' }}>No appointments today</td></tr>
+                    <tr><td colSpan={8} style={{ textAlign: 'center', padding: 24, color: 'var(--color-text-muted)' }}>No appointments today</td></tr>
                   )}
                   {today.map(a => (
                     <tr key={a.appointmentId}>
@@ -81,8 +89,16 @@ export default function ReceptionistDashboard() {
                       <td>{a.doctorName}</td>
                       <td style={{ fontSize: 12 }}>{formatTime(a.startTime)}</td>
                       <td style={{ fontSize: 12 }}>{a.reasonForVisit || '—'}</td>
+                      <td><StatusBadge status={a.priority || 'NORMAL'} /></td>
                       <td><StatusBadge status={a.status} /></td>
-                      <td><AppointmentStatusSelect appointment={a} onChange={handleStatus} /></td>
+                      <td style={{ whiteSpace: 'nowrap' }}>
+                        <AppointmentStatusSelect appointment={a} onChange={handleStatus} />{' '}
+                        {['BOOKED', 'CONFIRMED', 'IN_PROGRESS'].includes(a.status) && (
+                          <button className="btn btn-outline btn-sm" onClick={() => togglePriority(a)}>
+                            {a.priority === 'HIGH_PRIORITY' ? 'Unmark priority' : 'Mark high priority'}
+                          </button>
+                        )}
+                      </td>
                     </tr>
                   ))}
                 </tbody>
