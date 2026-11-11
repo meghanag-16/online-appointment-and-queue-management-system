@@ -19,7 +19,7 @@
 
     <properties>
         <java.version>17</java.version>
-        <jjwt.version>0.12.6</jjwt.version>
+        <jjwt.version>0.13.0</jjwt.version>
         <!-- lint / format tooling -->
         <spotless.version>2.44.4</spotless.version>
         <google-java-format.version>1.28.0</google-java-format.version>
