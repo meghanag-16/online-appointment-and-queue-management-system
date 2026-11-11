@@ -1,7 +1,7 @@
--- Phase 2 (patient-only sign-up, scheduling and booking). Run ONCE on a database created
+-- patient-only sign-up, scheduling and booking. Run ONCE on a database created
 -- before this change; fresh installs get all of this from schema.sql.
---   mysql -u root -p mediqueue < db/migrations/phase2_scheduling_and_booking.sql
--- Docker: docker exec -i mediqueue-db mysql -uroot -proot mediqueue < db/migrations/phase2_scheduling_and_booking.sql
+--   mysql -u root -p mediqueue < db/migrations/scheduling_and_booking.sql
+-- Docker: docker exec -i mediqueue-db mysql -uroot -proot mediqueue < db/migrations/scheduling_and_booking.sql
 USE mediqueue;
 
 -- 1. No more staff self-registration, so no "pending approval" state. Any staff sign-up that was
