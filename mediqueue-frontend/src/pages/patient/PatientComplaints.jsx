@@ -1,5 +1,6 @@
 import { useState } from "react";
 import PageLayout from "../../components/layout/PageLayout";
+import { errorMessage } from "../../api/axiosInstance";
 import { raiseComplaint } from "../../api/complaintApi";
 
 export default function PatientComplaints() {
@@ -23,8 +24,7 @@ export default function PatientComplaints() {
       setIssueType("");
       setDescription("");
     } catch (error) {
-      console.error(error);
-      alert("Error submitting complaint");
+      alert(errorMessage(error, "Error submitting complaint"));
     }
   };
 

@@ -1,11 +1,11 @@
 package com.mediqueue.controller;
 
-import com.mediqueue.entity.Appointment;
-import com.mediqueue.entity.Complaint;
-import com.mediqueue.entity.Doctor;
-import com.mediqueue.repository.AppointmentRepository;
-import com.mediqueue.repository.ComplaintRepository;
-import com.mediqueue.repository.DoctorRepository;
+import com.mediqueue.dto.AppointmentResponse;
+import com.mediqueue.dto.ComplaintResponse;
+import com.mediqueue.dto.DoctorDTO;
+import com.mediqueue.service.AdminService;
+import com.mediqueue.service.AppointmentService;
+import com.mediqueue.service.ComplaintService;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.web.bind.annotation.GetMapping;
@@ -14,37 +14,39 @@ import org.springframework.web.bind.annotation.RestController;
 
 import java.util.List;
 
+/**
+ * Administrator overview lists. These used to return raw JPA entities (leaking password
+ * hashes and failing on lazy fields); they now return the same DTOs as the rest of the API.
+ */
 @RestController
 @RequestMapping("/api/v1")
+@PreAuthorize("hasRole('ADMINISTRATOR')")
 public class DashboardController {
 
-    private final DoctorRepository doctorRepository;
-    private final AppointmentRepository appointmentRepository;
-    private final ComplaintRepository complaintRepository;
+    private final AdminService adminService;
+    private final AppointmentService appointmentService;
+    private final ComplaintService complaintService;
 
-    public DashboardController(DoctorRepository doctorRepository,
-                              AppointmentRepository appointmentRepository,
-                              ComplaintRepository complaintRepository) {
-        this.doctorRepository = doctorRepository;
-        this.appointmentRepository = appointmentRepository;
-        this.complaintRepository = complaintRepository;
+    public DashboardController(AdminService adminService,
+                               AppointmentService appointmentService,
+                               ComplaintService complaintService) {
+        this.adminService = adminService;
+        this.appointmentService = appointmentService;
+        this.complaintService = complaintService;
     }
 
     @GetMapping("/doctors")
-    @PreAuthorize("hasRole('ADMINISTRATOR')")
-    public ResponseEntity<List<Doctor>> getAllDoctors() {
-        return ResponseEntity.ok(doctorRepository.findAll());
+    public ResponseEntity<List<DoctorDTO>> getAllDoctors() {
+        return ResponseEntity.ok(adminService.getAllDoctors());
     }
 
     @GetMapping("/appointments")
-    @PreAuthorize("hasRole('ADMINISTRATOR')")
-    public ResponseEntity<List<Appointment>> getAllAppointments() {
-        return ResponseEntity.ok(appointmentRepository.findAll());
+    public ResponseEntity<List<AppointmentResponse>> getAllAppointments() {
+        return ResponseEntity.ok(appointmentService.getAll(null));
     }
 
     @GetMapping("/complaints")
-    @PreAuthorize("hasRole('ADMINISTRATOR')")
-    public ResponseEntity<List<Complaint>> getAllComplaints() {
-        return ResponseEntity.ok(complaintRepository.findAll());
+    public ResponseEntity<List<ComplaintResponse>> getAllComplaints() {
+        return ResponseEntity.ok(complaintService.getAll());
     }
 }

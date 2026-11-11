@@ -8,6 +8,9 @@ import org.springframework.http.ResponseEntity;
 import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.web.bind.annotation.*;
 
+import java.util.List;
+
+/** Ownership (patients see only their own bills) is enforced in BillingService via AccessGuard. */
 @RestController
 @RequestMapping("/api/v1/billing")
 public class BillingController {
@@ -28,13 +31,14 @@ public class BillingController {
     }
 
     @GetMapping("/appointment/{appointmentId}")
+    @PreAuthorize("hasAnyRole('PATIENT','DOCTOR','RECEPTIONIST','ADMINISTRATOR')")
     public ResponseEntity<BillResponse> getByAppointment(@PathVariable Long appointmentId) {
         return ResponseEntity.ok(billingService.getBill(appointmentId));
     }
 
     @GetMapping("/patient/{patientId}")
     @PreAuthorize("hasAnyRole('PATIENT','RECEPTIONIST','ADMINISTRATOR')")
-    public ResponseEntity<?> getByPatient(@PathVariable String patientId) {
+    public ResponseEntity<List<BillResponse>> getByPatient(@PathVariable String patientId) {
         return ResponseEntity.ok(billingService.getBillsForPatient(patientId));
     }
 
