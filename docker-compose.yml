@@ -11,6 +11,7 @@ services:
     environment:
       MYSQL_ROOT_PASSWORD: ${MYSQL_ROOT_PASSWORD:-root}
       MYSQL_DATABASE: mediqueue
+      TZ: ${APP_TIMEZONE:-Asia/Kolkata}
     ports:
       # Change MYSQL_HOST_PORT if a local MySQL already uses 3306
       - "${MYSQL_HOST_PORT:-3307}:3306"
@@ -32,10 +33,13 @@ services:
       mysql:
         condition: service_healthy
     environment:
-      SPRING_DATASOURCE_URL: jdbc:mysql://mysql:3306/mediqueue?useSSL=false&serverTimezone=UTC&allowPublicKeyRetrieval=true
+      SPRING_DATASOURCE_URL: jdbc:mysql://mysql:3306/mediqueue?useSSL=false&serverTimezone=${APP_TIMEZONE:-Asia/Kolkata}&allowPublicKeyRetrieval=true
       SPRING_DATASOURCE_USERNAME: root
       SPRING_DATASOURCE_PASSWORD: ${MYSQL_ROOT_PASSWORD:-root}
       SPRING_JPA_HIBERNATE_DDL_AUTO: validate
+      # Hospital time zone: "today", slot times and the cancel cutoff all use it
+      APP_TIMEZONE: ${APP_TIMEZONE:-Asia/Kolkata}
+      TZ: ${APP_TIMEZONE:-Asia/Kolkata}
       # HS256 needs a key of at least 32 bytes — shorter secrets make every login fail
       APP_JWT_SECRET: ${APP_JWT_SECRET:-dev-secret-key-for-miniproject-minimum-32-chars}
       APP_SEED_ENABLED: ${APP_SEED_ENABLED:-true}

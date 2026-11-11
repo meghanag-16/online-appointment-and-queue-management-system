@@ -19,6 +19,7 @@ import com.mediqueue.repository.DepartmentRepository;
 import com.mediqueue.repository.DoctorRepository;
 import com.mediqueue.repository.UserRepository;
 import com.mediqueue.service.AdminService;
+import com.mediqueue.service.SlotService;
 import com.mediqueue.service.UserAccountService;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
@@ -41,19 +42,22 @@ public class AdminServiceImpl implements AdminService {
     private final AppointmentRepository appointmentRepository;
     private final ComplaintRepository complaintRepository;
     private final UserAccountService userAccountService;
+    private final SlotService slotService;
 
     public AdminServiceImpl(DoctorRepository doctorRepository,
                             DepartmentRepository departmentRepository,
                             UserRepository userRepository,
                             AppointmentRepository appointmentRepository,
                             ComplaintRepository complaintRepository,
-                            UserAccountService userAccountService) {
+                            UserAccountService userAccountService,
+                            SlotService slotService) {
         this.doctorRepository = doctorRepository;
         this.departmentRepository = departmentRepository;
         this.userRepository = userRepository;
         this.appointmentRepository = appointmentRepository;
         this.complaintRepository = complaintRepository;
         this.userAccountService = userAccountService;
+        this.slotService = slotService;
     }
 
     @Override
@@ -84,7 +88,9 @@ public class AdminServiceImpl implements AdminService {
         Doctor doctor = doctorRepository.findById(doctorId)
             .orElseThrow(() -> new ResourceNotFoundException("Doctor not found: " + doctorId));
         doctor.setAccountStatus(AccountStatus.DEACTIVATED);
-        return DoctorDTO.from(doctorRepository.save(doctor));
+        Doctor saved = doctorRepository.save(doctor);
+        slotService.withdrawOpenSlots(doctorId);   // a deactivated doctor can no longer be booked
+        return DoctorDTO.from(saved);
     }
 
     @Override

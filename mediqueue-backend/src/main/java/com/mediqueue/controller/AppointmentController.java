@@ -3,6 +3,7 @@ package com.mediqueue.controller;
 import com.mediqueue.dto.AppointmentResponse;
 import com.mediqueue.dto.AppointmentStatsResponse;
 import com.mediqueue.dto.BookAppointmentRequest;
+import com.mediqueue.dto.RescheduleRequest;
 import com.mediqueue.dto.StatusUpdateRequest;
 import com.mediqueue.service.AppointmentService;
 import jakarta.validation.Valid;
@@ -16,8 +17,8 @@ import java.time.LocalDate;
 import java.util.List;
 
 /**
- * Role checks are here (@PreAuthorize); ownership checks ("is this MY appointment?") are in
- * AppointmentService via AccessGuard.
+ * Role checks are here (@PreAuthorize); ownership checks ("is this MY appointment?"), the
+ * cancel/reschedule cutoff and the status transition rules are in AppointmentService.
  */
 @RestController
 @RequestMapping("/api/v1/appointments")
@@ -29,6 +30,7 @@ public class AppointmentController {
         this.appointmentService = appointmentService;
     }
 
+    /** 409 with {alternateSlots: [...]} if the slot is taken. */
     @PostMapping
     @PreAuthorize("hasAnyRole('PATIENT','RECEPTIONIST','ADMINISTRATOR')")
     public ResponseEntity<AppointmentResponse> book(@Valid @RequestBody BookAppointmentRequest req) {
@@ -68,7 +70,7 @@ public class AppointmentController {
         return ResponseEntity.ok(appointmentService.getAppointmentsForDoctor(doctorId));
     }
 
-    /** Receptionist/Admin, or the doctor on the appointment: update status. */
+    /** Receptionist/Admin (any allowed transition), or the doctor on the appointment (In Progress / Completed / No Show). */
     @PatchMapping("/{id}/status")
     @PreAuthorize("hasAnyRole('RECEPTIONIST','ADMINISTRATOR','DOCTOR')")
     public ResponseEntity<AppointmentResponse> updateStatus(@PathVariable Long id,
@@ -80,5 +82,13 @@ public class AppointmentController {
     @PreAuthorize("hasAnyRole('PATIENT','RECEPTIONIST','ADMINISTRATOR')")
     public ResponseEntity<AppointmentResponse> cancel(@PathVariable Long id) {
         return ResponseEntity.ok(appointmentService.cancelAppointment(id));
+    }
+
+    /** {"slotId": 123} — another open slot of the same doctor. 409 with alternates if it is taken. */
+    @PatchMapping("/{id}/reschedule")
+    @PreAuthorize("hasAnyRole('PATIENT','RECEPTIONIST','ADMINISTRATOR')")
+    public ResponseEntity<AppointmentResponse> reschedule(@PathVariable Long id,
+                                                          @Valid @RequestBody RescheduleRequest body) {
+        return ResponseEntity.ok(appointmentService.rescheduleAppointment(id, body.slotId()));
     }
 }

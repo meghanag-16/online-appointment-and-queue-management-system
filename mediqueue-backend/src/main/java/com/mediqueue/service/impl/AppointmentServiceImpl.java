@@ -8,16 +8,18 @@ import com.mediqueue.entity.Appointment;
 import com.mediqueue.entity.Doctor;
 import com.mediqueue.entity.Patient;
 import com.mediqueue.entity.TimeSlot;
+import com.mediqueue.entity.enums.AccountStatus;
 import com.mediqueue.entity.enums.AppointmentStatus;
 import com.mediqueue.entity.enums.CreatedByRole;
 import com.mediqueue.entity.enums.Priority;
 import com.mediqueue.entity.enums.SlotStatus;
 import com.mediqueue.entity.enums.UserRole;
 import com.mediqueue.exception.BadRequestException;
+import com.mediqueue.exception.DuplicateResourceException;
+import com.mediqueue.exception.ForbiddenException;
 import com.mediqueue.exception.ResourceNotFoundException;
 import com.mediqueue.exception.SlotUnavailableException;
 import com.mediqueue.repository.AppointmentRepository;
-import com.mediqueue.repository.DoctorRepository;
 import com.mediqueue.repository.PatientRepository;
 import com.mediqueue.repository.TimeSlotRepository;
 import com.mediqueue.security.AccessGuard;
@@ -25,103 +27,127 @@ import com.mediqueue.security.AuthenticatedUser;
 import com.mediqueue.security.CurrentUserService;
 import com.mediqueue.service.AppointmentService;
 import com.mediqueue.service.BillingService;
+import com.mediqueue.service.SlotService;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
 import java.time.LocalDate;
 import java.time.LocalDateTime;
+import java.util.ArrayList;
+import java.util.Comparator;
+import java.util.EnumMap;
+import java.util.EnumSet;
 import java.util.List;
 import java.util.Locale;
-import java.util.Random;
+import java.util.Map;
+import java.util.Set;
+
+import static com.mediqueue.entity.enums.AppointmentStatus.*;
 
 @Service
 @Transactional
 public class AppointmentServiceImpl implements AppointmentService {
 
+    /** Appointments that still hold their slot. */
+    private static final Set<AppointmentStatus> LIVE = EnumSet.of(BOOKED, CONFIRMED, IN_PROGRESS);
+    /** Appointments that can still be cancelled or moved. */
+    private static final Set<AppointmentStatus> CHANGEABLE = EnumSet.of(BOOKED, CONFIRMED);
+
+    /**
+     * Allowed status changes. BOOKED → CONFIRMED → IN_PROGRESS → COMPLETED is the normal path
+     * (a walk-in may go straight from BOOKED to IN_PROGRESS); CANCELLED and NO_SHOW end it early.
+     * COMPLETED, CANCELLED and NO_SHOW are final.
+     */
+    private static final Map<AppointmentStatus, Set<AppointmentStatus>> TRANSITIONS = new EnumMap<>(Map.of(
+        BOOKED,      EnumSet.of(CONFIRMED, IN_PROGRESS, CANCELLED, NO_SHOW),
+        CONFIRMED,   EnumSet.of(IN_PROGRESS, CANCELLED, NO_SHOW),
+        IN_PROGRESS, EnumSet.of(COMPLETED),
+        COMPLETED,   EnumSet.noneOf(AppointmentStatus.class),
+        CANCELLED,   EnumSet.noneOf(AppointmentStatus.class),
+        NO_SHOW,     EnumSet.noneOf(AppointmentStatus.class)));
+
+    /** Doctors run the consultation; confirming and cancelling is the front desk's job. */
+    private static final Set<AppointmentStatus> DOCTOR_TARGETS = EnumSet.of(IN_PROGRESS, COMPLETED, NO_SHOW);
+
     private final BillingService billingService;
     private final AppointmentRepository appointmentRepository;
     private final PatientRepository patientRepository;
-    private final DoctorRepository doctorRepository;
     private final TimeSlotRepository timeSlotRepository;
+    private final SlotService slotService;
     private final CurrentUserService currentUser;
     private final AccessGuard accessGuard;
 
     public AppointmentServiceImpl(AppointmentRepository appointmentRepository,
                                   PatientRepository patientRepository,
-                                  DoctorRepository doctorRepository,
                                   TimeSlotRepository timeSlotRepository,
                                   BillingService billingService,
+                                  SlotService slotService,
                                   CurrentUserService currentUser,
                                   AccessGuard accessGuard) {
         this.appointmentRepository = appointmentRepository;
         this.patientRepository = patientRepository;
-        this.doctorRepository = doctorRepository;
         this.timeSlotRepository = timeSlotRepository;
         this.billingService = billingService;
+        this.slotService = slotService;
         this.currentUser = currentUser;
         this.accessGuard = accessGuard;
     }
 
+    // ── booking ──────────────────────────────────────────────────────────────
+
     @Override
     public AppointmentResponse bookAppointment(BookAppointmentRequest req) {
         AuthenticatedUser me = currentUser.get();
+        boolean byPatient = me.is(UserRole.PATIENT);
 
-        // ── who is the patient? ─────────────────────────────────────────────
-        // A patient always books for themself; the body's patientId is ignored.
-        // Receptionists/administrators book on behalf of the patient they name.
-        String patientId;
-        if (me.is(UserRole.PATIENT)) {
-            patientId = me.userId();
-        } else {
-            if (req.getPatientId() == null || req.getPatientId().isBlank()) {
-                throw new BadRequestException("Patient is required when booking on a patient's behalf");
-            }
-            patientId = req.getPatientId().trim();
+        // Who is the patient? A patient always books for themself; the body's patientId is ignored.
+        String patientId = byPatient ? me.userId() : trimToNull(req.getPatientId());
+        if (patientId == null) {
+            throw new BadRequestException("Choose the patient you are booking for");
         }
         Patient patient = patientRepository.findById(patientId)
             .orElseThrow(() -> new ResourceNotFoundException("Patient not found: " + patientId));
-
-        Doctor doctor = doctorRepository.findById(req.getDoctorId())
-            .orElseThrow(() -> new ResourceNotFoundException("Doctor not found: " + req.getDoctorId()));
-
-        TimeSlot slot = timeSlotRepository.findById(req.getSlotId())
-            .orElseThrow(() -> new ResourceNotFoundException("Slot not found: " + req.getSlotId()));
-
-        // ── slot availability check ─────────────────────────────────────────
-        if (slot.getStatus() != SlotStatus.AVAILABLE) {
-            List<AlternateSlot> alternates = findAlternateSlots(doctor, req.getSlotId());
-            throw new SlotUnavailableException(
-                "Slot " + req.getSlotId() + " is not available. " + alternates.size() + " alternate(s) suggested.");
+        if (patient.getAccountStatus() != AccountStatus.ACTIVE) {
+            throw new BadRequestException("This patient's account is " + patient.getAccountStatus().name().toLowerCase(Locale.ROOT));
         }
 
-        // ── mark slot booked ────────────────────────────────────────────────
-        slot.setStatus(SlotStatus.BOOKED);
-        timeSlotRepository.save(slot);
+        // Lock the slot row until commit, so two simultaneous bookings cannot both get it.
+        TimeSlot slot = lockSlot(req.getSlotId());
+        Doctor doctor = slot.getDoctor();
 
-        // ── create appointment ──────────────────────────────────────────────
+        String requestedDoctor = trimToNull(req.getDoctorId());
+        if (requestedDoctor != null && !requestedDoctor.equals(doctor.getUserId())) {
+            throw new BadRequestException("This time slot belongs to a different doctor");
+        }
+        requireBookable(slot, true);
+        requireNoClash(patient.getUserId(), slot, byPatient);
+
+        slot.setStatus(SlotStatus.BOOKED);
+
         Appointment appointment = new Appointment();
-        appointment.setAppointmentId(generateAppointmentId());
         appointment.setPatient(patient);
         appointment.setDoctor(doctor);
         appointment.setSlot(slot);
-        appointment.setAppointmentDate(req.getAppointmentDate());
-        appointment.setReasonForVisit(req.getReasonForVisit());
+        appointment.setAppointmentDate(slot.getStartTime().toLocalDate());   // always the slot's date
+        appointment.setReasonForVisit(trimToNull(req.getReasonForVisit()));
         // Only front-desk staff may mark a booking high priority; patients are always NORMAL.
-        appointment.setPriority(me.is(UserRole.PATIENT) ? Priority.NORMAL : parsePriority(req.getPriority()));
-        appointment.setCreatedByRole(me.is(UserRole.PATIENT) ? CreatedByRole.PATIENT : CreatedByRole.RECEPTIONIST);
-        appointment.setAppointmentStatus(AppointmentStatus.BOOKED);
+        appointment.setPriority(byPatient ? Priority.NORMAL : parsePriority(req.getPriority()));
+        appointment.setCreatedByRole(byPatient ? CreatedByRole.PATIENT : CreatedByRole.RECEPTIONIST);
+        appointment.setAppointmentStatus(BOOKED);
 
         Appointment saved = appointmentRepository.save(appointment);
         billingService.generateBill(saved.getAppointmentId(), "STANDARD");
-        return toResponse(saved);
+        return toResponse(saved, context());
     }
+
+    // ── reads ────────────────────────────────────────────────────────────────
 
     @Override
     @Transactional(readOnly = true)
     public AppointmentResponse getAppointment(Long appointmentId) {
         Appointment a = find(appointmentId);
         accessGuard.requireAppointmentRead(a);
-        return toResponse(a);
+        return toResponse(a, context());
     }
 
     @Override
@@ -133,50 +159,22 @@ public class AppointmentServiceImpl implements AppointmentService {
         List<Appointment> appointments = me.is(UserRole.DOCTOR)
             ? appointmentRepository.findByDoctor_UserIdAndPatient_UserId(me.userId(), patientId)
             : appointmentRepository.findByPatient_UserId(patientId);
-        return appointments.stream().map(this::toResponse).toList();
+        return toResponses(appointments, NEWEST_FIRST);
     }
 
     @Override
     @Transactional(readOnly = true)
     public List<AppointmentResponse> getAppointmentsForDoctor(String doctorId) {
         accessGuard.requireDoctorSelfOrStaff(doctorId);
-        return appointmentRepository.findByDoctor_UserId(doctorId)
-            .stream().map(this::toResponse).toList();
-    }
-
-    @Override
-    public AppointmentResponse cancelAppointment(Long appointmentId) {
-        Appointment a = find(appointmentId);
-        accessGuard.requireAppointmentWrite(a);
-        a.setAppointmentStatus(AppointmentStatus.CANCELLED);
-        if (a.getSlot() != null) {
-            a.getSlot().setStatus(SlotStatus.AVAILABLE);
-            timeSlotRepository.save(a.getSlot());
-        }
-        return toResponse(appointmentRepository.save(a));
+        return toResponses(appointmentRepository.findByDoctor_UserId(doctorId), NEWEST_FIRST);
     }
 
     @Override
     @Transactional(readOnly = true)
     public List<AppointmentResponse> getAll(LocalDate date) {
-        List<Appointment> appointments = date != null
-            ? appointmentRepository.findByAppointmentDate(date)
-            : appointmentRepository.findAll();
-        return appointments.stream().map(this::toResponse).toList();
-    }
-
-    @Override
-    public AppointmentResponse updateStatus(Long appointmentId, String status) {
-        Appointment a = find(appointmentId);
-        accessGuard.requireAppointmentWrite(a);
-        AppointmentStatus newStatus;
-        try {
-            newStatus = AppointmentStatus.valueOf(status.trim().toUpperCase(Locale.ROOT));
-        } catch (IllegalArgumentException e) {
-            throw new BadRequestException("Invalid appointment status: " + status);
-        }
-        a.setAppointmentStatus(newStatus);
-        return toResponse(appointmentRepository.save(a));
+        return date != null
+            ? toResponses(appointmentRepository.findByAppointmentDate(date), EARLIEST_FIRST)
+            : toResponses(appointmentRepository.findAll(), NEWEST_FIRST);
     }
 
     @Override
@@ -185,73 +183,280 @@ public class AppointmentServiceImpl implements AppointmentService {
         LocalDate today = LocalDate.now();
         return new AppointmentStatsResponse(
             appointmentRepository.countByAppointmentDate(today),
-            appointmentRepository.countByAppointmentDateAndAppointmentStatus(today, AppointmentStatus.BOOKED),
-            appointmentRepository.countByAppointmentDateAndAppointmentStatus(today, AppointmentStatus.COMPLETED),
-            appointmentRepository.countByAppointmentDateAndAppointmentStatus(today, AppointmentStatus.CANCELLED),
+            appointmentRepository.countByAppointmentDateAndAppointmentStatus(today, BOOKED),
+            appointmentRepository.countByAppointmentDateAndAppointmentStatus(today, COMPLETED),
+            appointmentRepository.countByAppointmentDateAndAppointmentStatus(today, CANCELLED),
             appointmentRepository.count());
     }
 
-    // ── alternate slot suggestion logic ──────────────────────────────────────
+    // ── cancel / reschedule ──────────────────────────────────────────────────
+
+    @Override
+    public AppointmentResponse cancelAppointment(Long appointmentId) {
+        Appointment a = find(appointmentId);
+        accessGuard.requireAppointmentWrite(a);
+        Context ctx = context();
+        requireChangeAllowed(a, ctx, "cancelled");
+        cancel(a);
+        return toResponse(appointmentRepository.save(a), ctx);
+    }
+
+    @Override
+    public AppointmentResponse rescheduleAppointment(Long appointmentId, Long newSlotId) {
+        Appointment a = find(appointmentId);
+        accessGuard.requireAppointmentWrite(a);
+        Context ctx = context();
+        requireChangeAllowed(a, ctx, "rescheduled");
+
+        TimeSlot oldSlot = a.getSlot();
+        if (oldSlot != null && oldSlot.getSlotId().equals(newSlotId)) {
+            throw new BadRequestException("Pick a different time from the current one");
+        }
+        TimeSlot newSlot = lockSlot(newSlotId);
+        if (!newSlot.getDoctor().getUserId().equals(a.getDoctor().getUserId())) {
+            throw new BadRequestException("You can only move to another time with the same doctor. "
+                + "To see a different doctor, cancel this appointment and book a new one.");
+        }
+        requireBookable(newSlot, false);
+        requireNoClash(a.getPatient().getUserId(), newSlot, ctx.me().is(UserRole.PATIENT));
+
+        if (oldSlot != null) releaseSlot(oldSlot);
+        newSlot.setStatus(SlotStatus.BOOKED);
+        a.setSlot(newSlot);
+        a.setAppointmentDate(newSlot.getStartTime().toLocalDate());
+        a.setAppointmentStatus(BOOKED);   // a new time needs to be confirmed again
+        return toResponse(appointmentRepository.save(a), ctx);
+    }
+
+    /** Status (BOOKED/CONFIRMED), the slot not started yet, and — for patients — before the cutoff. */
+    private void requireChangeAllowed(Appointment a, Context ctx, String verb) {
+        if (!CHANGEABLE.contains(a.getAppointmentStatus())) {
+            throw new BadRequestException("Only booked or confirmed appointments can be " + verb
+                + " (this one is " + label(a.getAppointmentStatus()) + ")");
+        }
+        LocalDateTime start = a.getSlot() != null ? a.getSlot().getStartTime() : null;
+        if (start != null && !start.isAfter(ctx.now())) {
+            throw new BadRequestException("This appointment has already started and can no longer be " + verb);
+        }
+        if (ctx.me().is(UserRole.PATIENT) && start != null && !ctx.now().isBefore(deadline(start, ctx))) {
+            throw new BadRequestException("Appointments can't be " + verb + " less than "
+                + hours(ctx.cutoffHours()) + " before the start time. Please contact the front desk.");
+        }
+    }
+
+    private void cancel(Appointment a) {
+        a.setAppointmentStatus(CANCELLED);
+        if (a.getSlot() != null) releaseSlot(a.getSlot());
+    }
+
+    /** Frees a slot for others; a slot in the past, or of a doctor no longer active, is withdrawn instead. */
+    private void releaseSlot(TimeSlot slot) {
+        TimeSlot locked = lockSlot(slot.getSlotId());
+        if (locked.getStatus() != SlotStatus.BOOKED) return;
+        boolean reusable = locked.getStartTime().isAfter(LocalDateTime.now())
+            && locked.getDoctor().getAccountStatus() == AccountStatus.ACTIVE;
+        locked.setStatus(reusable ? SlotStatus.AVAILABLE : SlotStatus.CANCELLED);
+    }
+
+    // ── status changes ───────────────────────────────────────────────────────
+
+    @Override
+    public AppointmentResponse updateStatus(Long appointmentId, String status) {
+        Appointment a = find(appointmentId);
+        accessGuard.requireAppointmentWrite(a);
+        AppointmentStatus target;
+        try {
+            target = AppointmentStatus.valueOf(status.trim().toUpperCase(Locale.ROOT));
+        } catch (IllegalArgumentException e) {
+            throw new BadRequestException("Invalid appointment status: " + status);
+        }
+        Context ctx = context();
+        AppointmentStatus current = a.getAppointmentStatus();
+        if (target == current) return toResponse(a, ctx);
+
+        if (!TRANSITIONS.get(current).contains(target)) {
+            throw new BadRequestException("Cannot change an appointment from " + label(current) + " to " + label(target));
+        }
+        if (ctx.me().is(UserRole.DOCTOR) && !DOCTOR_TARGETS.contains(target)) {
+            throw new ForbiddenException("Access denied: doctors can mark appointments In Progress, Completed or No Show");
+        }
+        String timingProblem = timingProblem(a, target, ctx.now());
+        if (timingProblem != null) throw new BadRequestException(timingProblem);
+
+        if (target == CANCELLED) {
+            cancel(a);   // same as the Cancel button: the slot is freed
+        } else {
+            a.setAppointmentStatus(target);
+        }
+        return toResponse(appointmentRepository.save(a), ctx);
+    }
+
+    /** Visits can't start before their day, and a no-show can only be recorded once the slot has begun. */
+    private static String timingProblem(Appointment a, AppointmentStatus target, LocalDateTime now) {
+        if ((target == IN_PROGRESS || target == COMPLETED)
+                && a.getAppointmentDate() != null && a.getAppointmentDate().isAfter(now.toLocalDate())) {
+            return "This appointment is on " + a.getAppointmentDate() + "; it can't be started before that day";
+        }
+        if (target == NO_SHOW && a.getSlot() != null && a.getSlot().getStartTime().isAfter(now)) {
+            return "A no-show can only be recorded after the appointment time has started";
+        }
+        return null;
+    }
+
+    // ── slot checks and alternates ───────────────────────────────────────────
+
+    private TimeSlot lockSlot(Long slotId) {
+        return timeSlotRepository.findByIdForUpdate(slotId)
+            .orElseThrow(() -> new ResourceNotFoundException("Time slot not found: " + slotId));
+    }
+
+    /** Throws with alternates if the slot can't be booked (taken, in the past, or doctor unavailable). */
+    private void requireBookable(TimeSlot slot, boolean includeDepartment) {
+        Doctor doctor = slot.getDoctor();
+        if (doctor.getAccountStatus() != AccountStatus.ACTIVE) {
+            // Only other doctors in the department make sense as alternates here.
+            throw new SlotUnavailableException(doctor.getName() + " is not taking appointments.",
+                findAlternates(slot, true, false));
+        }
+        String problem = null;
+        if (slot.getStatus() != SlotStatus.AVAILABLE) {
+            problem = "That time slot has just been taken.";
+        } else if (!slot.getStartTime().isAfter(LocalDateTime.now())) {
+            problem = "That time slot is in the past.";
+        }
+        if (problem != null) {
+            List<AlternateSlot> alternates = findAlternates(slot, includeDepartment, true);
+            throw new SlotUnavailableException(problem + (alternates.isEmpty()
+                ? " No other open slots were found."
+                : " Here are the nearest open slots."), alternates);
+        }
+    }
+
+    private void requireNoClash(String patientId, TimeSlot slot, boolean byPatient) {
+        if (appointmentRepository.existsByPatient_UserIdAndAppointmentStatusInAndSlot_StartTimeLessThanAndSlot_EndTimeGreaterThan(
+                patientId, LIVE, slot.getEndTime(), slot.getStartTime())) {
+            throw new DuplicateResourceException((byPatient ? "You already have" : "This patient already has")
+                + " another appointment at this time");
+        }
+    }
 
     /**
-     * Returns up to 3 alternate available slots:
-     *   - first tries same doctor (future slots)
-     *   - then tries other doctors in the same department
+     * Up to 3 open slots of the same doctor, then up to 3 of other active doctors in the same
+     * department, starting from the day that was asked for.
      */
-    private List<AlternateSlot> findAlternateSlots(Doctor doctor, Long excludeSlotId) {
+    private List<AlternateSlot> findAlternates(TimeSlot requested, boolean includeDepartment, boolean includeSameDoctor) {
+        Doctor doctor = requested.getDoctor();
         LocalDateTime now = LocalDateTime.now();
+        LocalDateTime dayStart = requested.getStartTime().toLocalDate().atStartOfDay();
+        LocalDateTime from = dayStart.isAfter(now) ? dayStart : now;
+        String deptName = doctor.getDepartment() != null ? doctor.getDepartment().getDepartmentName() : null;
 
-        List<AlternateSlot> results = new java.util.ArrayList<>(timeSlotRepository
-            .findByDoctor_UserIdAndStatusAndStartTimeAfter(doctor.getUserId(), SlotStatus.AVAILABLE, now)
-            .stream()
-            .filter(s -> !s.getSlotId().equals(excludeSlotId))
-            .limit(2)
-            .map(s -> toAlternateSlot(s, doctor, "same_doctor"))
-            .toList());
-
-        if (results.size() < 3 && doctor.getDepartment() != null) {
-            results.addAll(timeSlotRepository
-                .findByDoctor_Department_DepartmentIdAndStatusAndStartTimeAfter(
-                    doctor.getDepartment().getDepartmentId(), SlotStatus.AVAILABLE, now)
-                .stream()
-                .filter(s -> !s.getDoctor().getUserId().equals(doctor.getUserId()))
-                .filter(s -> !s.getSlotId().equals(excludeSlotId))
-                .limit(3L - results.size())
-                .map(s -> toAlternateSlot(s, s.getDoctor(), "same_department"))
-                .toList());
+        List<AlternateSlot> results = new ArrayList<>();
+        if (includeSameDoctor) {
+            timeSlotRepository.findTop3ByDoctor_UserIdAndStatusAndStartTimeAfterOrderByStartTimeAsc(
+                    doctor.getUserId(), SlotStatus.AVAILABLE, from).stream()
+                .filter(s -> !s.getSlotId().equals(requested.getSlotId()))
+                .forEach(s -> results.add(toAlternate(s, doctor, deptName, "same_doctor")));
+        }
+        if (includeDepartment && doctor.getDepartment() != null) {
+            timeSlotRepository
+                .findTop3ByDoctor_Department_DepartmentIdAndDoctor_UserIdNotAndDoctor_AccountStatusAndStatusAndStartTimeAfterOrderByStartTimeAsc(
+                    doctor.getDepartment().getDepartmentId(), doctor.getUserId(), AccountStatus.ACTIVE,
+                    SlotStatus.AVAILABLE, from)
+                .forEach(s -> results.add(toAlternate(s, s.getDoctor(), deptName, "same_department")));
         }
         return results;
     }
 
-    private AlternateSlot toAlternateSlot(TimeSlot slot, Doctor doc, String reason) {
-        return new AlternateSlot(slot.getSlotId(), doc.getUserId(), doc.getName(),
+    private static AlternateSlot toAlternate(TimeSlot slot, Doctor doc, String deptName, String reason) {
+        return new AlternateSlot(slot.getSlotId(), doc.getUserId(), doc.getName(), deptName,
             slot.getStartTime(), slot.getEndTime(), reason);
     }
 
-    // ── mappers & helpers ─────────────────────────────────────────────────────
+    // ── mapping ──────────────────────────────────────────────────────────────
 
-    private Appointment find(Long appointmentId) {
-        return appointmentRepository.findById(appointmentId)
-            .orElseThrow(() -> new ResourceNotFoundException("Appointment not found: " + appointmentId));
+    /** Per-request facts used to work out what the current user may do. */
+    private record Context(AuthenticatedUser me, LocalDateTime now, int cutoffHours) {}
+
+    private Context context() {
+        return new Context(currentUser.get(), LocalDateTime.now(), slotService.getSettings().changeCutoffHours());
     }
 
-    private AppointmentResponse toResponse(Appointment a) {
+    private static final Comparator<AppointmentResponse> EARLIEST_FIRST = Comparator.comparing(
+        AppointmentServiceImpl::sortKey, Comparator.nullsLast(Comparator.naturalOrder()));
+    private static final Comparator<AppointmentResponse> NEWEST_FIRST = Comparator.comparing(
+        AppointmentServiceImpl::sortKey, Comparator.nullsLast(Comparator.reverseOrder()));
+
+    private static LocalDateTime sortKey(AppointmentResponse r) {
+        if (r.getStartTime() != null) return r.getStartTime();
+        return r.getAppointmentDate() != null ? r.getAppointmentDate().atStartOfDay() : null;
+    }
+
+    private List<AppointmentResponse> toResponses(List<Appointment> appointments, Comparator<AppointmentResponse> order) {
+        Context ctx = context();
+        return appointments.stream().map(a -> toResponse(a, ctx)).sorted(order).toList();
+    }
+
+    private AppointmentResponse toResponse(Appointment a, Context ctx) {
         AppointmentResponse r = new AppointmentResponse();
         r.setAppointmentId(a.getAppointmentId());
         r.setPatientId(a.getPatient().getUserId());
         r.setPatientName(a.getPatient().getName());
-        r.setDoctorId(a.getDoctor().getUserId());
-        r.setDoctorName(a.getDoctor().getName());
+        Doctor d = a.getDoctor();
+        r.setDoctorId(d.getUserId());
+        r.setDoctorName(d.getName());
+        r.setDoctorSpecialization(d.getSpecialization());
+        if (d.getDepartment() != null) r.setDepartmentName(d.getDepartment().getDepartmentName());
         if (a.getSlot() != null) {
             r.setSlotId(a.getSlot().getSlotId());
             r.setStartTime(a.getSlot().getStartTime());
             r.setEndTime(a.getSlot().getEndTime());
+            r.setChangeDeadline(deadline(a.getSlot().getStartTime(), ctx));
         }
         r.setAppointmentDate(a.getAppointmentDate());
+        r.setBookingTime(a.getBookingTime());
         r.setReasonForVisit(a.getReasonForVisit());
         r.setStatus(a.getAppointmentStatus());
         r.setPriority(a.getPriority());
+
+        boolean changeable = isChangeable(a, ctx);
+        r.setCanCancel(changeable);
+        r.setCanReschedule(changeable);
+        r.setAllowedStatuses(allowedStatuses(a, ctx));
         return r;
+    }
+
+    private boolean isChangeable(Appointment a, Context ctx) {
+        AuthenticatedUser me = ctx.me();
+        if (!CHANGEABLE.contains(a.getAppointmentStatus())) return false;
+        LocalDateTime start = a.getSlot() != null ? a.getSlot().getStartTime() : null;
+        if (start != null && !start.isAfter(ctx.now())) return false;
+        if (me.isStaff()) return true;
+        return me.is(UserRole.PATIENT)
+            && me.userId().equals(a.getPatient().getUserId())
+            && (start == null || ctx.now().isBefore(deadline(start, ctx)));
+    }
+
+    private List<AppointmentStatus> allowedStatuses(Appointment a, Context ctx) {
+        AuthenticatedUser me = ctx.me();
+        boolean treatingDoctor = me.is(UserRole.DOCTOR) && me.userId().equals(a.getDoctor().getUserId());
+        if (!me.isStaff() && !treatingDoctor) return List.of();
+        return TRANSITIONS.get(a.getAppointmentStatus()).stream()
+            .filter(t -> !treatingDoctor || DOCTOR_TARGETS.contains(t))
+            .filter(t -> timingProblem(a, t, ctx.now()) == null)
+            .sorted()
+            .toList();
+    }
+
+    private static LocalDateTime deadline(LocalDateTime start, Context ctx) {
+        return start.minusHours(ctx.cutoffHours());
+    }
+
+    // ── helpers ──────────────────────────────────────────────────────────────
+
+    private Appointment find(Long appointmentId) {
+        return appointmentRepository.findById(appointmentId)
+            .orElseThrow(() -> new ResourceNotFoundException("Appointment not found: " + appointmentId));
     }
 
     private Priority parsePriority(String s) {
@@ -263,8 +468,12 @@ public class AppointmentServiceImpl implements AppointmentService {
         }
     }
 
-    private Long generateAppointmentId() {
-        // Timestamp-based ID; to be replaced by an auto-increment key.
-        return System.currentTimeMillis() + new Random().nextInt(1000);
+    private static String label(AppointmentStatus s) {
+        String text = s.name().replace('_', ' ').toLowerCase(Locale.ROOT);
+        return Character.toUpperCase(text.charAt(0)) + text.substring(1);
     }
+
+    private static String hours(int h) { return h == 1 ? "1 hour" : h + " hours"; }
+
+    private static String trimToNull(String s) { return s == null || s.isBlank() ? null : s.trim(); }
 }

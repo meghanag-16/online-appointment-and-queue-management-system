@@ -2,10 +2,13 @@ package com.mediqueue.controller;
 
 import com.mediqueue.dto.MedicalRecordResponse;
 import com.mediqueue.dto.PatientDashboardResponse;
+import com.mediqueue.dto.PatientSummaryDTO;
 import com.mediqueue.service.PatientService;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.web.bind.annotation.*;
+
+import java.util.List;
 
 @RestController
 @RequestMapping("/api/v1/patient")
@@ -15,6 +18,13 @@ public class PatientController {
 
     public PatientController(PatientService patientService) {
         this.patientService = patientService;
+    }
+
+    /** Front desk: find a patient by name, username, phone, email or ID to book on their behalf. */
+    @GetMapping("/search")
+    @PreAuthorize("hasAnyRole('RECEPTIONIST','ADMINISTRATOR')")
+    public ResponseEntity<List<PatientSummaryDTO>> searchPatients(@RequestParam(required = false) String q) {
+        return ResponseEntity.ok(patientService.searchPatients(q));
     }
 
     @GetMapping("/dashboard/{patientId}")

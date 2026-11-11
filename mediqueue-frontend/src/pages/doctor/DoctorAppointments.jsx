@@ -1,34 +1,63 @@
-import { useEffect } from 'react'
+import { useEffect, useState } from 'react'
 import PageLayout from '../../components/layout/PageLayout'
 import PageTitle from '../../components/common/PageTitle'
 import StatusBadge from '../../components/common/StatusBadge'
 import Spinner from '../../components/common/Spinner'
+import AppointmentStatusSelect from '../../components/booking/AppointmentStatusSelect'
 import { useAuth } from '../../context/AuthContext'
-import { useApi } from '../../hooks/useApi'
-import axiosInstance from '../../api/axiosInstance'
+import axiosInstance, { errorMessage } from '../../api/axiosInstance'
 import { ENDPOINTS } from '../../api/endpoints'
-import { formatDate } from '../../utils/formatters'
+import { formatDate, formatEnum } from '../../utils/formatters'
+import { formatTime } from '../../utils/dates'
+
+/** The doctor's appointments, with In Progress / Completed / No Show actions where allowed. */
 export default function DoctorAppointments() {
   const { user } = useAuth()
-  const { data, loading, error, execute } = useApi()
-  useEffect(() => { execute(() => axiosInstance.get(ENDPOINTS.APPOINTMENTS_BY_DOCTOR(user.userId))) }, [user.userId])
+  const [data, setData] = useState(null)
+  const [error, setError] = useState('')
+  const [message, setMessage] = useState('')
+
+  useEffect(() => { load() }, [user.userId]) // eslint-disable-line react-hooks/exhaustive-deps
+
+  async function load() {
+    try {
+      const res = await axiosInstance.get(ENDPOINTS.APPOINTMENTS_BY_DOCTOR(user.userId))
+      setData(res.data); setError('')
+    } catch (err) { setError(errorMessage(err, 'Could not load appointments.')) }
+  }
+
+  async function changeStatus(a, status) {
+    setMessage(''); setError('')
+    try {
+      await axiosInstance.patch(ENDPOINTS.UPDATE_STATUS(a.appointmentId), { status })
+      setMessage(`${a.patientName}: ${formatEnum(status)}.`)
+      load()
+    } catch (err) { setError(errorMessage(err, 'Could not update the status.')) }
+  }
+
   return (
     <PageLayout>
       <PageTitle title="Appointments" subtitle="Your scheduled patient appointments" />
-      {loading && <Spinner />}
+      {message && <div className="alert alert-success">{message}</div>}
       {error && <div className="alert alert-error">{error}</div>}
+      {!data && !error && <Spinner />}
       {data && (
-        <div className="card" style={{padding:0}}>
+        <div className="card" style={{ padding: 0 }}>
           <div className="table-wrapper">
             <table>
-              <thead><tr><th>ID</th><th>Patient</th><th>Date</th><th>Reason</th><th>Status</th></tr></thead>
+              <thead><tr><th>ID</th><th>Patient</th><th>Date</th><th>Time</th><th>Reason</th><th>Priority</th><th>Status</th><th>Update</th></tr></thead>
               <tbody>
-                {data.length===0&&<tr><td colSpan={5} style={{textAlign:'center',padding:24,color:'var(--color-text-muted)'}}>No appointments</td></tr>}
-                {data.map(a=>(
+                {data.length === 0 && <tr><td colSpan={8} style={{ textAlign: 'center', padding: 24, color: 'var(--color-text-muted)' }}>No appointments</td></tr>}
+                {data.map(a => (
                   <tr key={a.appointmentId}>
-                    <td>{a.appointmentId}</td><td>{a.patientName}</td>
-                    <td>{formatDate(a.appointmentDate)}</td><td>{a.reasonForVisit||'—'}</td>
-                    <td><StatusBadge status={a.status}/></td>
+                    <td>{a.appointmentId}</td>
+                    <td>{a.patientName}</td>
+                    <td>{formatDate(a.appointmentDate)}</td>
+                    <td style={{ fontSize: 12 }}>{a.startTime ? `${formatTime(a.startTime)} – ${formatTime(a.endTime)}` : '—'}</td>
+                    <td>{a.reasonForVisit || '—'}</td>
+                    <td><StatusBadge status={a.priority || 'NORMAL'} /></td>
+                    <td><StatusBadge status={a.status} /></td>
+                    <td><AppointmentStatusSelect appointment={a} onChange={changeStatus} /></td>
                   </tr>
                 ))}
               </tbody>

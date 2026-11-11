@@ -19,6 +19,10 @@ public interface AppointmentRepository extends JpaRepository<Appointment, Long> 
 
     boolean existsByDoctor_UserIdAndPatient_UserId(String doctorId, String patientId);
 
+    /** Does the patient already have a live appointment overlapping this time (with any doctor)? */
+    boolean existsByPatient_UserIdAndAppointmentStatusInAndSlot_StartTimeLessThanAndSlot_EndTimeGreaterThan(
+        String patientId, Collection<AppointmentStatus> statuses, java.time.LocalDateTime end, java.time.LocalDateTime start);
+
     // ── counts (database-side, no findAll().stream()) ──────────────────────
     long countByAppointmentStatus(AppointmentStatus status);
     long countByAppointmentDate(LocalDate date);

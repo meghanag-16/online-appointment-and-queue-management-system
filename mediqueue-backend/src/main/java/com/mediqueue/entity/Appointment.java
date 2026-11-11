@@ -11,7 +11,9 @@ import java.time.LocalDateTime;
 @Table(name = "appointments")
 public class Appointment {
 
+    /** Auto-increment key (was timestamp + random, which could collide). */
     @Id
+    @GeneratedValue(strategy = GenerationType.IDENTITY)
     @Column(name = "appointment_id")
     private Long appointmentId;
 
@@ -23,7 +25,11 @@ public class Appointment {
     @JoinColumn(name = "doctor_id", nullable = false)
     private Doctor doctor;
 
-    @OneToOne(fetch = FetchType.LAZY)
+    /**
+     * Many-to-one: after a cancellation the slot is freed and can be booked again, so a slot can be
+     * referenced by one live appointment plus any number of cancelled ones.
+     */
+    @ManyToOne(fetch = FetchType.LAZY)
     @JoinColumn(name = "slot_id")
     private TimeSlot slot;
 
