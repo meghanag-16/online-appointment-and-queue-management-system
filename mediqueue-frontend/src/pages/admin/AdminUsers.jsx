@@ -18,7 +18,9 @@ export default function AdminUsers() {
   const [showCreate, setShowCreate] = useState(false)
   const [credentials, setCredentials] = useState(null)
 
-  useEffect(() => { load() }, [])
+  useEffect(() => {
+    load()
+  }, [])
 
   async function load() {
     setLoading(true)
@@ -34,17 +36,25 @@ export default function AdminUsers() {
 
   // The only way to create doctor, lab technician, receptionist and administrator accounts.
   async function handleCreate(payload) {
-    setMessage(''); setError(''); setCredentials(null)
+    setMessage('')
+    setError('')
+    setCredentials(null)
     const res = await createUser(payload)
     const u = res.data.user
-    setCredentials({ name: `${u.name} (${(u.role || payload.role).replace(/_/g, ' ').toLowerCase()})`, username: u.username, password: res.data.temporaryPassword })
+    setCredentials({
+      name: `${u.name} (${(u.role || payload.role).replace(/_/g, ' ').toLowerCase()})`,
+      username: u.username,
+      password: res.data.temporaryPassword,
+    })
     setShowCreate(false)
     load()
   }
 
   async function resetPassword(u) {
     if (!window.confirm(`Give ${u.name} a new temporary password? Their current password will stop working.`)) return
-    setMessage(''); setError(''); setCredentials(null)
+    setMessage('')
+    setError('')
+    setCredentials(null)
     try {
       const res = await resetUserPassword(u.userId)
       setCredentials({ name: u.name, username: u.username, password: res.data.temporaryPassword })
@@ -55,10 +65,13 @@ export default function AdminUsers() {
 
   async function changeStatus(u, status) {
     const verb = { ACTIVE: 'activate', SUSPENDED: 'suspend', DEACTIVATED: 'deactivate' }[status]
-    const doctorNote = u.role === 'DOCTOR' && status !== 'ACTIVE'
-      ? ' Their upcoming appointments will be cancelled and each patient notified.' : ''
+    const doctorNote =
+      u.role === 'DOCTOR' && status !== 'ACTIVE'
+        ? ' Their upcoming appointments will be cancelled and each patient notified.'
+        : ''
     if (!window.confirm(`Really ${verb} ${u.name}?${doctorNote}`)) return
-    setMessage(''); setError('')
+    setMessage('')
+    setError('')
     try {
       await updateUserStatus(u.userId, status)
       setMessage(`${u.name} is now ${status.toLowerCase()}.`)
@@ -70,7 +83,10 @@ export default function AdminUsers() {
 
   return (
     <PageLayout>
-      <PageTitle title="User Management" subtitle="Create staff accounts and manage account status. Patients sign up themselves." />
+      <PageTitle
+        title="User Management"
+        subtitle="Create staff accounts and manage account status. Patients sign up themselves."
+      />
       {message && <div className="alert alert-success">{message}</div>}
       {error && <div className="alert alert-error">{error}</div>}
       {credentials && <TemporaryPasswordNotice {...credentials} onClose={() => setCredentials(null)} />}
@@ -86,12 +102,7 @@ export default function AdminUsers() {
           <p style={{ fontSize: '0.85rem', color: 'var(--color-text-muted)', marginBottom: 16 }}>
             A temporary password is generated for them; they must change it when they first log in.
           </p>
-          <UserProfileForm
-            roles={ALL_ROLES}
-            submitLabel="Create User"
-            showPassword={false}
-            onSubmit={handleCreate}
-          />
+          <UserProfileForm roles={ALL_ROLES} submitLabel="Create User" showPassword={false} onSubmit={handleCreate} />
         </div>
       )}
 
@@ -100,18 +111,41 @@ export default function AdminUsers() {
         <div className="card" style={{ padding: 0 }}>
           <div className="table-wrapper">
             <table>
-              <thead><tr><th>ID</th><th>Name</th><th>Username</th><th>Email</th><th>Role</th><th>Status</th><th>Actions</th></tr></thead>
+              <thead>
+                <tr>
+                  <th>ID</th>
+                  <th>Name</th>
+                  <th>Username</th>
+                  <th>Email</th>
+                  <th>Role</th>
+                  <th>Status</th>
+                  <th>Actions</th>
+                </tr>
+              </thead>
               <tbody>
-                {users.length === 0 && <tr><td colSpan={7} style={{ textAlign: 'center', padding: 24, color: 'var(--color-text-muted)' }}>No users found</td></tr>}
+                {users.length === 0 && (
+                  <tr>
+                    <td colSpan={7} style={{ textAlign: 'center', padding: 24, color: 'var(--color-text-muted)' }}>
+                      No users found
+                    </td>
+                  </tr>
+                )}
                 {users.map(u => {
                   const isMe = u.userId === me?.userId
                   return (
                     <tr key={u.userId}>
-                      <td>{u.userId}</td><td>{u.name}</td><td>{u.username}</td>
-                      <td>{u.email}</td><td>{u.role}</td>
-                      <td><StatusBadge status={u.accountStatus} /></td>
+                      <td>{u.userId}</td>
+                      <td>{u.name}</td>
+                      <td>{u.username}</td>
+                      <td>{u.email}</td>
+                      <td>{u.role}</td>
+                      <td>
+                        <StatusBadge status={u.accountStatus} />
+                      </td>
                       <td style={{ whiteSpace: 'nowrap' }}>
-                        {isMe ? <span style={{ color: 'var(--color-text-muted)', fontSize: '0.8rem' }}>You</span> : (
+                        {isMe ? (
+                          <span style={{ color: 'var(--color-text-muted)', fontSize: '0.8rem' }}>You</span>
+                        ) : (
                           <>
                             {u.accountStatus !== 'ACTIVE' && (
                               <button className="btn btn-primary btn-sm" onClick={() => changeStatus(u, 'ACTIVE')}>
@@ -119,12 +153,18 @@ export default function AdminUsers() {
                               </button>
                             )}{' '}
                             {u.accountStatus === 'ACTIVE' && (
-                              <button className="btn btn-outline btn-sm" onClick={() => changeStatus(u, 'SUSPENDED')}>Suspend</button>
+                              <button className="btn btn-outline btn-sm" onClick={() => changeStatus(u, 'SUSPENDED')}>
+                                Suspend
+                              </button>
                             )}{' '}
                             {u.accountStatus !== 'DEACTIVATED' && (
-                              <button className="btn btn-outline btn-sm" onClick={() => changeStatus(u, 'DEACTIVATED')}>Deactivate</button>
+                              <button className="btn btn-outline btn-sm" onClick={() => changeStatus(u, 'DEACTIVATED')}>
+                                Deactivate
+                              </button>
                             )}{' '}
-                            <button className="btn btn-outline btn-sm" onClick={() => resetPassword(u)}>Reset password</button>
+                            <button className="btn btn-outline btn-sm" onClick={() => resetPassword(u)}>
+                              Reset password
+                            </button>
                           </>
                         )}
                       </td>

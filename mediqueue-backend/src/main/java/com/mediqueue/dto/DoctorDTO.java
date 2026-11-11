@@ -1,7 +1,6 @@
 package com.mediqueue.dto;
 
 import com.mediqueue.entity.Doctor;
-
 import java.math.BigDecimal;
 import java.time.LocalDate;
 import java.time.LocalDateTime;
@@ -22,7 +21,11 @@ public class DoctorDTO {
     private String departmentId;
     private String departmentName;
     private String accountStatus;
-    /** Earliest open slot (on the searched day, if a date was given); null = none. Set by doctor search. */
+
+    /**
+     * Earliest open slot (on the searched day, if a date was given); null = none. Set by doctor
+     * search.
+     */
     private LocalDateTime nextAvailableSlot;
 
     public DoctorDTO() {}
@@ -36,7 +39,9 @@ public class DoctorDTO {
     }
 
     public static DoctorDTO from(Doctor d) {
-        DoctorDTO dto = new DoctorDTO(d.getUserId(), d.getName(), d.getEmail(), "DOCTOR", d.getSpecialization());
+        DoctorDTO dto =
+                new DoctorDTO(
+                        d.getUserId(), d.getName(), d.getEmail(), "DOCTOR", d.getSpecialization());
         dto.username = d.getUsername();
         dto.gender = d.getGender();
         dto.phoneNumber = d.getPhoneNumber();
@@ -52,50 +57,127 @@ public class DoctorDTO {
     }
 
     /** Kept for older UI code that reads {@code id}. */
-    public String getId() { return userId; }
+    public String getId() {
+        return userId;
+    }
 
-    public String getUserId() { return userId; }
-    public void setUserId(String userId) { this.userId = userId; }
+    public String getUserId() {
+        return userId;
+    }
 
-    public String getName() { return name; }
-    public void setName(String name) { this.name = name; }
+    public void setUserId(String userId) {
+        this.userId = userId;
+    }
 
-    public String getUsername() { return username; }
-    public void setUsername(String username) { this.username = username; }
+    public String getName() {
+        return name;
+    }
 
-    public String getEmail() { return email; }
-    public void setEmail(String email) { this.email = email; }
+    public void setName(String name) {
+        this.name = name;
+    }
 
-    public String getRole() { return role; }
-    public void setRole(String role) { this.role = role; }
+    public String getUsername() {
+        return username;
+    }
 
-    public String getGender() { return gender; }
-    public void setGender(String gender) { this.gender = gender; }
+    public void setUsername(String username) {
+        this.username = username;
+    }
 
-    public String getPhoneNumber() { return phoneNumber; }
-    public void setPhoneNumber(String phoneNumber) { this.phoneNumber = phoneNumber; }
+    public String getEmail() {
+        return email;
+    }
 
-    public LocalDate getDateOfBirth() { return dateOfBirth; }
-    public void setDateOfBirth(LocalDate dateOfBirth) { this.dateOfBirth = dateOfBirth; }
+    public void setEmail(String email) {
+        this.email = email;
+    }
 
-    public String getSpecialization() { return specialization; }
-    public void setSpecialization(String specialization) { this.specialization = specialization; }
+    public String getRole() {
+        return role;
+    }
 
-    public String getQualification() { return qualification; }
-    public void setQualification(String qualification) { this.qualification = qualification; }
+    public void setRole(String role) {
+        this.role = role;
+    }
 
-    public BigDecimal getConsultationFee() { return consultationFee; }
-    public void setConsultationFee(BigDecimal consultationFee) { this.consultationFee = consultationFee; }
+    public String getGender() {
+        return gender;
+    }
 
-    public String getDepartmentId() { return departmentId; }
-    public void setDepartmentId(String departmentId) { this.departmentId = departmentId; }
+    public void setGender(String gender) {
+        this.gender = gender;
+    }
 
-    public String getDepartmentName() { return departmentName; }
-    public void setDepartmentName(String departmentName) { this.departmentName = departmentName; }
+    public String getPhoneNumber() {
+        return phoneNumber;
+    }
 
-    public String getAccountStatus() { return accountStatus; }
-    public void setAccountStatus(String accountStatus) { this.accountStatus = accountStatus; }
+    public void setPhoneNumber(String phoneNumber) {
+        this.phoneNumber = phoneNumber;
+    }
 
-    public LocalDateTime getNextAvailableSlot() { return nextAvailableSlot; }
-    public void setNextAvailableSlot(LocalDateTime nextAvailableSlot) { this.nextAvailableSlot = nextAvailableSlot; }
+    public LocalDate getDateOfBirth() {
+        return dateOfBirth;
+    }
+
+    public void setDateOfBirth(LocalDate dateOfBirth) {
+        this.dateOfBirth = dateOfBirth;
+    }
+
+    public String getSpecialization() {
+        return specialization;
+    }
+
+    public void setSpecialization(String specialization) {
+        this.specialization = specialization;
+    }
+
+    public String getQualification() {
+        return qualification;
+    }
+
+    public void setQualification(String qualification) {
+        this.qualification = qualification;
+    }
+
+    public BigDecimal getConsultationFee() {
+        return consultationFee;
+    }
+
+    public void setConsultationFee(BigDecimal consultationFee) {
+        this.consultationFee = consultationFee;
+    }
+
+    public String getDepartmentId() {
+        return departmentId;
+    }
+
+    public void setDepartmentId(String departmentId) {
+        this.departmentId = departmentId;
+    }
+
+    public String getDepartmentName() {
+        return departmentName;
+    }
+
+    public void setDepartmentName(String departmentName) {
+        this.departmentName = departmentName;
+    }
+
+    public String getAccountStatus() {
+        return accountStatus;
+    }
+
+    public void setAccountStatus(String accountStatus) {
+        this.accountStatus = accountStatus;
+    }
+
+    public LocalDateTime getNextAvailableSlot() {
+        return nextAvailableSlot;
+    }
+
+    public void setNextAvailableSlot(LocalDateTime nextAvailableSlot) {
+        this.nextAvailableSlot = nextAvailableSlot;
+    }
 }

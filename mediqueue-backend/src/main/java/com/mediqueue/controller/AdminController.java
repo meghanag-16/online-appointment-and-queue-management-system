@@ -14,14 +14,13 @@ import com.mediqueue.entity.enums.UserRole;
 import com.mediqueue.service.AdminService;
 import jakarta.validation.Valid;
 import jakarta.validation.Validator;
+import java.time.LocalDate;
+import java.util.List;
 import org.springframework.format.annotation.DateTimeFormat;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.web.bind.annotation.*;
-
-import java.time.LocalDate;
-import java.util.List;
 
 @RestController
 @RequestMapping("/api/v1/admin")
@@ -32,7 +31,8 @@ public class AdminController {
     private final AuditService auditService;
     private final Validator validator;
 
-    public AdminController(AdminService adminService, AuditService auditService, Validator validator) {
+    public AdminController(
+            AdminService adminService, AuditService auditService, Validator validator) {
         this.adminService = adminService;
         this.auditService = auditService;
         this.validator = validator;
@@ -45,11 +45,12 @@ public class AdminController {
 
     /**
      * Onboard a doctor with their department. Takes the same profile fields as registration
-     * (RegisterRequest); the server generates a temporary password, returned once, which the
-     * doctor must change at first login. A duplicate username or email gives 409.
+     * (RegisterRequest); the server generates a temporary password, returned once, which the doctor
+     * must change at first login. A duplicate username or email gives 409.
      */
     @PostMapping("/doctors")
-    public ResponseEntity<AccountCreatedResponse> onboardDoctor(@RequestBody RegisterRequest request) {
+    public ResponseEntity<AccountCreatedResponse> onboardDoctor(
+            @RequestBody RegisterRequest request) {
         // The role is implied by this endpoint, so set it before validating the rest of the fields.
         request.setRole(UserRole.DOCTOR);
         AdminAccountRequests.validate(validator, request);
@@ -63,8 +64,8 @@ public class AdminController {
 
     /** Department, specialization, qualification and fee of an existing doctor. */
     @PutMapping("/doctors/{doctorId}")
-    public ResponseEntity<DoctorDTO> updateDoctor(@PathVariable String doctorId,
-                                                  @Valid @RequestBody DoctorUpdateRequest request) {
+    public ResponseEntity<DoctorDTO> updateDoctor(
+            @PathVariable String doctorId, @Valid @RequestBody DoctorUpdateRequest request) {
         return ResponseEntity.ok(adminService.updateDoctor(doctorId, request));
     }
 
@@ -74,16 +75,22 @@ public class AdminController {
     }
 
     @PostMapping("/departments")
-    public ResponseEntity<DepartmentDTO> addDepartment(@Valid @RequestBody DepartmentRequest request) {
+    public ResponseEntity<DepartmentDTO> addDepartment(
+            @Valid @RequestBody DepartmentRequest request) {
         return ResponseEntity.status(HttpStatus.CREATED).body(adminService.addDepartment(request));
     }
 
-    /** Audit log, newest first. ?action=&from=yyyy-MM-dd&to=yyyy-MM-dd&q=text&limit=200 (all optional). */
+    /**
+     * Audit log, newest first. ?action=&from=yyyy-MM-dd&to=yyyy-MM-dd&q=text&limit=200 (all
+     * optional).
+     */
     @GetMapping("/audit")
     public ResponseEntity<List<AuditLogResponse>> auditLog(
             @RequestParam(required = false) String action,
-            @RequestParam(required = false) @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) LocalDate from,
-            @RequestParam(required = false) @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) LocalDate to,
+            @RequestParam(required = false) @DateTimeFormat(iso = DateTimeFormat.ISO.DATE)
+                    LocalDate from,
+            @RequestParam(required = false) @DateTimeFormat(iso = DateTimeFormat.ISO.DATE)
+                    LocalDate to,
             @RequestParam(required = false) String q,
             @RequestParam(defaultValue = "200") int limit) {
         return ResponseEntity.ok(auditService.search(action, from, to, q, limit));

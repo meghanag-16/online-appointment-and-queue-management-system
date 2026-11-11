@@ -1,6 +1,5 @@
 package com.mediqueue.service.impl;
 
-import com.mediqueue.service.AppointmentService;
 import com.mediqueue.audit.AuditAction;
 import com.mediqueue.audit.AuditService;
 import com.mediqueue.dto.AccountCreatedResponse;
@@ -27,23 +26,26 @@ import com.mediqueue.repository.DepartmentRepository;
 import com.mediqueue.repository.DoctorRepository;
 import com.mediqueue.repository.UserRepository;
 import com.mediqueue.service.AdminService;
+import com.mediqueue.service.AppointmentService;
 import com.mediqueue.service.SlotService;
 import com.mediqueue.service.UserAccountService;
-import org.springframework.stereotype.Service;
-import org.springframework.transaction.annotation.Transactional;
-
 import java.time.LocalDate;
 import java.util.List;
 import java.util.UUID;
+import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Transactional;
 
 @Service
 @Transactional
 public class AdminServiceImpl implements AdminService {
 
     private static final List<AppointmentStatus> ACTIVE_APPOINTMENT_STATUSES =
-        List.of(AppointmentStatus.BOOKED, AppointmentStatus.CONFIRMED, AppointmentStatus.IN_PROGRESS);
+            List.of(
+                    AppointmentStatus.BOOKED,
+                    AppointmentStatus.CONFIRMED,
+                    AppointmentStatus.IN_PROGRESS);
     private static final List<ResolutionStatus> OPEN_COMPLAINT_STATUSES =
-        List.of(ResolutionStatus.OPEN, ResolutionStatus.UNDER_REVIEW);
+            List.of(ResolutionStatus.OPEN, ResolutionStatus.UNDER_REVIEW);
 
     private final DoctorRepository doctorRepository;
     private final DepartmentRepository departmentRepository;
@@ -56,16 +58,17 @@ public class AdminServiceImpl implements AdminService {
     private final AuditService auditService;
     private final AppointmentService appointmentService;
 
-    public AdminServiceImpl(DoctorRepository doctorRepository,
-                            DepartmentRepository departmentRepository,
-                            UserRepository userRepository,
-                            AppointmentRepository appointmentRepository,
-                            ComplaintRepository complaintRepository,
-                            UserAccountService userAccountService,
-                            SlotService slotService,
-                            BillRepository billRepository,
-                            AuditService auditService,
-                            AppointmentService appointmentService) {
+    public AdminServiceImpl(
+            DoctorRepository doctorRepository,
+            DepartmentRepository departmentRepository,
+            UserRepository userRepository,
+            AppointmentRepository appointmentRepository,
+            ComplaintRepository complaintRepository,
+            UserAccountService userAccountService,
+            SlotService slotService,
+            BillRepository billRepository,
+            AuditService auditService,
+            AppointmentService appointmentService) {
         this.doctorRepository = doctorRepository;
         this.departmentRepository = departmentRepository;
         this.userRepository = userRepository;
@@ -86,53 +89,95 @@ public class AdminServiceImpl implements AdminService {
             return doctors.stream().map(DoctorDTO::from).toList();
         }
         // Fallback for doctor users inserted by hand without a row in the doctors table.
-        return userRepository.findAllDoctorUsersRaw().stream().map(row -> {
-            DoctorDTO dto = new DoctorDTO((String) row[0], (String) row[1], (String) row[3], "DOCTOR", null);
-            dto.setUsername((String) row[2]);
-            dto.setAccountStatus((String) row[5]);
-            return dto;
-        }).toList();
+        return userRepository.findAllDoctorUsersRaw().stream()
+                .map(
+                        row -> {
+                            DoctorDTO dto =
+                                    new DoctorDTO(
+                                            (String) row[0],
+                                            (String) row[1],
+                                            (String) row[3],
+                                            "DOCTOR",
+                                            null);
+                            dto.setUsername((String) row[2]);
+                            dto.setAccountStatus((String) row[5]);
+                            return dto;
+                        })
+                .toList();
     }
 
     @Override
     public AccountCreatedResponse onboardDoctor(RegisterRequest request) {
         request.setRole(UserRole.DOCTOR);
         var created = userAccountService.createByAdmin(request);
-        return new AccountCreatedResponse(DoctorDTO.from((Doctor) created.user()), created.temporaryPassword());
+        return new AccountCreatedResponse(
+                DoctorDTO.from((Doctor) created.user()), created.temporaryPassword());
     }
 
     @Override
     public DoctorDTO deactivateDoctor(String doctorId) {
-        Doctor doctor = doctorRepository.findById(doctorId)
-            .orElseThrow(() -> new ResourceNotFoundException("Doctor not found: " + doctorId));
+        Doctor doctor =
+                doctorRepository
+                        .findById(doctorId)
+                        .orElseThrow(
+                                () ->
+                                        new ResourceNotFoundException(
+                                                "Doctor not found: " + doctorId));
         AccountStatus previous = doctor.getAccountStatus();
         doctor.setAccountStatus(AccountStatus.DEACTIVATED);
         Doctor saved = doctorRepository.saveAndFlush(doctor);
-        slotService.withdrawOpenSlots(doctorId);   // a deactivated doctor can no longer be booked
+        slotService.withdrawOpenSlots(doctorId); // a deactivated doctor can no longer be booked
         int cancelled = appointmentService.cancelUpcomingForDoctor(doctorId);
         if (previous != AccountStatus.DEACTIVATED) {
-            auditService.record(AuditAction.USER_STATUS_CHANGED, "USER", doctorId,
-                saved.getName() + " (DOCTOR): " + previous + " → DEACTIVATED; "
-                    + cancelled + " upcoming appointment(s) cancelled");
+            auditService.record(
+                    AuditAction.USER_STATUS_CHANGED,
+                    "USER",
+                    doctorId,
+                    saved.getName()
+                            + " (DOCTOR): "
+                            + previous
+                            + " → DEACTIVATED; "
+                            + cancelled
+                            + " upcoming appointment(s) cancelled");
         }
         return DoctorDTO.from(saved);
     }
 
     @Override
     public DoctorDTO updateDoctor(String doctorId, DoctorUpdateRequest request) {
-        Doctor doctor = doctorRepository.findById(doctorId)
-            .orElseThrow(() -> new ResourceNotFoundException("Doctor not found: " + doctorId));
-        Department department = departmentRepository.findById(request.departmentId().trim())
-            .orElseThrow(() -> new BadRequestException("Department not found: " + request.departmentId()));
+        Doctor doctor =
+                doctorRepository
+                        .findById(doctorId)
+                        .orElseThrow(
+                                () ->
+                                        new ResourceNotFoundException(
+                                                "Doctor not found: " + doctorId));
+        Department department =
+                departmentRepository
+                        .findById(request.departmentId().trim())
+                        .orElseThrow(
+                                () ->
+                                        new BadRequestException(
+                                                "Department not found: " + request.departmentId()));
         doctor.setDepartment(department);
         doctor.setSpecialization(request.specialization().trim());
-        doctor.setQualification(request.qualification() == null || request.qualification().isBlank()
-            ? null : request.qualification().trim());
+        doctor.setQualification(
+                request.qualification() == null || request.qualification().isBlank()
+                        ? null
+                        : request.qualification().trim());
         doctor.setConsultationFee(request.consultationFee());
         Doctor saved = doctorRepository.save(doctor);
-        auditService.record(AuditAction.DOCTOR_DETAILS_CHANGED, "USER", doctorId,
-            saved.getName() + ": " + department.getDepartmentName() + ", " + saved.getSpecialization()
-                + ", fee " + saved.getConsultationFee());
+        auditService.record(
+                AuditAction.DOCTOR_DETAILS_CHANGED,
+                "USER",
+                doctorId,
+                saved.getName()
+                        + ": "
+                        + department.getDepartmentName()
+                        + ", "
+                        + saved.getSpecialization()
+                        + ", fee "
+                        + saved.getConsultationFee());
         return DoctorDTO.from(saved);
     }
 
@@ -148,10 +193,12 @@ public class AdminServiceImpl implements AdminService {
         if (departmentRepository.existsByDepartmentNameIgnoreCase(name)) {
             throw new DuplicateResourceException("Department already exists: " + name);
         }
-        Department dept = new Department(
-            "DEPT-" + UUID.randomUUID().toString().substring(0, 8).toUpperCase(), name);
+        Department dept =
+                new Department(
+                        "DEPT-" + UUID.randomUUID().toString().substring(0, 8).toUpperCase(), name);
         Department saved = departmentRepository.save(dept);
-        auditService.record(AuditAction.DEPARTMENT_ADDED, "DEPARTMENT", saved.getDepartmentId(), name);
+        auditService.record(
+                AuditAction.DEPARTMENT_ADDED, "DEPARTMENT", saved.getDepartmentId(), name);
         return DepartmentDTO.from(saved);
     }
 
@@ -161,17 +208,20 @@ public class AdminServiceImpl implements AdminService {
         LocalDate today = LocalDate.now();
         List<PaymentStatus> unpaid = List.of(PaymentStatus.PENDING, PaymentStatus.FAILED);
         return new AdminDashboardResponse(
-            userRepository.count(),
-            userRepository.countByAccountStatus(AccountStatus.ACTIVE),
-            userRepository.countByRoleAndAccountStatus(UserRole.PATIENT, AccountStatus.ACTIVE),
-            userRepository.countByRoleAndAccountStatus(UserRole.DOCTOR, AccountStatus.ACTIVE),
-            userRepository.countByAccountStatus(AccountStatus.SUSPENDED) + userRepository.countByAccountStatus(AccountStatus.DEACTIVATED),
-            appointmentRepository.countByAppointmentDate(today),
-            // upcoming visits still to happen: today or later, booked/confirmed/in progress (not stale past ones)
-            appointmentRepository.countByAppointmentDateGreaterThanEqualAndAppointmentStatusIn(today, ACTIVE_APPOINTMENT_STATUSES),
-            complaintRepository.countByResolutionStatusIn(OPEN_COMPLAINT_STATUSES),
-            billRepository.countByPaymentStatusIn(unpaid),
-            billRepository.sumAmountByPaymentStatusIn(unpaid),
-            billRepository.sumAmountByPaymentStatusIn(List.of(PaymentStatus.PAID)));
+                userRepository.count(),
+                userRepository.countByAccountStatus(AccountStatus.ACTIVE),
+                userRepository.countByRoleAndAccountStatus(UserRole.PATIENT, AccountStatus.ACTIVE),
+                userRepository.countByRoleAndAccountStatus(UserRole.DOCTOR, AccountStatus.ACTIVE),
+                userRepository.countByAccountStatus(AccountStatus.SUSPENDED)
+                        + userRepository.countByAccountStatus(AccountStatus.DEACTIVATED),
+                appointmentRepository.countByAppointmentDate(today),
+                // upcoming visits still to happen: today or later, booked/confirmed/in progress
+                // (not stale past ones)
+                appointmentRepository.countByAppointmentDateGreaterThanEqualAndAppointmentStatusIn(
+                        today, ACTIVE_APPOINTMENT_STATUSES),
+                complaintRepository.countByResolutionStatusIn(OPEN_COMPLAINT_STATUSES),
+                billRepository.countByPaymentStatusIn(unpaid),
+                billRepository.sumAmountByPaymentStatusIn(unpaid),
+                billRepository.sumAmountByPaymentStatusIn(List.of(PaymentStatus.PAID)));
     }
 }

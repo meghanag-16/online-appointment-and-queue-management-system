@@ -20,8 +20,10 @@ public class BillResponse {
     private String paymentMethod;
     private LocalDateTime generatedAt;
     private LocalDateTime paidAt;
+
     /** STANDARD, EMERGENCY or FOLLOW_UP. */
     private String billingStrategy;
+
     private String billingRule;
 
     public BillResponse() {}
@@ -35,9 +37,14 @@ public class BillResponse {
             r.patientId = a.getPatient() != null ? a.getPatient().getUserId() : null;
             r.patientName = a.getPatient() != null ? a.getPatient().getName() : null;
             r.doctorName = a.getDoctor() != null ? a.getDoctor().getName() : null;
-            r.appointmentStart = a.getSlot() != null ? a.getSlot().getStartTime()
-                : a.getAppointmentDate() != null ? a.getAppointmentDate().atStartOfDay() : null;
-            r.appointmentStatus = a.getAppointmentStatus() != null ? a.getAppointmentStatus().name() : null;
+            r.appointmentStart =
+                    a.getSlot() != null
+                            ? a.getSlot().getStartTime()
+                            : a.getAppointmentDate() != null
+                                    ? a.getAppointmentDate().atStartOfDay()
+                                    : null;
+            r.appointmentStatus =
+                    a.getAppointmentStatus() != null ? a.getAppointmentStatus().name() : null;
         }
         r.totalAmount = bill.getTotalAmount();
         r.paymentStatus = bill.getPaymentStatus();
@@ -49,18 +56,59 @@ public class BillResponse {
         return r;
     }
 
-    public Long getBillId() { return billId; }
-    public Long getAppointmentId() { return appointmentId; }
-    public String getPatientId() { return patientId; }
-    public String getPatientName() { return patientName; }
-    public String getDoctorName() { return doctorName; }
-    public LocalDateTime getAppointmentStart() { return appointmentStart; }
-    public String getAppointmentStatus() { return appointmentStatus; }
-    public BigDecimal getTotalAmount() { return totalAmount; }
-    public PaymentStatus getPaymentStatus() { return paymentStatus; }
-    public String getPaymentMethod() { return paymentMethod; }
-    public LocalDateTime getGeneratedAt() { return generatedAt; }
-    public LocalDateTime getPaidAt() { return paidAt; }
-    public String getBillingStrategy() { return billingStrategy; }
-    public String getBillingRule() { return billingRule; }
+    public Long getBillId() {
+        return billId;
+    }
+
+    public Long getAppointmentId() {
+        return appointmentId;
+    }
+
+    public String getPatientId() {
+        return patientId;
+    }
+
+    public String getPatientName() {
+        return patientName;
+    }
+
+    public String getDoctorName() {
+        return doctorName;
+    }
+
+    public LocalDateTime getAppointmentStart() {
+        return appointmentStart;
+    }
+
+    public String getAppointmentStatus() {
+        return appointmentStatus;
+    }
+
+    public BigDecimal getTotalAmount() {
+        return totalAmount;
+    }
+
+    public PaymentStatus getPaymentStatus() {
+        return paymentStatus;
+    }
+
+    public String getPaymentMethod() {
+        return paymentMethod;
+    }
+
+    public LocalDateTime getGeneratedAt() {
+        return generatedAt;
+    }
+
+    public LocalDateTime getPaidAt() {
+        return paidAt;
+    }
+
+    public String getBillingStrategy() {
+        return billingStrategy;
+    }
+
+    public String getBillingRule() {
+        return billingRule;
+    }
 }

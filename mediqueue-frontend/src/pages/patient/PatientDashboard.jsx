@@ -29,9 +29,9 @@ export default function PatientDashboard() {
 
   const cards = [
     { label: 'Upcoming Appointments', value: stats.upcomingAppointments, accent: true },
-    { label: 'Pending Bills',          value: stats.pendingBills },
-    { label: 'Lab Reports Ready',      value: stats.reportsReady },
-    { label: 'Open Complaints',        value: stats.openComplaints },
+    { label: 'Pending Bills', value: stats.pendingBills },
+    { label: 'Lab Reports Ready', value: stats.reportsReady },
+    { label: 'Open Complaints', value: stats.openComplaints },
   ]
 
   return (
@@ -43,9 +43,21 @@ export default function PatientDashboard() {
       ) : (
         <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(200px,1fr))', gap: 20 }}>
           {cards.map(c => (
-            <div key={c.label} className="card" style={{ borderTop: c.accent ? '3px solid var(--color-accent)' : undefined }}>
+            <div
+              key={c.label}
+              className="card"
+              style={{ borderTop: c.accent ? '3px solid var(--color-accent)' : undefined }}
+            >
               <p style={{ fontSize: '0.8rem', color: 'var(--color-text-muted)', marginBottom: 8 }}>{c.label}</p>
-              <p style={{ fontSize: '2rem', fontWeight: 700, color: c.accent ? 'var(--color-accent)' : 'var(--color-dark)' }}>{c.value}</p>
+              <p
+                style={{
+                  fontSize: '2rem',
+                  fontWeight: 700,
+                  color: c.accent ? 'var(--color-accent)' : 'var(--color-dark)',
+                }}
+              >
+                {c.value}
+              </p>
             </div>
           ))}
         </div>

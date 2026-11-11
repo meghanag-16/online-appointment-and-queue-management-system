@@ -41,24 +41,38 @@ export default function RegisterPage() {
 }
 
 const outerStyle = {
-  minHeight: '100vh', display: 'flex',
-  alignItems: 'center', justifyContent: 'center',
+  minHeight: '100vh',
+  display: 'flex',
+  alignItems: 'center',
+  justifyContent: 'center',
   background: 'linear-gradient(135deg, var(--color-dark) 0%, #3d3d3d 100%)',
   padding: 16,
 }
 const panelStyle = {
-  background: 'var(--color-white)', borderRadius: 16,
-  padding: '40px 36px', width: '100%', maxWidth: 520,
+  background: 'var(--color-white)',
+  borderRadius: 16,
+  padding: '40px 36px',
+  width: '100%',
+  maxWidth: 520,
   boxShadow: 'var(--shadow-lg)',
 }
 const logoStyle = {
-  width: 52, height: 52, borderRadius: 14,
-  background: 'var(--color-accent)', color: '#fff',
-  fontSize: '1.5rem', fontWeight: 700,
-  display: 'inline-flex', alignItems: 'center', justifyContent: 'center',
+  width: 52,
+  height: 52,
+  borderRadius: 14,
+  background: 'var(--color-accent)',
+  color: '#fff',
+  fontSize: '1.5rem',
+  fontWeight: 700,
+  display: 'inline-flex',
+  alignItems: 'center',
+  justifyContent: 'center',
   marginBottom: 10,
 }
 const headingStyle = {
-  fontFamily: 'var(--font-display)', fontSize: '1.5rem',
-  color: 'var(--color-dark)', fontWeight: 400, marginBottom: 4,
+  fontFamily: 'var(--font-display)',
+  fontSize: '1.5rem',
+  color: 'var(--color-dark)',
+  fontWeight: 400,
+  marginBottom: 4,
 }

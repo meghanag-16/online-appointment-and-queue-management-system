@@ -3,7 +3,6 @@ package com.mediqueue.service;
 import com.mediqueue.dto.ComplaintRequest;
 import com.mediqueue.dto.ComplaintResponse;
 import com.mediqueue.dto.ComplaintStatusRequest;
-
 import java.util.List;
 
 public interface ComplaintService {

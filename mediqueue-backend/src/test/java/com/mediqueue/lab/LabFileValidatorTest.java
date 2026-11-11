@@ -1,11 +1,10 @@
 package com.mediqueue.lab;
 
-import com.mediqueue.exception.BadRequestException;
-import org.junit.jupiter.api.Test;
-
-import java.nio.charset.StandardCharsets;
-
 import static org.junit.jupiter.api.Assertions.*;
+
+import com.mediqueue.exception.BadRequestException;
+import java.nio.charset.StandardCharsets;
+import org.junit.jupiter.api.Test;
 
 class LabFileValidatorTest {
 
@@ -16,7 +15,8 @@ class LabFileValidatorTest {
 
     @Test
     void acceptsPdfPngAndJpeg() {
-        assertEquals("application/pdf", LabFileValidator.validate("cbc.pdf", 1000, PDF).contentType());
+        assertEquals(
+                "application/pdf", LabFileValidator.validate("cbc.pdf", 1000, PDF).contentType());
         assertEquals("image/png", LabFileValidator.validate("xray.PNG", 1000, PNG).contentType());
         var jpeg = LabFileValidator.validate("scan.jpeg", 1000, JPG);
         assertEquals("image/jpeg", jpeg.contentType());
@@ -25,23 +25,34 @@ class LabFileValidatorTest {
 
     @Test
     void rejectsOtherFileTypes() {
-        var e = assertThrows(BadRequestException.class, () -> LabFileValidator.validate("notes.docx", 1000, PDF));
+        var e =
+                assertThrows(
+                        BadRequestException.class,
+                        () -> LabFileValidator.validate("notes.docx", 1000, PDF));
         assertTrue(e.getMessage().contains("PDF, PNG and JPEG"));
     }
 
     @Test
     void rejectsARenamedFileWhoseContentDoesNotMatch() {
-        assertThrows(BadRequestException.class, () -> LabFileValidator.validate("report.pdf", 1000, EXE));
-        assertThrows(BadRequestException.class, () -> LabFileValidator.validate("photo.png", 1000, JPG));
+        assertThrows(
+                BadRequestException.class,
+                () -> LabFileValidator.validate("report.pdf", 1000, EXE));
+        assertThrows(
+                BadRequestException.class, () -> LabFileValidator.validate("photo.png", 1000, JPG));
     }
 
     @Test
     void rejectsEmptyAndOversizedFiles() {
         assertThrows(BadRequestException.class, () -> LabFileValidator.validate("a.pdf", 0, PDF));
-        var e = assertThrows(BadRequestException.class,
-            () -> LabFileValidator.validate("a.pdf", LabFileValidator.MAX_BYTES + 1, PDF));
+        var e =
+                assertThrows(
+                        BadRequestException.class,
+                        () ->
+                                LabFileValidator.validate(
+                                        "a.pdf", LabFileValidator.MAX_BYTES + 1, PDF));
         assertTrue(e.getMessage().contains("10 MB"));
-        assertDoesNotThrow(() -> LabFileValidator.validate("a.pdf", LabFileValidator.MAX_BYTES, PDF));
+        assertDoesNotThrow(
+                () -> LabFileValidator.validate("a.pdf", LabFileValidator.MAX_BYTES, PDF));
     }
 
     @Test

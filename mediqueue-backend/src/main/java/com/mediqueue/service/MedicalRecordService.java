@@ -10,7 +10,10 @@ public interface MedicalRecordService {
     /** Returns the patient's record, creating an empty one if it does not exist yet. */
     MedicalRecord ensureRecord(Patient patient);
 
-    /** Creates missing records for all patients (patients added before records existed). Returns how many. */
+    /**
+     * Creates missing records for all patients (patients added before records existed). Returns how
+     * many.
+     */
     int createMissingRecords();
 
     /** Adds a dated line to the record's diagnoses (and medications/advice to observations). */

@@ -20,7 +20,7 @@ const axiosInstance = axios.create({
 })
 
 // Attach JWT token from localStorage on every request
-axiosInstance.interceptors.request.use((config) => {
+axiosInstance.interceptors.request.use(config => {
   const token = localStorage.getItem(TOKEN_KEY)
   if (token) config.headers.Authorization = `Bearer ${token}`
   return config
@@ -36,11 +36,11 @@ export function errorMessage(err, fallback = 'Something went wrong. Please try a
   return err?.message || fallback
 }
 
-const isAuthCall = (config) => /\/auth\/(login|register)$/.test(config?.url || '')
+const isAuthCall = config => /\/auth\/(login|register)$/.test(config?.url || '')
 
 axiosInstance.interceptors.response.use(
-  (res) => res,
-  (err) => {
+  res => res,
+  err => {
     const status = err.response?.status
     err.userMessage = errorMessage(err)
 
@@ -60,7 +60,9 @@ axiosInstance.interceptors.response.use(
       try {
         const stored = JSON.parse(localStorage.getItem(USER_KEY) || 'null')
         if (stored) localStorage.setItem(USER_KEY, JSON.stringify({ ...stored, mustChangePassword: true }))
-      } catch { /* ignore */ }
+      } catch {
+        /* ignore */
+      }
       if (!window.location.pathname.startsWith('/change-password')) window.location.assign('/change-password')
       return Promise.reject(err)
     }
@@ -71,7 +73,7 @@ axiosInstance.interceptors.response.use(
     }
 
     return Promise.reject(err)
-  }
+  },
 )
 
 export default axiosInstance

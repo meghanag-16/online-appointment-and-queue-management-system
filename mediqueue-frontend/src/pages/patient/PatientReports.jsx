@@ -16,14 +16,19 @@ export default function PatientReports() {
   useEffect(() => {
     getLabReportsByPatient(user.userId)
       .then(res => setReports(res.data))
-      .catch(err => { setReports([]); setError(errorMessage(err, 'Could not load your lab reports.')) })
+      .catch(err => {
+        setReports([])
+        setError(errorMessage(err, 'Could not load your lab reports.'))
+      })
   }, [user.userId])
 
   return (
     <PageLayout>
       <PageTitle title="Lab Reports" subtitle="Your test results. You get a notification when a new one is ready." />
       {error && <div className="alert alert-error">{error}</div>}
-      {reports === null ? <Spinner /> : (
+      {reports === null ? (
+        <Spinner />
+      ) : (
         <div className="card" style={{ padding: 0 }}>
           <ReportsTable reports={reports} emptyText="No lab reports yet." />
         </div>

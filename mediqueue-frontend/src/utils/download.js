@@ -13,7 +13,11 @@ export async function downloadLabReport(report) {
     // With responseType 'blob' the JSON error body arrives as a Blob; read it so the real reason is shown.
     const body = err.response?.data
     if (body && typeof body.text === 'function') {
-      try { err.response.data = JSON.parse(await body.text()) } catch { /* not JSON: keep the generic message */ }
+      try {
+        err.response.data = JSON.parse(await body.text())
+      } catch {
+        /* not JSON: keep the generic message */
+      }
     }
     throw err
   }

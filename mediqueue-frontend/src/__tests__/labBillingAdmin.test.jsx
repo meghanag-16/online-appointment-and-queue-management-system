@@ -38,13 +38,27 @@ describe('lab file check (same rules as the server)', () => {
 
 describe('NotificationBell', () => {
   beforeEach(() => {
-    getMyNotifications.mockResolvedValue({ data: {
-      unreadCount: 2,
-      items: [
-        { notificationId: 7, type: 'REPORT_READY', message: 'Your lab report "Blood test" is ready.', timestamp: '2026-11-12T09:00:00', read: false },
-        { notificationId: 6, type: 'APPOINTMENT_REMINDER', message: 'Reminder: appointment tomorrow', timestamp: '2026-11-11T09:00:00', read: true },
-      ],
-    } })
+    getMyNotifications.mockResolvedValue({
+      data: {
+        unreadCount: 2,
+        items: [
+          {
+            notificationId: 7,
+            type: 'REPORT_READY',
+            message: 'Your lab report "Blood test" is ready.',
+            timestamp: '2026-11-12T09:00:00',
+            read: false,
+          },
+          {
+            notificationId: 6,
+            type: 'APPOINTMENT_REMINDER',
+            message: 'Reminder: appointment tomorrow',
+            timestamp: '2026-11-11T09:00:00',
+            read: true,
+          },
+        ],
+      },
+    })
   })
 
   test('shows the unread count and the list, and marks an unread one as read', async () => {
@@ -69,11 +83,26 @@ describe('TemporaryPasswordNotice', () => {
 
 describe('ReportsTable', () => {
   test('lists reports with a download button, and patient columns for staff', () => {
-    render(<ReportsTable showPatient reports={[{
-      reportId: 3, appointmentId: 12, appointmentDate: '2026-11-12', reportType: 'Lipid profile',
-      fileName: 'lipid.pdf', fileSize: 2048, uploadTime: '2026-11-12T11:00:00', remarks: 'Fasting',
-      patientName: 'Asha', patientId: 'PAT-1', doctorName: 'Rao',
-    }]} />)
+    render(
+      <ReportsTable
+        showPatient
+        reports={[
+          {
+            reportId: 3,
+            appointmentId: 12,
+            appointmentDate: '2026-11-12',
+            reportType: 'Lipid profile',
+            fileName: 'lipid.pdf',
+            fileSize: 2048,
+            uploadTime: '2026-11-12T11:00:00',
+            remarks: 'Fasting',
+            patientName: 'Asha',
+            patientId: 'PAT-1',
+            doctorName: 'Rao',
+          },
+        ]}
+      />,
+    )
     const row = screen.getByTestId('report-row-3')
     expect(row).toHaveTextContent('Lipid profile')
     expect(row).toHaveTextContent('Asha')
@@ -89,7 +118,13 @@ describe('ReportsTable', () => {
 
 describe('StatusBadge', () => {
   test('labels the new bill and complaint states', () => {
-    render(<><StatusBadge status="VOID" /><StatusBadge status="UNDER_REVIEW" /><StatusBadge status="FOLLOW_UP" /></>)
+    render(
+      <>
+        <StatusBadge status="VOID" />
+        <StatusBadge status="UNDER_REVIEW" />
+        <StatusBadge status="FOLLOW_UP" />
+      </>,
+    )
     expect(screen.getByText('Void')).toBeInTheDocument()
     expect(screen.getByText('Under Review')).toBeInTheDocument()
     expect(screen.getByText('Follow Up')).toBeInTheDocument()

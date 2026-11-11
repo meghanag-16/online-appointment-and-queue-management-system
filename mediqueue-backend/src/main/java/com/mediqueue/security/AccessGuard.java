@@ -7,14 +7,12 @@ import com.mediqueue.repository.AppointmentRepository;
 import org.springframework.stereotype.Component;
 
 /**
- * Ownership rules from the requirements, in one place:
- *  - Patients see only their own data.
- *  - Doctors see only patients on their own appointments.
- *  - Lab technicians work with appointments and reports, but not prescriptions.
- *  - Receptionists and administrators can see everything.
+ * Ownership rules from the requirements, in one place: - Patients see only their own data. -
+ * Doctors see only patients on their own appointments. - Lab technicians work with appointments and
+ * reports, but not prescriptions. - Receptionists and administrators can see everything.
  *
- * Role checks (which role may call an endpoint) stay in @PreAuthorize; this class answers
- * "may THIS user touch THIS record".
+ * <p>Role checks (which role may call an endpoint) stay in @PreAuthorize; this class answers "may
+ * THIS user touch THIS record".
  */
 @Component
 public class AccessGuard {
@@ -22,7 +20,8 @@ public class AccessGuard {
     private final CurrentUserService currentUser;
     private final AppointmentRepository appointmentRepository;
 
-    public AccessGuard(CurrentUserService currentUser, AppointmentRepository appointmentRepository) {
+    public AccessGuard(
+            CurrentUserService currentUser, AppointmentRepository appointmentRepository) {
         this.currentUser = currentUser;
         this.appointmentRepository = appointmentRepository;
     }
@@ -33,7 +32,8 @@ public class AccessGuard {
         if (me.isStaff()) return;
         if (me.is(UserRole.PATIENT) && me.userId().equals(patientId)) return;
         if (me.is(UserRole.DOCTOR)
-                && appointmentRepository.existsByDoctor_UserIdAndPatient_UserId(me.userId(), patientId)) return;
+                && appointmentRepository.existsByDoctor_UserIdAndPatient_UserId(
+                        me.userId(), patientId)) return;
         throw new ForbiddenException("Access denied: you can only view your own patients' records");
     }
 
@@ -68,11 +68,17 @@ public class AccessGuard {
     /** Clinical writes (prescriptions): only the appointment's own doctor. */
     public void requireTreatingDoctor(Appointment a) {
         AuthenticatedUser me = currentUser.get();
-        if (me.is(UserRole.DOCTOR) && a.getDoctor() != null && me.userId().equals(a.getDoctor().getUserId())) return;
-        throw new ForbiddenException("Access denied: only the doctor on this appointment can do this");
+        if (me.is(UserRole.DOCTOR)
+                && a.getDoctor() != null
+                && me.userId().equals(a.getDoctor().getUserId())) return;
+        throw new ForbiddenException(
+                "Access denied: only the doctor on this appointment can do this");
     }
 
-    /** Documents tied to an appointment (bills, lab reports): its patient, its doctor, staff, optionally lab. */
+    /**
+     * Documents tied to an appointment (bills, lab reports): its patient, its doctor, staff,
+     * optionally lab.
+     */
     public void requireAppointmentDocumentRead(Appointment a, boolean allowLabTechnician) {
         AuthenticatedUser me = currentUser.get();
         if (me.isStaff() || isParticipant(me, a)) return;
@@ -82,7 +88,8 @@ public class AccessGuard {
 
     private boolean isParticipant(AuthenticatedUser me, Appointment a) {
         return switch (me.role()) {
-            case PATIENT -> a.getPatient() != null && me.userId().equals(a.getPatient().getUserId());
+            case PATIENT ->
+                    a.getPatient() != null && me.userId().equals(a.getPatient().getUserId());
             case DOCTOR -> a.getDoctor() != null && me.userId().equals(a.getDoctor().getUserId());
             default -> false;
         };

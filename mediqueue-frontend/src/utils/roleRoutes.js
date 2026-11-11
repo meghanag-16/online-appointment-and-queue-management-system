@@ -2,11 +2,11 @@
  * Maps each role to its default landing page after login.
  */
 export const ROLE_HOME = {
-  PATIENT:        '/patient/dashboard',
-  DOCTOR:         '/doctor/dashboard',
+  PATIENT: '/patient/dashboard',
+  DOCTOR: '/doctor/dashboard',
   LAB_TECHNICIAN: '/lab/dashboard',
-  RECEPTIONIST:   '/receptionist/dashboard',
-  ADMINISTRATOR:  '/admin/dashboard',
+  RECEPTIONIST: '/receptionist/dashboard',
+  ADMINISTRATOR: '/admin/dashboard',
 }
 
 /**

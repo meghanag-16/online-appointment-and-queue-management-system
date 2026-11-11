@@ -3,7 +3,6 @@ package com.mediqueue.dto;
 import jakarta.validation.ConstraintViolation;
 import jakarta.validation.ConstraintViolationException;
 import jakarta.validation.Validator;
-
 import java.util.Set;
 import java.util.stream.Collectors;
 
@@ -17,9 +16,10 @@ public final class AdminAccountRequests {
 
     public static void validate(Validator validator, RegisterRequest request) {
         request.setPassword(null);
-        Set<ConstraintViolation<RegisterRequest>> violations = validator.validate(request).stream()
-            .filter(v -> !"password".equals(v.getPropertyPath().toString()))
-            .collect(Collectors.toSet());
+        Set<ConstraintViolation<RegisterRequest>> violations =
+                validator.validate(request).stream()
+                        .filter(v -> !"password".equals(v.getPropertyPath().toString()))
+                        .collect(Collectors.toSet());
         if (!violations.isEmpty()) throw new ConstraintViolationException(violations);
     }
 }

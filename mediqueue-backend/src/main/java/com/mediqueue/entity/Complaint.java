@@ -5,7 +5,10 @@ import jakarta.persistence.*;
 import java.time.LocalDate;
 import java.time.LocalDateTime;
 
-/** A patient's complaint, optionally about one of their appointments or bills. OPEN → UNDER_REVIEW → RESOLVED. */
+/**
+ * A patient's complaint, optionally about one of their appointments or bills. OPEN → UNDER_REVIEW →
+ * RESOLVED.
+ */
 @Entity
 @Table(name = "complaints")
 public class Complaint {
@@ -51,38 +54,93 @@ public class Complaint {
 
     public Complaint() {}
 
-    public String getComplaintId() { return complaintId; }
-    public void setComplaintId(String complaintId) { this.complaintId = complaintId; }
+    public String getComplaintId() {
+        return complaintId;
+    }
 
-    public Patient getPatient() { return patient; }
-    public void setPatient(Patient patient) { this.patient = patient; }
+    public void setComplaintId(String complaintId) {
+        this.complaintId = complaintId;
+    }
 
-    public Appointment getAppointment() { return appointment; }
-    public void setAppointment(Appointment appointment) { this.appointment = appointment; }
+    public Patient getPatient() {
+        return patient;
+    }
 
-    public Bill getBill() { return bill; }
-    public void setBill(Bill bill) { this.bill = bill; }
+    public void setPatient(Patient patient) {
+        this.patient = patient;
+    }
 
-    public String getIssueType() { return issueType; }
-    public void setIssueType(String issueType) { this.issueType = issueType; }
+    public Appointment getAppointment() {
+        return appointment;
+    }
 
-    public String getDescription() { return description; }
-    public void setDescription(String description) { this.description = description; }
+    public void setAppointment(Appointment appointment) {
+        this.appointment = appointment;
+    }
 
-    public LocalDate getCreatedOn() { return createdOn; }
-    public void setCreatedOn(LocalDate createdOn) { this.createdOn = createdOn; }
+    public Bill getBill() {
+        return bill;
+    }
 
-    public ResolutionStatus getResolutionStatus() { return resolutionStatus; }
-    public void setResolutionStatus(ResolutionStatus resolutionStatus) { this.resolutionStatus = resolutionStatus; }
+    public void setBill(Bill bill) {
+        this.bill = bill;
+    }
 
-    public String getResolutionNote() { return resolutionNote; }
-    public void setResolutionNote(String resolutionNote) { this.resolutionNote = resolutionNote; }
+    public String getIssueType() {
+        return issueType;
+    }
 
-    public LocalDateTime getUpdatedAt() { return updatedAt; }
-    public void setUpdatedAt(LocalDateTime updatedAt) { this.updatedAt = updatedAt; }
+    public void setIssueType(String issueType) {
+        this.issueType = issueType;
+    }
 
-    public LocalDateTime getResolvedAt() { return resolvedAt; }
-    public void setResolvedAt(LocalDateTime resolvedAt) { this.resolvedAt = resolvedAt; }
+    public String getDescription() {
+        return description;
+    }
+
+    public void setDescription(String description) {
+        this.description = description;
+    }
+
+    public LocalDate getCreatedOn() {
+        return createdOn;
+    }
+
+    public void setCreatedOn(LocalDate createdOn) {
+        this.createdOn = createdOn;
+    }
+
+    public ResolutionStatus getResolutionStatus() {
+        return resolutionStatus;
+    }
+
+    public void setResolutionStatus(ResolutionStatus resolutionStatus) {
+        this.resolutionStatus = resolutionStatus;
+    }
+
+    public String getResolutionNote() {
+        return resolutionNote;
+    }
+
+    public void setResolutionNote(String resolutionNote) {
+        this.resolutionNote = resolutionNote;
+    }
+
+    public LocalDateTime getUpdatedAt() {
+        return updatedAt;
+    }
+
+    public void setUpdatedAt(LocalDateTime updatedAt) {
+        this.updatedAt = updatedAt;
+    }
+
+    public LocalDateTime getResolvedAt() {
+        return resolvedAt;
+    }
+
+    public void setResolvedAt(LocalDateTime resolvedAt) {
+        this.resolvedAt = resolvedAt;
+    }
 
     @PrePersist
     public void prePersist() {

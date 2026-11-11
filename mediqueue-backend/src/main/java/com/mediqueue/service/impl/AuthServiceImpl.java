@@ -24,10 +24,11 @@ public class AuthServiceImpl implements AuthService {
     private final PasswordEncoder passwordEncoder;
     private final JwtUtil jwtUtil;
 
-    public AuthServiceImpl(UserRepository userRepository,
-                           UserAccountService userAccountService,
-                           PasswordEncoder passwordEncoder,
-                           JwtUtil jwtUtil) {
+    public AuthServiceImpl(
+            UserRepository userRepository,
+            UserAccountService userAccountService,
+            PasswordEncoder passwordEncoder,
+            JwtUtil jwtUtil) {
         this.userRepository = userRepository;
         this.userAccountService = userAccountService;
         this.passwordEncoder = passwordEncoder;
@@ -43,23 +44,34 @@ public class AuthServiceImpl implements AuthService {
     @Override
     @Transactional(readOnly = true)
     public AuthResponse login(LoginRequest req) {
-        User user = userRepository.findByUsername(req.getUsername().trim())
-            .orElseThrow(() -> new UnauthorizedException("Invalid username or password"));
+        User user =
+                userRepository
+                        .findByUsername(req.getUsername().trim())
+                        .orElseThrow(
+                                () -> new UnauthorizedException("Invalid username or password"));
 
         if (!passwordEncoder.matches(req.getPassword(), user.getPassword())) {
             throw new UnauthorizedException("Invalid username or password");
         }
         // Checked after the password so account state is not revealed to someone guessing.
         if (user.getAccountStatus() != AccountStatus.ACTIVE) {
-            throw new AccountInactiveException("Your account is " + AccountStatus.describe(user.getAccountStatus()) + ".");
+            throw new AccountInactiveException(
+                    "Your account is " + AccountStatus.describe(user.getAccountStatus()) + ".");
         }
         return tokenFor(user);
     }
 
     private AuthResponse tokenFor(User user) {
         String token = jwtUtil.generateToken(user.getUsername(), user.getRole().name());
-        AuthResponse response = new AuthResponse(token, user.getUserId(), user.getUsername(), user.getName(),
-            user.getRole(), user.getAccountStatus(), null);
+        AuthResponse response =
+                new AuthResponse(
+                        token,
+                        user.getUserId(),
+                        user.getUsername(),
+                        user.getName(),
+                        user.getRole(),
+                        user.getAccountStatus(),
+                        null);
         response.setMustChangePassword(user.isMustChangePassword());
         return response;
     }

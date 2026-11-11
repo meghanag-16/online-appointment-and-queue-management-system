@@ -3,9 +3,9 @@ package com.mediqueue.security;
 import java.security.SecureRandom;
 
 /**
- * Random one-time passwords for accounts created or reset by the administrator. 12 characters
- * with at least one upper-case letter, lower-case letter, digit and symbol; look-alike
- * characters (0/O, 1/l/I) are left out so it can be read out or copied by hand.
+ * Random one-time passwords for accounts created or reset by the administrator. 12 characters with
+ * at least one upper-case letter, lower-case letter, digit and symbol; look-alike characters (0/O,
+ * 1/l/I) are left out so it can be read out or copied by hand.
  */
 public final class TemporaryPasswords {
 
@@ -30,7 +30,9 @@ public final class TemporaryPasswords {
         // shuffle so the guaranteed characters are not always at the front
         for (int i = LENGTH - 1; i > 0; i--) {
             int j = RANDOM.nextInt(i + 1);
-            char t = chars[i]; chars[i] = chars[j]; chars[j] = t;
+            char t = chars[i];
+            chars[i] = chars[j];
+            chars[j] = t;
         }
         return new String(chars);
     }

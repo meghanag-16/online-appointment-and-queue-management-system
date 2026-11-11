@@ -25,24 +25,39 @@ export default function BookAppointment() {
   const [cutoff, setCutoff] = useState(null)
 
   useEffect(() => {
-    axiosInstance.get(ENDPOINTS.SLOT_SETTINGS).then(res => setCutoff(res.data.changeCutoffHours)).catch(() => {})
+    axiosInstance
+      .get(ENDPOINTS.SLOT_SETTINGS)
+      .then(res => setCutoff(res.data.changeCutoffHours))
+      .catch(() => {})
     const preselected = params.get('doctorId')
     if (preselected) {
-      axiosInstance.get(ENDPOINTS.DOCTORS_SEARCH()).then(res => {
-        const d = res.data.find(x => x.userId === preselected)
-        if (d) setDoctor(d)
-      }).catch(() => {})
+      axiosInstance
+        .get(ENDPOINTS.DOCTORS_SEARCH())
+        .then(res => {
+          const d = res.data.find(x => x.userId === preselected)
+          if (d) setDoctor(d)
+        })
+        .catch(() => {})
     }
   }, []) // eslint-disable-line react-hooks/exhaustive-deps
 
   function chooseDoctor(d) {
-    setDoctor(d); setSlot(null); setError(''); setAlternates([])
+    setDoctor(d)
+    setSlot(null)
+    setError('')
+    setAlternates([])
   }
 
   async function handleSubmit(e) {
     e.preventDefault()
-    if (!slot) { setError('Please select a time slot.'); return }
-    setLoading(true); setError(''); setSuccess(''); setAlternates([])
+    if (!slot) {
+      setError('Please select a time slot.')
+      return
+    }
+    setLoading(true)
+    setError('')
+    setSuccess('')
+    setAlternates([])
     try {
       await axiosInstance.post(ENDPOINTS.APPOINTMENTS, {
         doctorId: doctor.userId,
@@ -55,8 +70,10 @@ export default function BookAppointment() {
       setError(errorMessage(err, 'Booking failed. Please try again.'))
       setAlternates(err.response?.data?.alternateSlots || [])
       setSlot(null)
-      setRefreshKey(k => k + 1)   // reload the times: the one we chose is gone
-    } finally { setLoading(false) }
+      setRefreshKey(k => k + 1) // reload the times: the one we chose is gone
+    } finally {
+      setLoading(false)
+    }
   }
 
   function pickAlternate(alt) {
@@ -64,7 +81,8 @@ export default function BookAppointment() {
       setDoctor({ userId: alt.doctorId, name: alt.doctorName, departmentName: alt.departmentName })
     }
     setSlot({ slotId: alt.slotId, startTime: alt.startTime, endTime: alt.endTime })
-    setAlternates([]); setError('')
+    setAlternates([])
+    setError('')
   }
 
   return (
@@ -80,26 +98,48 @@ export default function BookAppointment() {
         <form className="card" onSubmit={handleSubmit} style={{ maxWidth: 760 }}>
           <h3 style={{ marginBottom: 4 }}>2. Choose a time with {doctor.name}</h3>
           <p style={{ fontSize: '0.82rem', color: 'var(--color-text-muted)', marginBottom: 14 }}>
-            {cutoff != null && `You can cancel or reschedule up to ${cutoff} hour${cutoff === 1 ? '' : 's'} before the appointment.`}
+            {cutoff != null &&
+              `You can cancel or reschedule up to ${cutoff} hour${cutoff === 1 ? '' : 's'} before the appointment.`}
           </p>
           {error && <div className="alert alert-error">{error}</div>}
           {success && <div className="alert alert-success">{success}</div>}
 
-          <SlotPicker doctorId={doctor.userId} selectedSlotId={slot?.slotId} onSelect={s => { setSlot(s); setError('') }}
-            refreshKey={refreshKey} />
+          <SlotPicker
+            doctorId={doctor.userId}
+            selectedSlotId={slot?.slotId}
+            onSelect={s => {
+              setSlot(s)
+              setError('')
+            }}
+            refreshKey={refreshKey}
+          />
           <AlternateSlots alternates={alternates} onPick={pickAlternate} />
 
           <div className="form-group" style={{ marginTop: 16 }}>
             <label htmlFor="reason">Reason for visit</label>
-            <textarea id="reason" className="form-control" rows={3} maxLength={2000}
+            <textarea
+              id="reason"
+              className="form-control"
+              rows={3}
+              maxLength={2000}
               placeholder="Describe your symptoms or reason for visit…"
-              value={reasonForVisit} onChange={e => setReasonForVisit(e.target.value)} />
+              value={reasonForVisit}
+              onChange={e => setReasonForVisit(e.target.value)}
+            />
           </div>
 
-          {slot && <p style={{ marginBottom: 12 }}>Selected: <strong>{formatSlot(slot.startTime)}</strong></p>}
-          <button type="submit" className="btn btn-primary" data-testid="book-btn"
+          {slot && (
+            <p style={{ marginBottom: 12 }}>
+              Selected: <strong>{formatSlot(slot.startTime)}</strong>
+            </p>
+          )}
+          <button
+            type="submit"
+            className="btn btn-primary"
+            data-testid="book-btn"
             style={{ width: '100%', justifyContent: 'center', padding: '12px' }}
-            disabled={loading || !slot || !!success}>
+            disabled={loading || !slot || !!success}
+          >
             {loading ? 'Booking…' : 'Book Appointment'}
           </button>
         </form>

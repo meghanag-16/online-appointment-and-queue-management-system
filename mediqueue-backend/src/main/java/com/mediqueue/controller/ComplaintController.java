@@ -5,12 +5,11 @@ import com.mediqueue.dto.ComplaintResponse;
 import com.mediqueue.dto.ComplaintStatusRequest;
 import com.mediqueue.service.ComplaintService;
 import jakarta.validation.Valid;
+import java.util.List;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.web.bind.annotation.*;
-
-import java.util.List;
 
 @RestController
 @RequestMapping("/api/v1/complaints")
@@ -24,7 +23,8 @@ public class ComplaintController {
 
     @PostMapping
     @PreAuthorize("hasRole('PATIENT')")
-    public ResponseEntity<ComplaintResponse> raiseComplaint(@Valid @RequestBody ComplaintRequest request) {
+    public ResponseEntity<ComplaintResponse> raiseComplaint(
+            @Valid @RequestBody ComplaintRequest request) {
         return ResponseEntity.status(HttpStatus.CREATED).body(complaintService.raise(request));
     }
 
@@ -37,14 +37,15 @@ public class ComplaintController {
     /** ?status=OPEN | UNDER_REVIEW | RESOLVED (optional). */
     @GetMapping("/all")
     @PreAuthorize("hasRole('ADMINISTRATOR')")
-    public ResponseEntity<List<ComplaintResponse>> getAllComplaints(@RequestParam(required = false) String status) {
+    public ResponseEntity<List<ComplaintResponse>> getAllComplaints(
+            @RequestParam(required = false) String status) {
         return ResponseEntity.ok(complaintService.getAll(status));
     }
 
     @PatchMapping("/{complaintId}/status")
     @PreAuthorize("hasRole('ADMINISTRATOR')")
-    public ResponseEntity<ComplaintResponse> updateStatus(@PathVariable String complaintId,
-                                                          @Valid @RequestBody ComplaintStatusRequest request) {
+    public ResponseEntity<ComplaintResponse> updateStatus(
+            @PathVariable String complaintId, @Valid @RequestBody ComplaintStatusRequest request) {
         return ResponseEntity.ok(complaintService.updateStatus(complaintId, request));
     }
 }

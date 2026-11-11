@@ -9,11 +9,10 @@ import com.mediqueue.security.CurrentUserService;
 import com.mediqueue.service.AuthService;
 import com.mediqueue.service.UserAccountService;
 import jakarta.validation.Valid;
+import java.util.Map;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
-
-import java.util.Map;
 
 @RestController
 @RequestMapping("/api/v1/auth")
@@ -23,9 +22,10 @@ public class AuthController {
     private final UserAccountService userAccountService;
     private final CurrentUserService currentUser;
 
-    public AuthController(AuthService authService,
-                          UserAccountService userAccountService,
-                          CurrentUserService currentUser) {
+    public AuthController(
+            AuthService authService,
+            UserAccountService userAccountService,
+            CurrentUserService currentUser) {
         this.authService = authService;
         this.userAccountService = userAccountService;
         this.currentUser = currentUser;
@@ -59,7 +59,8 @@ public class AuthController {
 
     /** Any logged-in user changes their own password. */
     @PutMapping("/me/password")
-    public ResponseEntity<Map<String, String>> changePassword(@Valid @RequestBody ChangePasswordRequest request) {
+    public ResponseEntity<Map<String, String>> changePassword(
+            @Valid @RequestBody ChangePasswordRequest request) {
         userAccountService.changeOwnPassword(request);
         return ResponseEntity.ok(Map.of("message", "Password changed"));
     }

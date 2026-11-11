@@ -23,22 +23,46 @@ public class Doctor extends User {
 
     public Doctor() {}
 
-    public Doctor(Department department, String qualification, String specialization, BigDecimal consultationFee) {
+    public Doctor(
+            Department department,
+            String qualification,
+            String specialization,
+            BigDecimal consultationFee) {
         this.department = department;
         this.qualification = qualification;
         this.specialization = specialization;
         this.consultationFee = consultationFee;
     }
 
-    public Department getDepartment() { return department; }
-    public void setDepartment(Department department) { this.department = department; }
+    public Department getDepartment() {
+        return department;
+    }
 
-    public String getQualification() { return qualification; }
-    public void setQualification(String qualification) { this.qualification = qualification; }
+    public void setDepartment(Department department) {
+        this.department = department;
+    }
 
-    public String getSpecialization() { return specialization; }
-    public void setSpecialization(String specialization) { this.specialization = specialization; }
+    public String getQualification() {
+        return qualification;
+    }
 
-    public BigDecimal getConsultationFee() { return consultationFee; }
-    public void setConsultationFee(BigDecimal consultationFee) { this.consultationFee = consultationFee; }
+    public void setQualification(String qualification) {
+        this.qualification = qualification;
+    }
+
+    public String getSpecialization() {
+        return specialization;
+    }
+
+    public void setSpecialization(String specialization) {
+        this.specialization = specialization;
+    }
+
+    public BigDecimal getConsultationFee() {
+        return consultationFee;
+    }
+
+    public void setConsultationFee(BigDecimal consultationFee) {
+        this.consultationFee = consultationFee;
+    }
 }

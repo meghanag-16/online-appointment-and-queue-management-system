@@ -9,8 +9,8 @@ import org.springframework.scheduling.annotation.Scheduled;
 import org.springframework.stereotype.Component;
 
 /**
- * Keeps every active doctor's rolling booking window filled with slots, using the
- * administrator's slot settings (see {@link SlotService}). Runs at startup and every night.
+ * Keeps every active doctor's rolling booking window filled with slots, using the administrator's
+ * slot settings (see {@link SlotService}). Runs at startup and every night.
  */
 @Component
 public class SlotScheduler {
@@ -29,12 +29,15 @@ public class SlotScheduler {
      */
     @EventListener(ApplicationReadyEvent.class)
     public void generateOnStartup() {
-        log.info("[SlotScheduler] Startup: created {} slot(s)", slotService.generateForAllDoctors());
+        log.info(
+                "[SlotScheduler] Startup: created {} slot(s)", slotService.generateForAllDoctors());
     }
 
     /** Just after midnight (server time zone): adds the new last day of the window. */
     @Scheduled(cron = "0 1 0 * * *")
     public void generateDaily() {
-        log.info("[SlotScheduler] Nightly run: created {} slot(s)", slotService.generateForAllDoctors());
+        log.info(
+                "[SlotScheduler] Nightly run: created {} slot(s)",
+                slotService.generateForAllDoctors());
     }
 }

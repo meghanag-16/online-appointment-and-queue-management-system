@@ -15,11 +15,10 @@ import com.mediqueue.service.AppointmentService;
 import com.mediqueue.service.MedicalRecordService;
 import com.mediqueue.service.PrescriptionService;
 import com.mediqueue.service.facade.NotificationFacade;
-import org.springframework.stereotype.Service;
-import org.springframework.transaction.annotation.Transactional;
-
 import java.time.LocalDate;
 import java.util.List;
+import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Transactional;
 
 @Service
 @Transactional
@@ -32,12 +31,13 @@ public class PrescriptionServiceImpl implements PrescriptionService {
     private final NotificationFacade notificationFacade;
     private final AccessGuard accessGuard;
 
-    public PrescriptionServiceImpl(PrescriptionRepository prescriptionRepository,
-                                   AppointmentRepository appointmentRepository,
-                                   AppointmentService appointmentService,
-                                   MedicalRecordService medicalRecordService,
-                                   NotificationFacade notificationFacade,
-                                   AccessGuard accessGuard) {
+    public PrescriptionServiceImpl(
+            PrescriptionRepository prescriptionRepository,
+            AppointmentRepository appointmentRepository,
+            AppointmentService appointmentService,
+            MedicalRecordService medicalRecordService,
+            NotificationFacade notificationFacade,
+            AccessGuard accessGuard) {
         this.prescriptionRepository = prescriptionRepository;
         this.appointmentRepository = appointmentRepository;
         this.appointmentService = appointmentService;
@@ -52,16 +52,22 @@ public class PrescriptionServiceImpl implements PrescriptionService {
         accessGuard.requireTreatingDoctor(appointment);
 
         if (prescriptionRepository.existsByAppointment_AppointmentId(req.appointmentId())) {
-            throw new DuplicateResourceException("A prescription already exists for this appointment");
+            throw new DuplicateResourceException(
+                    "A prescription already exists for this appointment");
         }
         AppointmentStatus status = appointment.getAppointmentStatus();
         if (status == AppointmentStatus.CANCELLED || status == AppointmentStatus.NO_SHOW) {
-            throw new BadRequestException("This appointment was " + status.name().replace('_', ' ').toLowerCase()
-                + "; no prescription can be issued for it");
+            throw new BadRequestException(
+                    "This appointment was "
+                            + status.name().replace('_', ' ').toLowerCase()
+                            + "; no prescription can be issued for it");
         }
-        if (appointment.getAppointmentDate() != null && appointment.getAppointmentDate().isAfter(LocalDate.now())) {
-            throw new BadRequestException("This appointment is on " + appointment.getAppointmentDate()
-                + "; a prescription can only be issued on or after the visit");
+        if (appointment.getAppointmentDate() != null
+                && appointment.getAppointmentDate().isAfter(LocalDate.now())) {
+            throw new BadRequestException(
+                    "This appointment is on "
+                            + appointment.getAppointmentDate()
+                            + "; a prescription can only be issued on or after the visit");
         }
         if (req.followUpDate() != null && !req.followUpDate().isAfter(LocalDate.now())) {
             throw new BadRequestException("The follow-up date must be in the future");
@@ -71,21 +77,25 @@ public class PrescriptionServiceImpl implements PrescriptionService {
         prescription.setAppointment(appointment);
         prescription.setDiagnosisNotes(req.diagnosisNotes().trim());
         prescription.setMedicationList(req.medicationList().trim());
-        prescription.setAdvice(req.advice() == null || req.advice().isBlank() ? null : req.advice().trim());
+        prescription.setAdvice(
+                req.advice() == null || req.advice().isBlank() ? null : req.advice().trim());
         prescription.setFollowUpDate(req.followUpDate());
         Prescription saved = prescriptionRepository.saveAndFlush(prescription);
 
-        // The visit is over: walk the appointment to COMPLETED through the normal status rules, so the
+        // The visit is over: walk the appointment to COMPLETED through the normal status rules, so
+        // the
         // queue (an observer of appointment changes) marks it FINISHED as well.
         if (status == AppointmentStatus.BOOKED || status == AppointmentStatus.CONFIRMED) {
-            appointmentService.updateStatus(appointment.getAppointmentId(), AppointmentStatus.IN_PROGRESS.name());
+            appointmentService.updateStatus(
+                    appointment.getAppointmentId(), AppointmentStatus.IN_PROGRESS.name());
         }
         if (appointment.getAppointmentStatus() != AppointmentStatus.COMPLETED) {
-            appointmentService.updateStatus(appointment.getAppointmentId(), AppointmentStatus.COMPLETED.name());
+            appointmentService.updateStatus(
+                    appointment.getAppointmentId(), AppointmentStatus.COMPLETED.name());
         }
 
         medicalRecordService.appendConsultation(saved);
-        notificationFacade.prescriptionAvailable(saved);   // PRESCRIPTION_AVAILABLE, stored and sent
+        notificationFacade.prescriptionAvailable(saved); // PRESCRIPTION_AVAILABLE, stored and sent
         return PrescriptionResponse.from(saved);
     }
 
@@ -93,30 +103,42 @@ public class PrescriptionServiceImpl implements PrescriptionService {
     @Transactional(readOnly = true)
     public List<PrescriptionResponse> getByDoctor(String doctorId) {
         accessGuard.requireDoctorSelfOrStaff(doctorId);
-        return prescriptionRepository.findByAppointment_Doctor_UserIdOrderByIssuedAtDesc(doctorId).stream()
-            .map(PrescriptionResponse::from).toList();
+        return prescriptionRepository
+                .findByAppointment_Doctor_UserIdOrderByIssuedAtDesc(doctorId)
+                .stream()
+                .map(PrescriptionResponse::from)
+                .toList();
     }
 
     @Override
     @Transactional(readOnly = true)
     public List<PrescriptionResponse> getByPatient(String patientId) {
         accessGuard.requirePatientAccess(patientId);
-        return prescriptionRepository.findByAppointment_Patient_UserIdOrderByIssuedAtDesc(patientId).stream()
-            .map(PrescriptionResponse::from).toList();
+        return prescriptionRepository
+                .findByAppointment_Patient_UserIdOrderByIssuedAtDesc(patientId)
+                .stream()
+                .map(PrescriptionResponse::from)
+                .toList();
     }
 
     @Override
     @Transactional(readOnly = true)
     public PrescriptionResponse getByAppointment(Long appointmentId) {
         Appointment appointment = findAppointment(appointmentId);
-        accessGuard.requireAppointmentDocumentRead(appointment, false);   // not lab technicians
-        return prescriptionRepository.findByAppointment_AppointmentId(appointmentId)
-            .map(PrescriptionResponse::from)
-            .orElseThrow(() -> new ResourceNotFoundException("No prescription has been issued for appointment " + appointmentId));
+        accessGuard.requireAppointmentDocumentRead(appointment, false); // not lab technicians
+        return prescriptionRepository
+                .findByAppointment_AppointmentId(appointmentId)
+                .map(PrescriptionResponse::from)
+                .orElseThrow(
+                        () ->
+                                new ResourceNotFoundException(
+                                        "No prescription has been issued for appointment "
+                                                + appointmentId));
     }
 
     private Appointment findAppointment(Long id) {
-        return appointmentRepository.findById(id)
-            .orElseThrow(() -> new ResourceNotFoundException("Appointment not found: " + id));
+        return appointmentRepository
+                .findById(id)
+                .orElseThrow(() -> new ResourceNotFoundException("Appointment not found: " + id));
     }
 }

@@ -9,17 +9,24 @@ export default function AccessDeniedBanner() {
   const [message, setMessage] = useState('')
 
   useEffect(() => {
-    const onDenied = (e) => setMessage(e.detail || 'You do not have permission to do that.')
+    const onDenied = e => setMessage(e.detail || 'You do not have permission to do that.')
     window.addEventListener(ACCESS_DENIED_EVENT, onDenied)
     return () => window.removeEventListener(ACCESS_DENIED_EVENT, onDenied)
   }, [])
 
   if (!message) return null
   return (
-    <div className="alert alert-error" role="alert"
-      style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', gap: 12 }}>
-      <span><strong>Access Denied.</strong> {message}</span>
-      <button type="button" className="btn btn-outline btn-sm" onClick={() => setMessage('')}>Dismiss</button>
+    <div
+      className="alert alert-error"
+      role="alert"
+      style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', gap: 12 }}
+    >
+      <span>
+        <strong>Access Denied.</strong> {message}
+      </span>
+      <button type="button" className="btn btn-outline btn-sm" onClick={() => setMessage('')}>
+        Dismiss
+      </button>
     </div>
   )
 }

@@ -56,7 +56,17 @@ public class Appointment {
 
     public Appointment() {}
 
-    public Appointment(Long appointmentId, Patient patient, Doctor doctor, TimeSlot slot, LocalDate appointmentDate, LocalDateTime bookingTime, String reasonForVisit, AppointmentStatus appointmentStatus, Priority priority, CreatedByRole createdByRole) {
+    public Appointment(
+            Long appointmentId,
+            Patient patient,
+            Doctor doctor,
+            TimeSlot slot,
+            LocalDate appointmentDate,
+            LocalDateTime bookingTime,
+            String reasonForVisit,
+            AppointmentStatus appointmentStatus,
+            Priority priority,
+            CreatedByRole createdByRole) {
         this.appointmentId = appointmentId;
         this.patient = patient;
         this.doctor = doctor;
@@ -69,35 +79,85 @@ public class Appointment {
         this.createdByRole = createdByRole;
     }
 
-    public Long getAppointmentId() { return appointmentId; }
-    public void setAppointmentId(Long appointmentId) { this.appointmentId = appointmentId; }
+    public Long getAppointmentId() {
+        return appointmentId;
+    }
 
-    public Patient getPatient() { return patient; }
-    public void setPatient(Patient patient) { this.patient = patient; }
+    public void setAppointmentId(Long appointmentId) {
+        this.appointmentId = appointmentId;
+    }
 
-    public Doctor getDoctor() { return doctor; }
-    public void setDoctor(Doctor doctor) { this.doctor = doctor; }
+    public Patient getPatient() {
+        return patient;
+    }
 
-    public TimeSlot getSlot() { return slot; }
-    public void setSlot(TimeSlot slot) { this.slot = slot; }
+    public void setPatient(Patient patient) {
+        this.patient = patient;
+    }
 
-    public LocalDate getAppointmentDate() { return appointmentDate; }
-    public void setAppointmentDate(LocalDate appointmentDate) { this.appointmentDate = appointmentDate; }
+    public Doctor getDoctor() {
+        return doctor;
+    }
 
-    public LocalDateTime getBookingTime() { return bookingTime; }
-    public void setBookingTime(LocalDateTime bookingTime) { this.bookingTime = bookingTime; }
+    public void setDoctor(Doctor doctor) {
+        this.doctor = doctor;
+    }
 
-    public String getReasonForVisit() { return reasonForVisit; }
-    public void setReasonForVisit(String reasonForVisit) { this.reasonForVisit = reasonForVisit; }
+    public TimeSlot getSlot() {
+        return slot;
+    }
 
-    public AppointmentStatus getAppointmentStatus() { return appointmentStatus; }
-    public void setAppointmentStatus(AppointmentStatus appointmentStatus) { this.appointmentStatus = appointmentStatus; }
+    public void setSlot(TimeSlot slot) {
+        this.slot = slot;
+    }
 
-    public Priority getPriority() { return priority; }
-    public void setPriority(Priority priority) { this.priority = priority; }
+    public LocalDate getAppointmentDate() {
+        return appointmentDate;
+    }
 
-    public CreatedByRole getCreatedByRole() { return createdByRole; }
-    public void setCreatedByRole(CreatedByRole createdByRole) { this.createdByRole = createdByRole; }
+    public void setAppointmentDate(LocalDate appointmentDate) {
+        this.appointmentDate = appointmentDate;
+    }
+
+    public LocalDateTime getBookingTime() {
+        return bookingTime;
+    }
+
+    public void setBookingTime(LocalDateTime bookingTime) {
+        this.bookingTime = bookingTime;
+    }
+
+    public String getReasonForVisit() {
+        return reasonForVisit;
+    }
+
+    public void setReasonForVisit(String reasonForVisit) {
+        this.reasonForVisit = reasonForVisit;
+    }
+
+    public AppointmentStatus getAppointmentStatus() {
+        return appointmentStatus;
+    }
+
+    public void setAppointmentStatus(AppointmentStatus appointmentStatus) {
+        this.appointmentStatus = appointmentStatus;
+    }
+
+    public Priority getPriority() {
+        return priority;
+    }
+
+    public void setPriority(Priority priority) {
+        this.priority = priority;
+    }
+
+    public CreatedByRole getCreatedByRole() {
+        return createdByRole;
+    }
+
+    public void setCreatedByRole(CreatedByRole createdByRole) {
+        this.createdByRole = createdByRole;
+    }
 
     @PrePersist
     public void prePersist() {

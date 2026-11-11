@@ -2,7 +2,6 @@ package com.mediqueue.service;
 
 import com.mediqueue.dto.AlertRequest;
 import com.mediqueue.dto.NotificationResponse;
-
 import java.time.LocalDateTime;
 
 public interface NotificationService {
@@ -14,9 +13,15 @@ public interface NotificationService {
 
     int markAllRead();
 
-    /** Administrator: a general alert to one user or to every active user of a role. Returns how many were sent. */
+    /**
+     * Administrator: a general alert to one user or to every active user of a role. Returns how
+     * many were sent.
+     */
     int sendAlert(AlertRequest request);
 
-    /** Sends one reminder for each live appointment starting within the reminder window after {@code now}. */
+    /**
+     * Sends one reminder for each live appointment starting within the reminder window after {@code
+     * now}.
+     */
     int sendDueReminders(LocalDateTime now);
 }

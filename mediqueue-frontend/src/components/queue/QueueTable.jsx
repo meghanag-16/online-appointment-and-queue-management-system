@@ -15,30 +15,59 @@ export default function QueueTable({ entries, renderActions, emptyText = 'Nobody
       <div className="table-wrapper">
         <table data-testid="queue-table">
           <thead>
-            <tr><th>#</th><th>Patient</th><th>Slot</th><th>Reason</th><th>Priority</th><th>Status</th><th>Actions</th></tr>
+            <tr>
+              <th>#</th>
+              <th>Patient</th>
+              <th>Slot</th>
+              <th>Reason</th>
+              <th>Priority</th>
+              <th>Status</th>
+              <th>Actions</th>
+            </tr>
           </thead>
           <tbody>
             {active.length === 0 && (
-              <tr><td colSpan={7} style={{ textAlign: 'center', padding: 24, color: 'var(--color-text-muted)' }}>{emptyText}</td></tr>
+              <tr>
+                <td colSpan={7} style={{ textAlign: 'center', padding: 24, color: 'var(--color-text-muted)' }}>
+                  {emptyText}
+                </td>
+              </tr>
             )}
             {active.map(e => (
               <tr key={e.queueId} style={rowStyle(e)} data-testid={`queue-row-${e.appointmentId}`}>
                 <td style={{ fontWeight: 700, fontSize: '1.05rem' }}>
                   {e.queuePosition}
-                  {e.overridePosition != null && <span title="Position set by the administrator" style={{ fontSize: 11, marginLeft: 4 }}>📌</span>}
+                  {e.overridePosition != null && (
+                    <span title="Position set by the administrator" style={{ fontSize: 11, marginLeft: 4 }}>
+                      📌
+                    </span>
+                  )}
                 </td>
-                <td><strong>{e.patientName}</strong></td>
-                <td style={{ fontSize: 12 }}>{e.slotStart ? `${formatTime(e.slotStart)} – ${formatTime(e.slotEnd)}` : '—'}</td>
+                <td>
+                  <strong>{e.patientName}</strong>
+                </td>
+                <td style={{ fontSize: 12 }}>
+                  {e.slotStart ? `${formatTime(e.slotStart)} – ${formatTime(e.slotEnd)}` : '—'}
+                </td>
                 <td style={{ fontSize: 12, maxWidth: 180 }}>{e.reasonForVisit || '—'}</td>
-                <td><StatusBadge status={e.priority || 'NORMAL'} /></td>
-                <td><StatusBadge status={e.visitStatus} /></td>
+                <td>
+                  <StatusBadge status={e.priority || 'NORMAL'} />
+                </td>
+                <td>
+                  <StatusBadge status={e.visitStatus} />
+                </td>
                 <td style={{ whiteSpace: 'nowrap' }}>{renderActions(e)}</td>
               </tr>
             ))}
             {finished.length > 0 && (
-              <tr><td colSpan={7} style={{ background: 'var(--color-bg)', fontSize: 12, color: 'var(--color-text-muted)' }}>
-                Seen today ({finished.length})
-              </td></tr>
+              <tr>
+                <td
+                  colSpan={7}
+                  style={{ background: 'var(--color-bg)', fontSize: 12, color: 'var(--color-text-muted)' }}
+                >
+                  Seen today ({finished.length})
+                </td>
+              </tr>
             )}
             {finished.map(e => (
               <tr key={e.queueId} style={{ opacity: 0.7 }}>
@@ -46,8 +75,12 @@ export default function QueueTable({ entries, renderActions, emptyText = 'Nobody
                 <td>{e.patientName}</td>
                 <td style={{ fontSize: 12 }}>{e.slotStart ? formatTime(e.slotStart) : '—'}</td>
                 <td style={{ fontSize: 12 }}>{e.reasonForVisit || '—'}</td>
-                <td><StatusBadge status={e.priority || 'NORMAL'} /></td>
-                <td><StatusBadge status="FINISHED" /></td>
+                <td>
+                  <StatusBadge status={e.priority || 'NORMAL'} />
+                </td>
+                <td>
+                  <StatusBadge status="FINISHED" />
+                </td>
                 <td style={{ whiteSpace: 'nowrap' }}>{renderActions(e)}</td>
               </tr>
             ))}
@@ -58,7 +91,6 @@ export default function QueueTable({ entries, renderActions, emptyText = 'Nobody
   )
 }
 
-const rowStyle = (e) => ({
-  background: e.visitStatus === 'IN_CONSULTATION' ? '#f6efff'
-    : e.visitStatus === 'CALLED' ? '#fff8ec' : undefined,
+const rowStyle = e => ({
+  background: e.visitStatus === 'IN_CONSULTATION' ? '#f6efff' : e.visitStatus === 'CALLED' ? '#fff8ec' : undefined,
 })

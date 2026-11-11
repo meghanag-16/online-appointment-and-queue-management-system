@@ -1,5 +1,9 @@
 package com.mediqueue.notification;
 
+import static org.junit.jupiter.api.Assertions.*;
+import static org.mockito.ArgumentMatchers.*;
+import static org.mockito.Mockito.*;
+
 import com.mediqueue.entity.Appointment;
 import com.mediqueue.entity.Doctor;
 import com.mediqueue.entity.LabReport;
@@ -11,14 +15,9 @@ import com.mediqueue.entity.enums.NotificationType;
 import com.mediqueue.repository.NotificationRepository;
 import com.mediqueue.service.facade.NotificationFacadeImpl;
 import com.mediqueue.service.facade.NotificationSender;
+import java.time.LocalDateTime;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
-
-import java.time.LocalDateTime;
-
-import static org.junit.jupiter.api.Assertions.*;
-import static org.mockito.ArgumentMatchers.*;
-import static org.mockito.Mockito.*;
 
 /** The facade stores every notification and records whether the (mocked) sender delivered it. */
 class NotificationFacadeTest {
@@ -54,7 +53,11 @@ class NotificationFacadeTest {
     void reminderIsStoredAsSentForThePatient() {
         Notification n = facade.appointmentReminder(appointment);
 
-        verify(sender).send(eq(appointment.getPatient()), eq(NotificationType.APPOINTMENT_REMINDER), contains("Dr. Rao"));
+        verify(sender)
+                .send(
+                        eq(appointment.getPatient()),
+                        eq(NotificationType.APPOINTMENT_REMINDER),
+                        contains("Dr. Rao"));
         assertEquals(DeliveryStatus.SENT, n.getDeliveryStatus());
         assertEquals(42L, n.getAppointmentId());
         assertEquals("TEST", n.getChannel());
@@ -73,7 +76,9 @@ class NotificationFacadeTest {
 
     @Test
     void aFailingSenderIsRecordedAsFailedWithoutThrowing() {
-        doThrow(new IllegalStateException("SMTP down")).when(sender).send(any(), any(), anyString());
+        doThrow(new IllegalStateException("SMTP down"))
+                .when(sender)
+                .send(any(), any(), anyString());
         LabReport report = new LabReport();
         report.setAppointment(appointment);
         report.setReportType("Blood test");
@@ -82,6 +87,6 @@ class NotificationFacadeTest {
 
         assertEquals(DeliveryStatus.FAILED, n.getDeliveryStatus());
         assertEquals(NotificationType.REPORT_READY, n.getType());
-        verify(repository).save(n);   // still stored, so it shows in the patient's bell
+        verify(repository).save(n); // still stored, so it shows in the patient's bell
     }
 }

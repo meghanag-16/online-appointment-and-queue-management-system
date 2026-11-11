@@ -3,7 +3,6 @@ package com.mediqueue.service;
 import com.mediqueue.dto.DoctorDTO;
 import com.mediqueue.dto.DoctorDashboardResponse;
 import com.mediqueue.dto.SlotResponse;
-
 import java.time.LocalDate;
 import java.util.List;
 

@@ -4,19 +4,16 @@ import com.mediqueue.entity.Appointment;
 import com.mediqueue.entity.enums.BillingType;
 import com.mediqueue.entity.enums.Priority;
 import com.mediqueue.repository.PrescriptionRepository;
-import org.springframework.stereotype.Component;
-
 import java.util.EnumMap;
 import java.util.List;
 import java.util.Map;
+import org.springframework.stereotype.Component;
 
 /**
- * Chooses the pricing rule for an appointment:
- *  - EMERGENCY when the appointment is high priority;
- *  - FOLLOW_UP when the same doctor asked for a follow-up at an earlier visit and this visit is
- *    no more than {@value #FOLLOW_UP_GRACE_DAYS} days after the follow-up date they set;
- *  - STANDARD otherwise.
- * Stateless: nothing is stored between calls.
+ * Chooses the pricing rule for an appointment: - EMERGENCY when the appointment is high priority; -
+ * FOLLOW_UP when the same doctor asked for a follow-up at an earlier visit and this visit is no
+ * more than {@value #FOLLOW_UP_GRACE_DAYS} days after the follow-up date they set; - STANDARD
+ * otherwise. Stateless: nothing is stored between calls.
  */
 @Component
 public class BillingStrategySelector {
@@ -26,7 +23,8 @@ public class BillingStrategySelector {
     private final Map<BillingType, BillingStrategy> strategies = new EnumMap<>(BillingType.class);
     private final PrescriptionRepository prescriptionRepository;
 
-    public BillingStrategySelector(List<BillingStrategy> all, PrescriptionRepository prescriptionRepository) {
+    public BillingStrategySelector(
+            List<BillingStrategy> all, PrescriptionRepository prescriptionRepository) {
         all.forEach(s -> strategies.put(s.type(), s));
         this.prescriptionRepository = prescriptionRepository;
     }
@@ -49,8 +47,13 @@ public class BillingStrategySelector {
     }
 
     private boolean isFollowUp(Appointment a) {
-        if (a.getAppointmentDate() == null || a.getPatient() == null || a.getDoctor() == null) return false;
-        return prescriptionRepository.isFollowUpVisit(a.getPatient().getUserId(), a.getDoctor().getUserId(),
-            a.getAppointmentId(), a.getAppointmentDate(), a.getAppointmentDate().minusDays(FOLLOW_UP_GRACE_DAYS));
+        if (a.getAppointmentDate() == null || a.getPatient() == null || a.getDoctor() == null)
+            return false;
+        return prescriptionRepository.isFollowUpVisit(
+                a.getPatient().getUserId(),
+                a.getDoctor().getUserId(),
+                a.getAppointmentId(),
+                a.getAppointmentDate(),
+                a.getAppointmentDate().minusDays(FOLLOW_UP_GRACE_DAYS));
     }
 }

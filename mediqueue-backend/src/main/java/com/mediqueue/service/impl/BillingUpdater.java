@@ -17,7 +17,8 @@ public class BillingUpdater implements AppointmentObserver {
     private final BillingService billingService;
     private final AppointmentRepository appointmentRepository;
 
-    public BillingUpdater(BillingService billingService, AppointmentRepository appointmentRepository) {
+    public BillingUpdater(
+            BillingService billingService, AppointmentRepository appointmentRepository) {
         this.billingService = billingService;
         this.appointmentRepository = appointmentRepository;
     }
@@ -25,11 +26,17 @@ public class BillingUpdater implements AppointmentObserver {
     @Override
     public void onAppointmentEvent(AppointmentEvent event) {
         switch (event.type()) {
-            case BOOKED, PRIORITY_CHANGED, RESCHEDULED -> billingService.priceAppointment(event.appointmentId());
+            case BOOKED, PRIORITY_CHANGED, RESCHEDULED ->
+                    billingService.priceAppointment(event.appointmentId());
             case CANCELLED -> billingService.settleCancelledAppointment(event.appointmentId());
-            case STATUS_CHANGED -> appointmentRepository.findById(event.appointmentId())
-                .filter(a -> a.getAppointmentStatus() == AppointmentStatus.CANCELLED)
-                .ifPresent(a -> billingService.settleCancelledAppointment(a.getAppointmentId()));
+            case STATUS_CHANGED ->
+                    appointmentRepository
+                            .findById(event.appointmentId())
+                            .filter(a -> a.getAppointmentStatus() == AppointmentStatus.CANCELLED)
+                            .ifPresent(
+                                    a ->
+                                            billingService.settleCancelledAppointment(
+                                                    a.getAppointmentId()));
         }
     }
 }

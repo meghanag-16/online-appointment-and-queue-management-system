@@ -4,12 +4,11 @@ import com.fasterxml.jackson.databind.ObjectMapper;
 import com.mediqueue.exception.ErrorResponses;
 import jakarta.servlet.http.HttpServletRequest;
 import jakarta.servlet.http.HttpServletResponse;
+import java.io.IOException;
 import org.springframework.http.HttpStatus;
 import org.springframework.security.core.AuthenticationException;
 import org.springframework.security.web.AuthenticationEntryPoint;
 import org.springframework.stereotype.Component;
-
-import java.io.IOException;
 
 /**
  * 401 for requests with no valid login (missing, expired or invalid token). Spring Security's
@@ -26,10 +25,15 @@ public class RestAuthenticationEntryPoint implements AuthenticationEntryPoint {
     }
 
     @Override
-    public void commence(HttpServletRequest request, HttpServletResponse response,
-                         AuthenticationException authException) throws IOException {
+    public void commence(
+            HttpServletRequest request,
+            HttpServletResponse response,
+            AuthenticationException authException)
+            throws IOException {
         Object reason = request.getAttribute(JwtAuthFilter.AUTH_ERROR_ATTRIBUTE);
-        String message = reason != null ? reason.toString() : "Authentication required. Please log in.";
-        ErrorResponses.write(response, objectMapper, HttpStatus.UNAUTHORIZED, message, request.getRequestURI());
+        String message =
+                reason != null ? reason.toString() : "Authentication required. Please log in.";
+        ErrorResponses.write(
+                response, objectMapper, HttpStatus.UNAUTHORIZED, message, request.getRequestURI());
     }
 }

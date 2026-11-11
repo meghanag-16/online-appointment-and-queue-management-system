@@ -10,7 +10,9 @@ export function usePolling(fn, intervalMs, deps = []) {
 
   useEffect(() => {
     let timer
-    const tick = () => { if (!document.hidden) saved.current() }
+    const tick = () => {
+      if (!document.hidden) saved.current()
+    }
     saved.current()
     timer = setInterval(tick, intervalMs)
     return () => clearInterval(timer)

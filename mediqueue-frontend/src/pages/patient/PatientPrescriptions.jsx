@@ -14,7 +14,8 @@ export default function PatientPrescriptions() {
   const [error, setError] = useState('')
 
   useEffect(() => {
-    axiosInstance.get(ENDPOINTS.PRESCRIPTIONS_BY_PATIENT(user.userId))
+    axiosInstance
+      .get(ENDPOINTS.PRESCRIPTIONS_BY_PATIENT(user.userId))
       .then(res => setData(res.data))
       .catch(err => setError(errorMessage(err, 'Could not load your prescriptions.')))
   }, [user.userId])
@@ -25,22 +26,30 @@ export default function PatientPrescriptions() {
       {error && <div className="alert alert-error">{error}</div>}
       {!data && !error && <Spinner />}
       {data && data.length === 0 && (
-        <div className="card" style={{ color: 'var(--color-text-muted)' }}>No prescriptions yet. They appear here as soon as your doctor issues one.</div>
-      )}
-      {data && data.map(p => (
-        <div key={p.prescriptionId} className="card" style={{ marginBottom: 14, maxWidth: 820 }} data-testid="prescription-card">
-          <div style={{ display: 'flex', justifyContent: 'space-between', gap: 8, marginBottom: 8 }}>
-            <strong>{p.doctorName}</strong>
-            <span style={{ fontSize: 12, color: 'var(--color-text-muted)' }}>
-              Visit {formatDate(p.appointmentDate)} · issued {formatDate(p.issuedAt)}
-            </span>
-          </div>
-          <Row label="Diagnosis" value={p.diagnosisNotes} />
-          <Row label="Medications" value={p.medicationList} pre />
-          {p.advice && <Row label="Advice" value={p.advice} />}
-          {p.followUpDate && <Row label="Follow-up" value={formatDate(p.followUpDate)} />}
+        <div className="card" style={{ color: 'var(--color-text-muted)' }}>
+          No prescriptions yet. They appear here as soon as your doctor issues one.
         </div>
-      ))}
+      )}
+      {data &&
+        data.map(p => (
+          <div
+            key={p.prescriptionId}
+            className="card"
+            style={{ marginBottom: 14, maxWidth: 820 }}
+            data-testid="prescription-card"
+          >
+            <div style={{ display: 'flex', justifyContent: 'space-between', gap: 8, marginBottom: 8 }}>
+              <strong>{p.doctorName}</strong>
+              <span style={{ fontSize: 12, color: 'var(--color-text-muted)' }}>
+                Visit {formatDate(p.appointmentDate)} · issued {formatDate(p.issuedAt)}
+              </span>
+            </div>
+            <Row label="Diagnosis" value={p.diagnosisNotes} />
+            <Row label="Medications" value={p.medicationList} pre />
+            {p.advice && <Row label="Advice" value={p.advice} />}
+            {p.followUpDate && <Row label="Follow-up" value={formatDate(p.followUpDate)} />}
+          </div>
+        ))}
     </PageLayout>
   )
 }

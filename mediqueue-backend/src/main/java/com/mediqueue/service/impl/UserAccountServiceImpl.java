@@ -1,6 +1,5 @@
 package com.mediqueue.service.impl;
 
-import com.mediqueue.service.AppointmentService;
 import com.mediqueue.audit.AuditAction;
 import com.mediqueue.audit.AuditService;
 import com.mediqueue.dto.ChangePasswordRequest;
@@ -22,15 +21,15 @@ import com.mediqueue.repository.DepartmentRepository;
 import com.mediqueue.repository.UserRepository;
 import com.mediqueue.security.CurrentUserService;
 import com.mediqueue.security.TemporaryPasswords;
+import com.mediqueue.service.AppointmentService;
 import com.mediqueue.service.MedicalRecordService;
 import com.mediqueue.service.SlotService;
 import com.mediqueue.service.UserAccountService;
+import java.util.List;
+import java.util.Locale;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
-
-import java.util.List;
-import java.util.Locale;
 
 @Service
 @Transactional
@@ -46,15 +45,16 @@ public class UserAccountServiceImpl implements UserAccountService {
     private final AuditService auditService;
     private final AppointmentService appointmentService;
 
-    public UserAccountServiceImpl(UserRepository userRepository,
-                                  DepartmentRepository departmentRepository,
-                                  UserFactory userFactory,
-                                  PasswordEncoder passwordEncoder,
-                                  CurrentUserService currentUser,
-                                  SlotService slotService,
-                                  MedicalRecordService medicalRecordService,
-                                  AuditService auditService,
-                                  AppointmentService appointmentService) {
+    public UserAccountServiceImpl(
+            UserRepository userRepository,
+            DepartmentRepository departmentRepository,
+            UserFactory userFactory,
+            PasswordEncoder passwordEncoder,
+            CurrentUserService currentUser,
+            SlotService slotService,
+            MedicalRecordService medicalRecordService,
+            AuditService auditService,
+            AppointmentService appointmentService) {
         this.userRepository = userRepository;
         this.departmentRepository = departmentRepository;
         this.userFactory = userFactory;
@@ -69,8 +69,9 @@ public class UserAccountServiceImpl implements UserAccountService {
     @Override
     public User registerPatient(RegisterRequest request) {
         if (request.getRole() != null && request.getRole() != UserRole.PATIENT) {
-            throw new ForbiddenException("Only patients can sign up. Doctor and staff accounts are "
-                + "created by the hospital administrator.");
+            throw new ForbiddenException(
+                    "Only patients can sign up. Doctor and staff accounts are "
+                            + "created by the hospital administrator.");
         }
         request.setRole(UserRole.PATIENT);
         return createUser(request);
@@ -86,8 +87,11 @@ public class UserAccountServiceImpl implements UserAccountService {
         user = userRepository.save(user);
         // A newly onboarded doctor can be booked straight away (no wait for the nightly run).
         if (user instanceof Doctor doctor) slotService.generateForDoctor(doctor);
-        auditService.record(AuditAction.USER_CREATED, "USER", user.getUserId(),
-            user.getName() + " (" + user.getRole() + "), username " + user.getUsername());
+        auditService.record(
+                AuditAction.USER_CREATED,
+                "USER",
+                user.getUserId(),
+                user.getName() + " (" + user.getRole() + "), username " + user.getUsername());
         return new CreatedAccount(user, temporaryPassword);
     }
 
@@ -96,13 +100,20 @@ public class UserAccountServiceImpl implements UserAccountService {
         if (userId.equals(currentUser.userId())) {
             throw new BadRequestException("Use My Profile to change your own password");
         }
-        User user = userRepository.findById(userId)
-            .orElseThrow(() -> new ResourceNotFoundException("User not found: " + userId));
+        User user =
+                userRepository
+                        .findById(userId)
+                        .orElseThrow(
+                                () -> new ResourceNotFoundException("User not found: " + userId));
         String temporaryPassword = TemporaryPasswords.generate();
         user.setPassword(passwordEncoder.encode(temporaryPassword));
         user.setMustChangePassword(true);
         userRepository.save(user);
-        auditService.record(AuditAction.PASSWORD_RESET, "USER", userId, user.getName() + " (" + user.getRole() + ")");
+        auditService.record(
+                AuditAction.PASSWORD_RESET,
+                "USER",
+                userId,
+                user.getName() + " (" + user.getRole() + ")");
         return temporaryPassword;
     }
 
@@ -121,17 +132,30 @@ public class UserAccountServiceImpl implements UserAccountService {
         // ── per-role required fields ───────────────────────────────────────
         Department department = null;
         if (req.getRole() == UserRole.DOCTOR) {
-            if (isBlank(req.getSpecialization())) throw new BadRequestException("Specialization is required for doctors");
-            if (isBlank(req.getDepartmentId())) throw new BadRequestException("Department is required for doctors");
-            if (req.getConsultationFee() == null) throw new BadRequestException("Consultation fee is required for doctors");
-            department = departmentRepository.findById(req.getDepartmentId())
-                .orElseThrow(() -> new BadRequestException("Department not found: " + req.getDepartmentId()));
+            if (isBlank(req.getSpecialization()))
+                throw new BadRequestException("Specialization is required for doctors");
+            if (isBlank(req.getDepartmentId()))
+                throw new BadRequestException("Department is required for doctors");
+            if (req.getConsultationFee() == null)
+                throw new BadRequestException("Consultation fee is required for doctors");
+            department =
+                    departmentRepository
+                            .findById(req.getDepartmentId())
+                            .orElseThrow(
+                                    () ->
+                                            new BadRequestException(
+                                                    "Department not found: "
+                                                            + req.getDepartmentId()));
         }
 
         // ── Factory pattern: the right User subclass for the role ──────────
-        User user = userFactory.createUser(
-            req.getRole(), req.getName().trim(), username, email,
-            passwordEncoder.encode(req.getPassword()));
+        User user =
+                userFactory.createUser(
+                        req.getRole(),
+                        req.getName().trim(),
+                        username,
+                        email,
+                        passwordEncoder.encode(req.getPassword()));
 
         // ── common profile fields (all roles) ──────────────────────────────
         user.setGender(req.getGender());
@@ -154,7 +178,8 @@ public class UserAccountServiceImpl implements UserAccountService {
         }
 
         User saved = userRepository.save(user);
-        if (saved instanceof Patient patient) medicalRecordService.ensureRecord(patient);   // one record per patient
+        if (saved instanceof Patient patient)
+            medicalRecordService.ensureRecord(patient); // one record per patient
         return saved;
     }
 
@@ -162,16 +187,26 @@ public class UserAccountServiceImpl implements UserAccountService {
     @Transactional(readOnly = true)
     public List<UserDTO> listUsers() {
         return userRepository.findAllUsersRaw().stream()
-            .map(row -> new UserDTO((String) row[0], (String) row[1], (String) row[2],
-                                    (String) row[3], (String) row[4], (String) row[5]))
-            .toList();
+                .map(
+                        row ->
+                                new UserDTO(
+                                        (String) row[0],
+                                        (String) row[1],
+                                        (String) row[2],
+                                        (String) row[3],
+                                        (String) row[4],
+                                        (String) row[5]))
+                .toList();
     }
 
     @Override
     @Transactional(readOnly = true)
     public Object getProfile(String userId) {
-        User user = userRepository.findById(userId)
-            .orElseThrow(() -> new ResourceNotFoundException("User not found: " + userId));
+        User user =
+                userRepository
+                        .findById(userId)
+                        .orElseThrow(
+                                () -> new ResourceNotFoundException("User not found: " + userId));
         return UserDTO.profileOf(user);
     }
 
@@ -222,14 +257,19 @@ public class UserAccountServiceImpl implements UserAccountService {
         try {
             newStatus = AccountStatus.valueOf(status.trim().toUpperCase(Locale.ROOT));
         } catch (IllegalArgumentException e) {
-            throw new BadRequestException("Invalid account status: " + status
-                + " (allowed: ACTIVE, SUSPENDED, DEACTIVATED)");
+            throw new BadRequestException(
+                    "Invalid account status: "
+                            + status
+                            + " (allowed: ACTIVE, SUSPENDED, DEACTIVATED)");
         }
         if (userId.equals(currentUser.userId()) && newStatus != AccountStatus.ACTIVE) {
             throw new BadRequestException("You cannot suspend or deactivate your own account");
         }
-        User user = userRepository.findById(userId)
-            .orElseThrow(() -> new ResourceNotFoundException("User not found: " + userId));
+        User user =
+                userRepository
+                        .findById(userId)
+                        .orElseThrow(
+                                () -> new ResourceNotFoundException("User not found: " + userId));
         AccountStatus previous = user.getAccountStatus();
         user.setAccountStatus(newStatus);
         User saved = userRepository.saveAndFlush(user);
@@ -246,16 +286,33 @@ public class UserAccountServiceImpl implements UserAccountService {
             }
         }
         if (previous != newStatus) {
-            auditService.record(AuditAction.USER_STATUS_CHANGED, "USER", userId,
-                saved.getName() + " (" + saved.getRole() + "): " + previous + " → " + newStatus
-                    + (cancelled > 0 ? "; " + cancelled + " upcoming appointment(s) cancelled" : ""));
+            auditService.record(
+                    AuditAction.USER_STATUS_CHANGED,
+                    "USER",
+                    userId,
+                    saved.getName()
+                            + " ("
+                            + saved.getRole()
+                            + "): "
+                            + previous
+                            + " → "
+                            + newStatus
+                            + (cancelled > 0
+                                    ? "; " + cancelled + " upcoming appointment(s) cancelled"
+                                    : ""));
         }
         return UserDTO.from(saved);
     }
 
-    private static String normaliseEmail(String email) { return email.trim().toLowerCase(Locale.ROOT); }
+    private static String normaliseEmail(String email) {
+        return email.trim().toLowerCase(Locale.ROOT);
+    }
 
-    private static boolean isBlank(String s) { return s == null || s.isBlank(); }
+    private static boolean isBlank(String s) {
+        return s == null || s.isBlank();
+    }
 
-    private static String blankToNull(String s) { return isBlank(s) ? null : s.trim(); }
+    private static String blankToNull(String s) {
+        return isBlank(s) ? null : s.trim();
+    }
 }

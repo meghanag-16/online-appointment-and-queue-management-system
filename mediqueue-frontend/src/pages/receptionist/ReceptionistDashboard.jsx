@@ -12,7 +12,9 @@ function StatCard({ label, value, color }) {
   return (
     <div className="card" style={{ textAlign: 'center', flex: 1, minWidth: 140 }}>
       <p style={{ fontSize: '0.85rem', color: 'var(--color-text-muted)', marginBottom: 6 }}>{label}</p>
-      <p style={{ fontSize: '2.4rem', fontWeight: 700, color: color || 'var(--color-dark)', margin: 0 }}>{value ?? 0}</p>
+      <p style={{ fontSize: '2.4rem', fontWeight: 700, color: color || 'var(--color-dark)', margin: 0 }}>
+        {value ?? 0}
+      </p>
     </div>
   )
 }
@@ -23,7 +25,9 @@ export default function ReceptionistDashboard() {
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState('')
 
-  useEffect(() => { fetchAll() }, [])
+  useEffect(() => {
+    fetchAll()
+  }, [])
 
   async function fetchAll() {
     setLoading(true)
@@ -33,10 +37,15 @@ export default function ReceptionistDashboard() {
         axiosInstance.get(ENDPOINTS.APPOINTMENTS_STATS),
         axiosInstance.get(ENDPOINTS.APPOINTMENTS_ALL(todayLocal())),
       ])
-      setStats(statsRes.data); setToday(todayRes.data); setError('')
+      setStats(statsRes.data)
+      setToday(todayRes.data)
+      setError('')
     } catch (err) {
-      setStats(null); setError(errorMessage(err, 'Could not load the dashboard.'))
-    } finally { setLoading(false) }
+      setStats(null)
+      setError(errorMessage(err, 'Could not load the dashboard.'))
+    } finally {
+      setLoading(false)
+    }
   }
 
   async function togglePriority(a) {
@@ -44,7 +53,9 @@ export default function ReceptionistDashboard() {
     try {
       await axiosInstance.patch(ENDPOINTS.APPOINTMENT_PRIORITY(a.appointmentId), { priority: next })
       fetchAll()
-    } catch (err) { setError(errorMessage(err, 'Could not change the priority.')) }
+    } catch (err) {
+      setError(errorMessage(err, 'Could not change the priority.'))
+    }
   }
 
   async function handleStatus(a, status) {
@@ -52,14 +63,18 @@ export default function ReceptionistDashboard() {
     try {
       await axiosInstance.patch(ENDPOINTS.UPDATE_STATUS(a.appointmentId), { status })
       fetchAll()
-    } catch (err) { setError(errorMessage(err, 'Could not update the status.')) }
+    } catch (err) {
+      setError(errorMessage(err, 'Could not update the status.'))
+    }
   }
 
   return (
     <PageLayout>
       <PageTitle title="Receptionist Dashboard" subtitle="Front desk overview" />
       {error && <div className="alert alert-error">{error}</div>}
-      {loading ? <Spinner /> : (
+      {loading ? (
+        <Spinner />
+      ) : (
         <>
           <div style={{ display: 'flex', gap: 16, flexWrap: 'wrap', marginBottom: 28 }}>
             <StatCard label="Today's Appointments" value={stats?.todayTotal} color="var(--color-dark)" />
@@ -76,21 +91,40 @@ export default function ReceptionistDashboard() {
             <div className="table-wrapper">
               <table>
                 <thead>
-                  <tr><th>ID</th><th>Patient</th><th>Doctor</th><th>Time</th><th>Reason</th><th>Priority</th><th>Status</th><th>Update</th></tr>
+                  <tr>
+                    <th>ID</th>
+                    <th>Patient</th>
+                    <th>Doctor</th>
+                    <th>Time</th>
+                    <th>Reason</th>
+                    <th>Priority</th>
+                    <th>Status</th>
+                    <th>Update</th>
+                  </tr>
                 </thead>
                 <tbody>
                   {today.length === 0 && (
-                    <tr><td colSpan={8} style={{ textAlign: 'center', padding: 24, color: 'var(--color-text-muted)' }}>No appointments today</td></tr>
+                    <tr>
+                      <td colSpan={8} style={{ textAlign: 'center', padding: 24, color: 'var(--color-text-muted)' }}>
+                        No appointments today
+                      </td>
+                    </tr>
                   )}
                   {today.map(a => (
                     <tr key={a.appointmentId}>
                       <td style={{ fontSize: 12 }}>{a.appointmentId}</td>
-                      <td><strong>{a.patientName}</strong></td>
+                      <td>
+                        <strong>{a.patientName}</strong>
+                      </td>
                       <td>{a.doctorName}</td>
                       <td style={{ fontSize: 12 }}>{formatTime(a.startTime)}</td>
                       <td style={{ fontSize: 12 }}>{a.reasonForVisit || '—'}</td>
-                      <td><StatusBadge status={a.priority || 'NORMAL'} /></td>
-                      <td><StatusBadge status={a.status} /></td>
+                      <td>
+                        <StatusBadge status={a.priority || 'NORMAL'} />
+                      </td>
+                      <td>
+                        <StatusBadge status={a.status} />
+                      </td>
                       <td style={{ whiteSpace: 'nowrap' }}>
                         <AppointmentStatusSelect appointment={a} onChange={handleStatus} />{' '}
                         {['BOOKED', 'CONFIRMED', 'IN_PROGRESS'].includes(a.status) && (

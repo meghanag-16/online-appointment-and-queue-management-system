@@ -2,19 +2,18 @@ import axiosInstance from './axiosInstance'
 import { ENDPOINTS } from './endpoints'
 
 /** Lab technician: find appointments by appointment ID, patient ID or patient name. */
-export const searchLabAppointments = (q) => axiosInstance.get(ENDPOINTS.LAB_SEARCH(q))
+export const searchLabAppointments = q => axiosInstance.get(ENDPOINTS.LAB_SEARCH(q))
 
 /** formData: appointmentId, reportType, file, remarks (optional). */
-export const uploadLabReport = (formData) =>
+export const uploadLabReport = formData =>
   axiosInstance.post(ENDPOINTS.LAB_UPLOAD, formData, {
     headers: { 'Content-Type': 'multipart/form-data' },
   })
 
-export const getLabReportsByAppointment = (appointmentId) =>
+export const getLabReportsByAppointment = appointmentId =>
   axiosInstance.get(ENDPOINTS.LAB_BY_APPOINTMENT(appointmentId))
 
-export const getLabReportsByPatient = (patientId) =>
-  axiosInstance.get(ENDPOINTS.LAB_BY_PATIENT(patientId))
+export const getLabReportsByPatient = patientId => axiosInstance.get(ENDPOINTS.LAB_BY_PATIENT(patientId))
 
 export const getAllLabReports = () => axiosInstance.get(ENDPOINTS.LAB_ALL)
 

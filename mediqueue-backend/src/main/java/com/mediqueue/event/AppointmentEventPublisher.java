@@ -1,9 +1,8 @@
 package com.mediqueue.event;
 
-import org.springframework.stereotype.Component;
-
 import java.util.List;
 import java.util.concurrent.CopyOnWriteArrayList;
+import org.springframework.stereotype.Component;
 
 /**
  * Subject in the Observer pattern. AppointmentService calls {@link #publish} after every change;
@@ -20,9 +19,13 @@ public class AppointmentEventPublisher {
         this.observers.addAll(observers);
     }
 
-    public void register(AppointmentObserver observer) { observers.add(observer); }
+    public void register(AppointmentObserver observer) {
+        observers.add(observer);
+    }
 
-    public void unregister(AppointmentObserver observer) { observers.remove(observer); }
+    public void unregister(AppointmentObserver observer) {
+        observers.remove(observer);
+    }
 
     public void publish(AppointmentEvent event) {
         for (AppointmentObserver observer : observers) {

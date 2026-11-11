@@ -2,15 +2,17 @@ package com.mediqueue.util;
 
 import com.mediqueue.entity.Appointment;
 import com.mediqueue.entity.Doctor;
-
 import java.time.LocalDateTime;
 import java.time.format.DateTimeFormatter;
 import java.util.Locale;
 
-/** Shared wording for notifications and audit entries ("Dr. Name", "Thu 12 Nov 2026 at 9:30 AM"). */
+/**
+ * Shared wording for notifications and audit entries ("Dr. Name", "Thu 12 Nov 2026 at 9:30 AM").
+ */
 public final class DisplayText {
 
-    public static final DateTimeFormatter WHEN = DateTimeFormatter.ofPattern("EEE d MMM yyyy 'at' h:mm a", Locale.ENGLISH);
+    public static final DateTimeFormatter WHEN =
+            DateTimeFormatter.ofPattern("EEE d MMM yyyy 'at' h:mm a", Locale.ENGLISH);
 
     private DisplayText() {}
 

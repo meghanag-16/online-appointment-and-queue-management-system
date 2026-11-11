@@ -8,9 +8,8 @@ import jakarta.validation.constraints.Size;
  * role ({@code role}, e.g. PATIENT); exactly one of the two must be given.
  */
 public record AlertRequest(
-    String userId,
-    String role,
-    @NotBlank(message = "Message is required")
-    @Size(max = 1000, message = "Message must be at most 1000 characters")
-    String message
-) {}
+        String userId,
+        String role,
+        @NotBlank(message = "Message is required")
+                @Size(max = 1000, message = "Message must be at most 1000 characters")
+                String message) {}

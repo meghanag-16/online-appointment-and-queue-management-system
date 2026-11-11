@@ -43,13 +43,26 @@ public abstract class User {
     @Column(name = "account_status")
     private AccountStatus accountStatus = AccountStatus.ACTIVE;
 
-    /** Set when an administrator created the account or reset its password; cleared by a password change. */
+    /**
+     * Set when an administrator created the account or reset its password; cleared by a password
+     * change.
+     */
     @Column(name = "must_change_password", nullable = false)
     private boolean mustChangePassword = false;
 
     public User() {}
 
-    public User(String userId, String name, LocalDate dateOfBirth, String gender, String phoneNumber, String email, String username, String password, UserRole role, AccountStatus accountStatus) {
+    public User(
+            String userId,
+            String name,
+            LocalDate dateOfBirth,
+            String gender,
+            String phoneNumber,
+            String email,
+            String username,
+            String password,
+            UserRole role,
+            AccountStatus accountStatus) {
         this.userId = userId;
         this.name = name;
         this.dateOfBirth = dateOfBirth;
@@ -62,36 +75,91 @@ public abstract class User {
         this.accountStatus = accountStatus;
     }
 
-    public String getUserId() { return userId; }
-    public void setUserId(String userId) { this.userId = userId; }
+    public String getUserId() {
+        return userId;
+    }
 
-    public String getName() { return name; }
-    public void setName(String name) { this.name = name; }
+    public void setUserId(String userId) {
+        this.userId = userId;
+    }
 
-    public LocalDate getDateOfBirth() { return dateOfBirth; }
-    public void setDateOfBirth(LocalDate dateOfBirth) { this.dateOfBirth = dateOfBirth; }
+    public String getName() {
+        return name;
+    }
 
-    public String getGender() { return gender; }
-    public void setGender(String gender) { this.gender = gender; }
+    public void setName(String name) {
+        this.name = name;
+    }
 
-    public String getPhoneNumber() { return phoneNumber; }
-    public void setPhoneNumber(String phoneNumber) { this.phoneNumber = phoneNumber; }
+    public LocalDate getDateOfBirth() {
+        return dateOfBirth;
+    }
 
-    public String getEmail() { return email; }
-    public void setEmail(String email) { this.email = email; }
+    public void setDateOfBirth(LocalDate dateOfBirth) {
+        this.dateOfBirth = dateOfBirth;
+    }
 
-    public String getUsername() { return username; }
-    public void setUsername(String username) { this.username = username; }
+    public String getGender() {
+        return gender;
+    }
 
-    public String getPassword() { return password; }
-    public void setPassword(String password) { this.password = password; }
+    public void setGender(String gender) {
+        this.gender = gender;
+    }
 
-    public UserRole getRole() { return role; }
-    public void setRole(UserRole role) { this.role = role; }
+    public String getPhoneNumber() {
+        return phoneNumber;
+    }
 
-    public AccountStatus getAccountStatus() { return accountStatus; }
-    public void setAccountStatus(AccountStatus accountStatus) { this.accountStatus = accountStatus; }
+    public void setPhoneNumber(String phoneNumber) {
+        this.phoneNumber = phoneNumber;
+    }
 
-    public boolean isMustChangePassword() { return mustChangePassword; }
-    public void setMustChangePassword(boolean mustChangePassword) { this.mustChangePassword = mustChangePassword; }
+    public String getEmail() {
+        return email;
+    }
+
+    public void setEmail(String email) {
+        this.email = email;
+    }
+
+    public String getUsername() {
+        return username;
+    }
+
+    public void setUsername(String username) {
+        this.username = username;
+    }
+
+    public String getPassword() {
+        return password;
+    }
+
+    public void setPassword(String password) {
+        this.password = password;
+    }
+
+    public UserRole getRole() {
+        return role;
+    }
+
+    public void setRole(UserRole role) {
+        this.role = role;
+    }
+
+    public AccountStatus getAccountStatus() {
+        return accountStatus;
+    }
+
+    public void setAccountStatus(AccountStatus accountStatus) {
+        this.accountStatus = accountStatus;
+    }
+
+    public boolean isMustChangePassword() {
+        return mustChangePassword;
+    }
+
+    public void setMustChangePassword(boolean mustChangePassword) {
+        this.mustChangePassword = mustChangePassword;
+    }
 }

@@ -2,9 +2,9 @@ package com.mediqueue.billing;
 
 import com.mediqueue.entity.Appointment;
 import com.mediqueue.entity.enums.BillingType;
-import org.springframework.stereotype.Component;
 import java.math.BigDecimal;
 import java.math.RoundingMode;
+import org.springframework.stereotype.Component;
 
 /** EmergencyBilling — 150 % of the consultation fee, used for high-priority visits. */
 @Component
@@ -13,7 +13,9 @@ public class EmergencyBilling implements BillingStrategy {
     private static final BigDecimal MULTIPLIER = new BigDecimal("1.50");
 
     @Override
-    public BillingType type() { return BillingType.EMERGENCY; }
+    public BillingType type() {
+        return BillingType.EMERGENCY;
+    }
 
     @Override
     public BigDecimal calculate(Appointment appointment) {
@@ -23,5 +25,7 @@ public class EmergencyBilling implements BillingStrategy {
     }
 
     @Override
-    public String description() { return "Emergency (high priority): 150% of the consultation fee"; }
+    public String description() {
+        return "Emergency (high priority): 150% of the consultation fee";
+    }
 }

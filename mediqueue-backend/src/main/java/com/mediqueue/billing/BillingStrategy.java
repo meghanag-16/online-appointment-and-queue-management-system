@@ -11,7 +11,9 @@ import java.math.BigDecimal;
  */
 public interface BillingStrategy {
     BillingType type();
+
     BigDecimal calculate(Appointment appointment);
+
     /** Short explanation shown on the bill, e.g. "150% of the consultation fee". */
     String description();
 }

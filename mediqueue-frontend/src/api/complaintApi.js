@@ -2,7 +2,7 @@ import axiosInstance from './axiosInstance'
 import { ENDPOINTS } from './endpoints'
 
 /** { issueType, description, appointmentId?, billId? } */
-export const raiseComplaint = (complaintData) => axiosInstance.post(ENDPOINTS.COMPLAINTS, complaintData)
+export const raiseComplaint = complaintData => axiosInstance.post(ENDPOINTS.COMPLAINTS, complaintData)
 
 export const getMyComplaints = () => axiosInstance.get(ENDPOINTS.COMPLAINTS_MINE)
 

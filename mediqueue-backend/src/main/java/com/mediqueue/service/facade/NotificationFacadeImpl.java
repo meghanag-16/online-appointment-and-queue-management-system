@@ -15,7 +15,6 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.stereotype.Service;
 
-
 @Service
 public class NotificationFacadeImpl implements NotificationFacade {
 
@@ -24,32 +23,55 @@ public class NotificationFacadeImpl implements NotificationFacade {
     private final NotificationRepository notificationRepository;
     private final NotificationSender sender;
 
-    public NotificationFacadeImpl(NotificationRepository notificationRepository, NotificationSender sender) {
+    public NotificationFacadeImpl(
+            NotificationRepository notificationRepository, NotificationSender sender) {
         this.notificationRepository = notificationRepository;
         this.sender = sender;
     }
 
     @Override
     public Notification appointmentReminder(Appointment a) {
-        String message = "Reminder: you have an appointment with " + doctor(a.getDoctor())
-            + " on " + when(a) + " (appointment #" + a.getAppointmentId() + "). Please arrive 10 minutes early.";
-        return deliver(a.getPatient(), NotificationType.APPOINTMENT_REMINDER, message, a.getAppointmentId());
+        String message =
+                "Reminder: you have an appointment with "
+                        + doctor(a.getDoctor())
+                        + " on "
+                        + when(a)
+                        + " (appointment #"
+                        + a.getAppointmentId()
+                        + "). Please arrive 10 minutes early.";
+        return deliver(
+                a.getPatient(),
+                NotificationType.APPOINTMENT_REMINDER,
+                message,
+                a.getAppointmentId());
     }
 
     @Override
     public Notification reportReady(LabReport r) {
         Appointment a = r.getAppointment();
-        String message = "Your lab report \"" + r.getReportType() + "\" for appointment #" + a.getAppointmentId()
-            + " is ready. You can view and download it under Lab Reports.";
-        return deliver(a.getPatient(), NotificationType.REPORT_READY, message, a.getAppointmentId());
+        String message =
+                "Your lab report \""
+                        + r.getReportType()
+                        + "\" for appointment #"
+                        + a.getAppointmentId()
+                        + " is ready. You can view and download it under Lab Reports.";
+        return deliver(
+                a.getPatient(), NotificationType.REPORT_READY, message, a.getAppointmentId());
     }
 
     @Override
     public Notification prescriptionAvailable(Prescription p) {
         Appointment a = p.getAppointment();
-        String message = doctor(a.getDoctor()) + " has issued your prescription for appointment #"
-            + a.getAppointmentId() + ". You can see it under Prescriptions.";
-        return deliver(a.getPatient(), NotificationType.PRESCRIPTION_AVAILABLE, message, a.getAppointmentId());
+        String message =
+                doctor(a.getDoctor())
+                        + " has issued your prescription for appointment #"
+                        + a.getAppointmentId()
+                        + ". You can see it under Prescriptions.";
+        return deliver(
+                a.getPatient(),
+                NotificationType.PRESCRIPTION_AVAILABLE,
+                message,
+                a.getAppointmentId());
     }
 
     @Override
@@ -57,9 +79,12 @@ public class NotificationFacadeImpl implements NotificationFacade {
         return deliver(recipient, NotificationType.GENERAL_ALERT, message, appointmentId);
     }
 
-
-    /** Store first, then send; a sender failure never breaks the action that caused the notification. */
-    private Notification deliver(User recipient, NotificationType type, String message, Long appointmentId) {
+    /**
+     * Store first, then send; a sender failure never breaks the action that caused the
+     * notification.
+     */
+    private Notification deliver(
+            User recipient, NotificationType type, String message, Long appointmentId) {
         Notification n = new Notification();
         n.setRecipient(recipient);
         n.setType(type);
@@ -71,7 +96,12 @@ public class NotificationFacadeImpl implements NotificationFacade {
             sender.send(recipient, type, message);
             n.setDeliveryStatus(DeliveryStatus.SENT);
         } catch (RuntimeException e) {
-            log.warn("Could not deliver {} to user {} via {}: {}", type, recipient.getUserId(), sender.channel(), e.getMessage());
+            log.warn(
+                    "Could not deliver {} to user {} via {}: {}",
+                    type,
+                    recipient.getUserId(),
+                    sender.channel(),
+                    e.getMessage());
             n.setDeliveryStatus(DeliveryStatus.FAILED);
         }
         return notificationRepository.save(n);

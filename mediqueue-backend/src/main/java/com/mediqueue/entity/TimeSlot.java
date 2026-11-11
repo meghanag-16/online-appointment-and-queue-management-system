@@ -29,7 +29,12 @@ public class TimeSlot {
 
     public TimeSlot() {}
 
-    public TimeSlot(Long slotId, Doctor doctor, LocalDateTime startTime, LocalDateTime endTime, SlotStatus status) {
+    public TimeSlot(
+            Long slotId,
+            Doctor doctor,
+            LocalDateTime startTime,
+            LocalDateTime endTime,
+            SlotStatus status) {
         this.slotId = slotId;
         this.doctor = doctor;
         this.startTime = startTime;
@@ -37,18 +42,43 @@ public class TimeSlot {
         this.status = status;
     }
 
-    public Long getSlotId() { return slotId; }
-    public void setSlotId(Long slotId) { this.slotId = slotId; }
+    public Long getSlotId() {
+        return slotId;
+    }
 
-    public Doctor getDoctor() { return doctor; }
-    public void setDoctor(Doctor doctor) { this.doctor = doctor; }
+    public void setSlotId(Long slotId) {
+        this.slotId = slotId;
+    }
 
-    public LocalDateTime getStartTime() { return startTime; }
-    public void setStartTime(LocalDateTime startTime) { this.startTime = startTime; }
+    public Doctor getDoctor() {
+        return doctor;
+    }
 
-    public LocalDateTime getEndTime() { return endTime; }
-    public void setEndTime(LocalDateTime endTime) { this.endTime = endTime; }
+    public void setDoctor(Doctor doctor) {
+        this.doctor = doctor;
+    }
 
-    public SlotStatus getStatus() { return status; }
-    public void setStatus(SlotStatus status) { this.status = status; }
+    public LocalDateTime getStartTime() {
+        return startTime;
+    }
+
+    public void setStartTime(LocalDateTime startTime) {
+        this.startTime = startTime;
+    }
+
+    public LocalDateTime getEndTime() {
+        return endTime;
+    }
+
+    public void setEndTime(LocalDateTime endTime) {
+        this.endTime = endTime;
+    }
+
+    public SlotStatus getStatus() {
+        return status;
+    }
+
+    public void setStatus(SlotStatus status) {
+        this.status = status;
+    }
 }
