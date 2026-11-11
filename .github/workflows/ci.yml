@@ -91,7 +91,7 @@ jobs:
         run: mvn -B verify -Dcoverage.check=true -Dspotless.check.skip=true -Dcheckstyle.skip=true
       - name: Upload test and coverage reports
         if: always()
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@v7
         with:
           name: backend-reports
           path: |
@@ -118,7 +118,7 @@ jobs:
         run: npm run test:coverage
       - name: Upload coverage report
         if: always()
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@v7
         with:
           name: frontend-coverage
           path: mediqueue-frontend/coverage
@@ -167,7 +167,7 @@ jobs:
         run: npx cypress run --browser electron
       - name: Upload screenshots of failures
         if: failure()
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@v7
         with:
           name: cypress-screenshots
           path: mediqueue-frontend/cypress/screenshots
