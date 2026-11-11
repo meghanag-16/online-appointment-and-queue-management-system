@@ -7,32 +7,22 @@ import { formatSlot } from '../../utils/dates'
 export default function AlternateSlots({ alternates, onPick }) {
   if (!alternates?.length) return null
   return (
-    <div style={{ marginTop: 16 }} data-testid="alternate-slots">
-      <p style={{ fontWeight: 600, marginBottom: 10, color: 'var(--color-accent)' }}>Suggested alternate slots</p>
-      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(220px, 1fr))', gap: 10 }}>
+    <div className="mt-4" data-testid="alternate-slots">
+      <p className="strong mb-2 text-accent">Suggested alternate slots</p>
+      <div className="choice-grid">
         {alternates.map(alt => (
-          <button key={alt.slotId} type="button" onClick={() => onPick(alt)} style={card}>
-            <div style={{ fontWeight: 600 }}>{alt.doctorName}</div>
-            <div style={{ fontSize: '0.78rem', color: 'var(--color-text-muted)', margin: '2px 0 6px' }}>
+          <button key={alt.slotId} type="button" className="choice is-highlight" onClick={() => onPick(alt)}>
+            <span className="choice-title block">{alt.doctorName}</span>
+            <span className="choice-sub block">
               {alt.reason === 'same_doctor'
                 ? 'Same doctor'
                 : `Same department${alt.departmentName ? ` · ${alt.departmentName}` : ''}`}
-            </div>
-            <div style={{ fontSize: '0.85rem' }}>{formatSlot(alt.startTime)}</div>
-            <div style={{ fontSize: '0.75rem', color: 'var(--color-accent)', marginTop: 6 }}>Choose this slot →</div>
+            </span>
+            <span className="block text-sm">{formatSlot(alt.startTime)}</span>
+            <span className="choice-meta block mt-2">Choose this slot →</span>
           </button>
         ))}
       </div>
     </div>
   )
-}
-
-const card = {
-  textAlign: 'left',
-  padding: '12px 14px',
-  borderRadius: 10,
-  cursor: 'pointer',
-  border: '1.5px solid var(--color-accent)',
-  background: 'var(--color-white)',
-  color: 'var(--color-text)',
 }

@@ -1,84 +1,89 @@
-import { useState, useEffect } from 'react'
+import { useEffect, useState } from 'react'
 import { getAllDepartments, addDepartment } from '../../api/adminApi'
-import PageLayout from '../../components/layout/PageLayout'
 import { errorMessage } from '../../api/axiosInstance'
+import PageLayout from '../../components/layout/PageLayout'
 import PageTitle from '../../components/common/PageTitle'
+import { Button, Card, EmptyState, ErrorState, Input, LoadingState, useToast } from '../../components/ui'
 
 export default function AdminDepartments() {
-  const [departments, setDepartments] = useState([])
+  const toast = useToast()
+  const [departments, setDepartments] = useState(null)
   const [name, setName] = useState('')
-  const [message, setMessage] = useState('')
-  const [error, setError] = useState('')
+  const [nameError, setNameError] = useState('')
+  const [loadError, setLoadError] = useState('')
+  const [saving, setSaving] = useState(false)
 
-  useEffect(() => {
-    fetchDepartments()
-  }, [])
-
-  const fetchDepartments = async () => {
+  async function load() {
     try {
-      const res = await getAllDepartments()
-      setDepartments(res.data)
-    } catch {
+      setDepartments((await getAllDepartments()).data)
+      setLoadError('')
+    } catch (err) {
       setDepartments([])
+      setLoadError(errorMessage(err, 'Could not load departments.'))
     }
   }
+  useEffect(() => {
+    load()
+  }, [])
 
-  const handleAdd = async () => {
-    if (!name) {
-      setError('Please enter a department name.')
+  async function handleAdd(e) {
+    e.preventDefault()
+    if (!name.trim()) {
+      setNameError('Enter a department name.')
       return
     }
+    setNameError('')
+    setSaving(true)
     try {
-      // Backend expects "departmentName" field
-      await addDepartment({ departmentName: name })
-      setMessage('Department added successfully!')
-      setError('')
+      await addDepartment({ departmentName: name.trim() })
+      toast.success(`Department "${name.trim()}" added.`)
       setName('')
-      fetchDepartments()
+      load()
     } catch (err) {
-      setError(errorMessage(err, 'Failed to add department.'))
-      setMessage('')
+      setNameError(errorMessage(err, 'Could not add the department.'))
+    } finally {
+      setSaving(false)
     }
   }
 
   return (
     <PageLayout>
-      <PageTitle title="Departments Management" subtitle="Create and manage hospital departments" />
-      <div style={{ maxWidth: '900px', margin: '0 auto' }}>
-        {message && <p style={{ color: 'green', marginBottom: '12px' }}>{message}</p>}
-        {error && <p style={{ color: 'red', marginBottom: '12px' }}>{error}</p>}
-
-        <div className="card" style={{ marginBottom: '20px' }}>
-          <h3 style={{ marginBottom: '16px' }}>Add New Department</h3>
-          <input
-            type="text"
-            placeholder="Department Name *"
-            value={name}
-            onChange={e => setName(e.target.value)}
-            style={{ width: '100%', padding: '10px', marginBottom: '10px' }}
-          />
-          <div style={{ textAlign: 'right' }}>
-            <button onClick={handleAdd} style={{ padding: '10px 16px', fontWeight: 'bold', cursor: 'pointer' }}>
-              Add Department
-            </button>
+      <PageTitle title="Departments" subtitle="Create and view hospital departments" />
+      <div className="stack max-w-lg">
+        <Card title="Add department" as="form" onSubmit={handleAdd}>
+          <div className="row row-top">
+            <Input
+              id="dept-name"
+              label="Department name"
+              required
+              maxLength={100}
+              fieldClassName="grow"
+              placeholder="e.g. Neurology"
+              value={name}
+              error={nameError}
+              onChange={e => setName(e.target.value)}
+            />
+            <Button type="submit" loading={saving} className="mt-6">
+              Add department
+            </Button>
           </div>
-        </div>
+        </Card>
 
-        <div className="card">
-          <h3 style={{ marginBottom: '16px' }}>All Departments</h3>
-          {departments.length === 0 ? (
-            <p style={{ color: 'var(--color-text-muted)' }}>No departments found.</p>
-          ) : (
-            departments.map(dept => (
-              <div
-                key={dept.departmentId || dept.id}
-                style={{ padding: '10px 0', borderBottom: '1px solid var(--color-border-tertiary)' }}
-              >
-                <strong>{dept.departmentName || dept.name}</strong>
-              </div>
-            ))
+        <Card title="All departments">
+          <ErrorState message={loadError} onRetry={load} />
+          {departments === null && <LoadingState />}
+          {departments?.length === 0 && !loadError && <EmptyState icon="🏥" title="No departments yet" />}
+          {departments?.length > 0 && (
+            <div className="divider-list">
+              {departments.map(d => (
+                <div key={d.departmentId} className="row-between">
+                  <strong>{d.departmentName}</strong>
+                  <span className="muted text-xs">{d.departmentId}</span>
+                </div>
+              ))}
+            </div>
           )}
-        </div>
+        </Card>
       </div>
     </PageLayout>
   )

@@ -2,6 +2,7 @@ import { useEffect, useState } from 'react'
 import axiosInstance, { errorMessage } from '../../api/axiosInstance'
 import { ENDPOINTS } from '../../api/endpoints'
 import { formatSlot, todayLocal } from '../../utils/dates'
+import { EmptyState, ErrorState, LoadingState } from '../ui'
 
 /**
  * Find a doctor by department, name/specialization and (optionally) a day they have open slots,
@@ -44,16 +45,9 @@ export default function DoctorPicker({ selectedDoctorId, onSelect, compact = fal
 
   return (
     <div>
-      <div
-        style={{
-          display: 'grid',
-          gridTemplateColumns: 'repeat(auto-fit, minmax(160px, 1fr))',
-          gap: 10,
-          marginBottom: 12,
-        }}
-      >
+      <div className="grid-form">
         <select
-          className="form-control"
+          className="form-control mb-4"
           aria-label="Department"
           value={departmentId}
           onChange={e => setDepartmentId(e.target.value)}
@@ -66,14 +60,14 @@ export default function DoctorPicker({ selectedDoctorId, onSelect, compact = fal
           ))}
         </select>
         <input
-          className="form-control"
+          className="form-control mb-4"
           aria-label="Doctor name or specialization"
           placeholder="Name or specialization"
           value={query}
           onChange={e => setQuery(e.target.value)}
         />
         <input
-          className="form-control"
+          className="form-control mb-4"
           type="date"
           aria-label="Available on"
           title="Only doctors with open slots on this day"
@@ -83,57 +77,37 @@ export default function DoctorPicker({ selectedDoctorId, onSelect, compact = fal
         />
       </div>
 
-      {error && <div className="alert alert-error">{error}</div>}
-      {loading && <p style={muted}>Searching…</p>}
-      {!loading && !error && doctors.length === 0 && <p style={muted}>No doctors match these filters.</p>}
+      <ErrorState message={error} />
+      {loading && <LoadingState label="Searching doctors…" />}
+      {!loading && !error && doctors.length === 0 && (
+        <EmptyState icon="🩺" title="No doctors match these filters" description="Try another department or day." />
+      )}
 
-      <div
-        style={{
-          display: 'grid',
-          gridTemplateColumns: `repeat(auto-fill, minmax(${compact ? 200 : 240}px, 1fr))`,
-          gap: 10,
-          maxHeight: compact ? 260 : 'none',
-          overflowY: compact ? 'auto' : 'visible',
-        }}
-      >
-        {doctors.map(doc => {
-          const active = doc.userId === selectedDoctorId
-          return (
+      {!loading && (
+        <div className={`choice-grid ${compact ? 'is-compact' : ''}`.trim()}>
+          {doctors.map(doc => (
             <button
               key={doc.userId}
               type="button"
+              className="choice"
               onClick={() => onSelect(doc)}
-              aria-pressed={active}
+              aria-pressed={doc.userId === selectedDoctorId}
               data-testid={`doctor-${doc.userId}`}
-              style={card(active)}
             >
-              <div style={{ fontWeight: 600 }}>{doc.name}</div>
-              <div style={{ fontSize: '0.8rem', color: 'var(--color-accent)', margin: '2px 0' }}>
+              <span className="choice-title block">{doc.name}</span>
+              <span className="choice-meta block">
                 {doc.specialization}
                 {doc.departmentName ? ` · ${doc.departmentName}` : ''}
-              </div>
-              {!compact && (
-                <div style={{ fontSize: '0.78rem', color: 'var(--color-text-muted)' }}>{doc.qualification}</div>
-              )}
-              <div style={{ fontSize: '0.78rem', marginTop: 4 }}>
+              </span>
+              {!compact && <span className="choice-sub block">{doc.qualification}</span>}
+              <span className="choice-sub block">
                 ₹{doc.consultationFee} ·{' '}
                 {doc.nextAvailableSlot ? `next: ${formatSlot(doc.nextAvailableSlot)}` : 'no open slots'}
-              </div>
+              </span>
             </button>
-          )
-        })}
-      </div>
+          ))}
+        </div>
+      )}
     </div>
   )
 }
-
-const muted = { color: 'var(--color-text-muted)', fontSize: '0.88rem' }
-const card = active => ({
-  textAlign: 'left',
-  padding: '12px 14px',
-  borderRadius: 10,
-  cursor: 'pointer',
-  color: 'var(--color-text)',
-  border: `1.5px solid ${active ? 'var(--color-accent)' : 'var(--color-border)'}`,
-  background: active ? 'var(--color-accent-soft)' : 'var(--color-white)',
-})

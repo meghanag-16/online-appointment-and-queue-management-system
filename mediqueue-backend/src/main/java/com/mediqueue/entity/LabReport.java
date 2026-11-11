@@ -4,8 +4,9 @@ import jakarta.persistence.*;
 import java.time.LocalDateTime;
 
 /**
- * A lab report file attached to an appointment. The file lives on disk under a generated name
- * (filePath); the cleaned original name is kept only for the download.
+ * A lab report attached to an appointment. The file itself is in {@link LabReportFile} (reports
+ * from older versions may still have a filePath on disk); the cleaned original name is kept for the
+ * download.
  */
 @Entity
 @Table(name = "lab_reports")

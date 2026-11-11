@@ -1,8 +1,8 @@
-import { useEscapeKey } from '../../hooks/useEscapeKey'
 import { useState } from 'react'
 import axiosInstance, { errorMessage } from '../../api/axiosInstance'
 import { ENDPOINTS } from '../../api/endpoints'
 import { formatSlot } from '../../utils/dates'
+import { Alert, Button, Modal } from '../ui'
 import SlotPicker from './SlotPicker'
 import AlternateSlots from './AlternateSlots'
 
@@ -16,7 +16,6 @@ export default function RescheduleDialog({ appointment, onClose, onDone }) {
   const [alternates, setAlternates] = useState([])
   const [saving, setSaving] = useState(false)
   const [refreshKey, setRefreshKey] = useState(0)
-  useEscapeKey(onClose)
 
   async function confirm() {
     if (!slot) return
@@ -39,58 +38,43 @@ export default function RescheduleDialog({ appointment, onClose, onDone }) {
   }
 
   return (
-    <div style={overlay} role="presentation" onClick={e => e.target === e.currentTarget && onClose()}>
-      <div className="card" style={panel} role="dialog" aria-modal="true" aria-labelledby="reschedule-title">
-        <h3 id="reschedule-title" style={{ marginBottom: 4 }}>
-          Reschedule appointment
-        </h3>
-        <p style={{ fontSize: '0.85rem', color: 'var(--color-text-muted)', marginBottom: 14 }}>
-          {appointment.doctorName} · currently {formatSlot(appointment.startTime)}
-        </p>
-        {error && <div className="alert alert-error">{error}</div>}
-
-        <SlotPicker
-          doctorId={appointment.doctorId}
-          selectedSlotId={slot?.slotId}
-          onSelect={setSlot}
-          excludeSlotId={appointment.slotId}
-          refreshKey={refreshKey}
-        />
-        <AlternateSlots
-          alternates={alternates}
-          onPick={alt => {
-            setSlot(alt)
-            setAlternates([])
-            setError('')
-          }}
-        />
-
-        {slot && (
-          <p style={{ marginTop: 14, fontSize: '0.9rem' }}>
-            New time: <strong>{formatSlot(slot.startTime)}</strong>
-          </p>
-        )}
-        <div style={{ display: 'flex', gap: 10, justifyContent: 'flex-end', marginTop: 16 }}>
-          <button type="button" className="btn btn-outline" onClick={onClose}>
+    <Modal
+      title="Reschedule appointment"
+      subtitle={`${appointment.doctorName} · currently ${formatSlot(appointment.startTime)}`}
+      onClose={onClose}
+      testId="reschedule-dialog"
+      footer={
+        <>
+          <Button variant="outline" onClick={onClose}>
             Close
-          </button>
-          <button type="button" className="btn btn-primary" disabled={!slot || saving} onClick={confirm}>
-            {saving ? 'Saving…' : 'Confirm new time'}
-          </button>
-        </div>
-      </div>
-    </div>
+          </Button>
+          <Button disabled={!slot} loading={saving} onClick={confirm} data-testid="confirm-reschedule">
+            Confirm new time
+          </Button>
+        </>
+      }
+    >
+      <Alert tone="error">{error}</Alert>
+      <SlotPicker
+        doctorId={appointment.doctorId}
+        selectedSlotId={slot?.slotId}
+        onSelect={setSlot}
+        excludeSlotId={appointment.slotId}
+        refreshKey={refreshKey}
+      />
+      <AlternateSlots
+        alternates={alternates}
+        onPick={alt => {
+          setSlot(alt)
+          setAlternates([])
+          setError('')
+        }}
+      />
+      {slot && (
+        <p className="mt-4">
+          New time: <strong>{formatSlot(slot.startTime)}</strong>
+        </p>
+      )}
+    </Modal>
   )
 }
-
-const overlay = {
-  position: 'fixed',
-  inset: 0,
-  background: 'rgba(0,0,0,0.45)',
-  zIndex: 500,
-  display: 'flex',
-  alignItems: 'center',
-  justifyContent: 'center',
-  padding: 16,
-}
-const panel = { width: '100%', maxWidth: 620, maxHeight: '90vh', overflowY: 'auto' }

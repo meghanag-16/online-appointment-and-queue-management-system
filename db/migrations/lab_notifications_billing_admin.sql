@@ -1,6 +1,6 @@
 -- Lab reports, notifications, billing, complaints, temporary passwords and the audit log.
 -- Run ONCE on a database created before this change (after queue_and_clinical_records.sql);
--- fresh installs get all of this from schema.sql.
+-- fresh installs get all of this from the Flyway migrations (mediqueue-backend/src/main/resources/db/migration).
 --   mysql -u root -p mediqueue < db/migrations/lab_notifications_billing_admin.sql
 -- Docker: docker exec -i mediqueue-db mysql -uroot -proot mediqueue < db/migrations/lab_notifications_billing_admin.sql
 USE mediqueue;

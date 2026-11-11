@@ -1,19 +1,21 @@
 import { useEffect, useState } from 'react'
 import PageLayout from '../../components/layout/PageLayout'
 import PageTitle from '../../components/common/PageTitle'
-import Spinner from '../../components/common/Spinner'
 import axiosInstance, { errorMessage } from '../../api/axiosInstance'
 import { ENDPOINTS } from '../../api/endpoints'
 import { updateSlotSettings } from '../../api/adminApi'
+import { Alert, Button, Card, ErrorState, Input, LoadingState, useConfirm, useToast } from '../../components/ui'
 
 const DAYS = ['MONDAY', 'TUESDAY', 'WEDNESDAY', 'THURSDAY', 'FRIDAY', 'SATURDAY', 'SUNDAY']
 
 /** Administrator: slot length, working hours and days, booking window and the cancel/reschedule cutoff. */
 export default function AdminSettings() {
+  const confirm = useConfirm()
+  const toast = useToast()
   const [form, setForm] = useState(null)
   const [hasBreak, setHasBreak] = useState(true)
-  const [message, setMessage] = useState('')
   const [error, setError] = useState('')
+  const [fieldErrors, setFieldErrors] = useState({})
   const [saving, setSaving] = useState(false)
 
   useEffect(() => {
@@ -38,14 +40,14 @@ export default function AdminSettings() {
 
   async function save(e) {
     e.preventDefault()
-    if (
-      !window.confirm(
-        'Save? Open (unbooked) slots will be regenerated on the new schedule. Booked appointments keep their time.',
-      )
-    )
-      return
-    setMessage('')
+    const ok = await confirm({
+      title: 'Save slot settings?',
+      message: 'Open (unbooked) slots will be regenerated on the new schedule. Booked appointments keep their time.',
+      confirmLabel: 'Save settings',
+    })
+    if (!ok) return
     setError('')
+    setFieldErrors({})
     setSaving(true)
     try {
       const payload = {
@@ -56,151 +58,150 @@ export default function AdminSettings() {
       const res = await updateSlotSettings(payload)
       setForm(res.data)
       setHasBreak(!!res.data.breakStart)
-      setMessage('Settings saved and open slots regenerated.')
+      toast.success('Settings saved and open slots regenerated.')
     } catch (err) {
       setError(errorMessage(err, 'Could not save settings.'))
+      setFieldErrors(err.response?.data?.fieldErrors || {})
     } finally {
       setSaving(false)
     }
   }
 
-  if (!form) return <PageLayout>{error ? <div className="alert alert-error">{error}</div> : <Spinner />}</PageLayout>
+  if (!form) {
+    return (
+      <PageLayout>
+        <PageTitle title="Slot Settings" />
+        {error ? <ErrorState message={error} /> : <LoadingState label="Loading settings…" />}
+      </PageLayout>
+    )
+  }
 
-  const grid2 = { display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 16 }
+  const timeError = form.dayStart && form.dayEnd && form.dayEnd <= form.dayStart ? 'Must be after the start' : ''
+  const breakError =
+    hasBreak && form.breakStart && form.breakEnd && form.breakEnd <= form.breakStart
+      ? 'Must be after the break start'
+      : ''
+
   return (
     <PageLayout>
       <PageTitle title="Slot Settings" subtitle="How appointment slots are generated for every active doctor" />
-      <form className="card" style={{ maxWidth: 620 }} onSubmit={save}>
-        {message && <div className="alert alert-success">{message}</div>}
-        {error && <div className="alert alert-error">{error}</div>}
-
-        <div style={grid2}>
-          <div className="form-group">
-            <label htmlFor="s-len">Slot length (minutes)</label>
-            <input
+      <Card className="max-w-md">
+        <form onSubmit={save}>
+          <Alert tone="error">{error}</Alert>
+          <div className="grid-form">
+            <Input
               id="s-len"
+              label="Slot length (minutes)"
               type="number"
               min={10}
               max={240}
               step={5}
-              className="form-control"
               value={form.slotMinutes}
               onChange={set('slotMinutes', true)}
               required
+              error={fieldErrors.slotMinutes}
             />
-          </div>
-          <div className="form-group">
-            <label htmlFor="s-window">Booking window (days ahead)</label>
-            <input
+            <Input
               id="s-window"
+              label="Booking window (days ahead)"
               type="number"
               min={1}
               max={60}
-              className="form-control"
               value={form.bookingWindowDays}
               onChange={set('bookingWindowDays', true)}
               required
+              error={fieldErrors.bookingWindowDays}
             />
-          </div>
-        </div>
-        <div style={grid2}>
-          <div className="form-group">
-            <label htmlFor="s-start">Day starts</label>
-            <input
+            <Input
               id="s-start"
+              label="Day starts"
               type="time"
-              className="form-control"
               value={form.dayStart}
               onChange={set('dayStart')}
               required
             />
-          </div>
-          <div className="form-group">
-            <label htmlFor="s-end">Day ends</label>
-            <input
+            <Input
               id="s-end"
+              label="Day ends"
               type="time"
-              className="form-control"
               value={form.dayEnd}
               onChange={set('dayEnd')}
               required
+              error={timeError}
             />
           </div>
-        </div>
 
-        <label style={{ display: 'flex', gap: 8, alignItems: 'center', marginBottom: 10 }}>
-          <input
-            type="checkbox"
-            checked={hasBreak}
-            onChange={e => {
-              setHasBreak(e.target.checked)
-              if (e.target.checked && !form.breakStart) setForm(s => ({ ...s, breakStart: '13:00', breakEnd: '14:00' }))
-            }}
-          />
-          Lunch break (no slots)
-        </label>
-        {hasBreak && (
-          <div style={grid2}>
-            <div className="form-group">
-              <label htmlFor="s-bstart">Break starts</label>
-              <input
+          <label className="checkbox-label mb-4">
+            <input
+              type="checkbox"
+              checked={hasBreak}
+              onChange={e => {
+                setHasBreak(e.target.checked)
+                if (e.target.checked && !form.breakStart)
+                  setForm(s => ({ ...s, breakStart: '13:00', breakEnd: '14:00' }))
+              }}
+            />
+            Lunch break (no slots)
+          </label>
+          {hasBreak && (
+            <div className="grid-form">
+              <Input
                 id="s-bstart"
+                label="Break starts"
                 type="time"
-                className="form-control"
                 value={form.breakStart || ''}
                 onChange={set('breakStart')}
                 required
               />
-            </div>
-            <div className="form-group">
-              <label htmlFor="s-bend">Break ends</label>
-              <input
+              <Input
                 id="s-bend"
+                label="Break ends"
                 type="time"
-                className="form-control"
                 value={form.breakEnd || ''}
                 onChange={set('breakEnd')}
                 required
+                error={breakError}
               />
             </div>
-          </div>
-        )}
+          )}
 
-        <div className="form-group">
-          <span className="form-label" id="s-days">
-            Working days
-          </span>
-          <div role="group" aria-labelledby="s-days" style={{ display: 'flex', flexWrap: 'wrap', gap: 8 }}>
-            {DAYS.map(d => (
-              <label key={d} style={{ display: 'flex', gap: 4, alignItems: 'center', fontSize: '0.88rem' }}>
-                <input type="checkbox" checked={form.workingDays.includes(d)} onChange={() => toggleDay(d)} />
-                {d.slice(0, 3)}
-              </label>
-            ))}
+          <div className="form-group">
+            <span className="form-label" id="s-days">
+              Working days
+            </span>
+            <div role="group" aria-labelledby="s-days" className="row">
+              {DAYS.map(d => (
+                <label key={d} className="checkbox-label">
+                  <input type="checkbox" checked={form.workingDays.includes(d)} onChange={() => toggleDay(d)} />
+                  {d.slice(0, 3)}
+                </label>
+              ))}
+            </div>
+            {form.workingDays.length === 0 && <small className="form-error">Pick at least one working day</small>}
           </div>
-        </div>
 
-        <div className="form-group">
-          <label htmlFor="s-cutoff">Patients can cancel/reschedule until (hours before the slot)</label>
-          <input
+          <Input
             id="s-cutoff"
+            label="Patients can cancel/reschedule until (hours before the slot)"
             type="number"
             min={0}
             max={72}
-            className="form-control"
             value={form.changeCutoffHours}
             onChange={set('changeCutoffHours', true)}
             required
+            hint="The front desk can still change appointments after this."
+            error={fieldErrors.changeCutoffHours}
           />
-          <small style={{ color: 'var(--color-text-muted)' }}>
-            The front desk can still change appointments after this.
-          </small>
-        </div>
 
-        <button type="submit" className="btn btn-primary" disabled={saving || form.workingDays.length === 0}>
-          {saving ? 'Saving…' : 'Save settings'}
-        </button>
-      </form>
+          <Button
+            type="submit"
+            loading={saving}
+            disabled={form.workingDays.length === 0 || !!timeError || !!breakError}
+          >
+            Save settings
+          </Button>
+        </form>
+      </Card>
     </PageLayout>
   )
 }

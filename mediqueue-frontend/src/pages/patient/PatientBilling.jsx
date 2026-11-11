@@ -1,12 +1,12 @@
-import { useState, useEffect } from 'react'
+import { useEffect, useState } from 'react'
 import PageLayout from '../../components/layout/PageLayout'
 import PageTitle from '../../components/common/PageTitle'
 import StatusBadge from '../../components/common/StatusBadge'
-import Spinner from '../../components/common/Spinner'
 import axiosInstance, { errorMessage } from '../../api/axiosInstance'
 import { ENDPOINTS } from '../../api/endpoints'
 import { drName, formatCurrency, formatDateTime, formatEnum } from '../../utils/formatters'
 import { useAuth } from '../../context/AuthContext'
+import { Card, EmptyState, ErrorState, LoadingState } from '../../components/ui'
 
 const STATUS_NOTE = {
   PENDING: 'Please pay at the front desk.',
@@ -22,7 +22,8 @@ export default function PatientBilling() {
   const [bills, setBills] = useState(null)
   const [error, setError] = useState('')
 
-  useEffect(() => {
+  function load() {
+    setError('')
     axiosInstance
       .get(ENDPOINTS.BILL_BY_PATIENT(user.userId))
       .then(res => setBills(res.data || []))
@@ -30,7 +31,8 @@ export default function PatientBilling() {
         setBills([])
         setError(errorMessage(err, 'Could not load your bills.'))
       })
-  }, [user.userId])
+  }
+  useEffect(load, [user.userId])
 
   const owed = (bills || [])
     .filter(b => ['PENDING', 'FAILED'].includes(b.paymentStatus))
@@ -39,74 +41,60 @@ export default function PatientBilling() {
   return (
     <PageLayout>
       <PageTitle title="Billing" subtitle="Your bills and payment status" />
-      {error && <div className="alert alert-error">{error}</div>}
+      <ErrorState message={error} onRetry={load} />
       {bills === null ? (
-        <Spinner />
+        <LoadingState label="Loading bills…" />
       ) : (
-        <div style={{ maxWidth: 760 }}>
+        <div className="stack max-w-md">
           {bills.length > 0 && (
-            <div
-              className="card"
-              style={{ marginBottom: 16, display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}
-            >
-              <span style={{ color: 'var(--color-text-muted)' }}>Amount due</span>
-              <strong style={{ fontSize: '1.4rem' }} data-testid="amount-due">
+            <Card className="row-between">
+              <span className="muted">Amount due</span>
+              <strong className="text-lg" data-testid="amount-due">
                 {formatCurrency(owed)}
               </strong>
-            </div>
+            </Card>
           )}
-          {bills.length === 0 && (
-            <div className="card">
-              <p style={{ color: 'var(--color-text-muted)', margin: 0 }}>
-                No bills yet. A bill is created when you book an appointment.
-              </p>
-            </div>
+          {bills.length === 0 && !error && (
+            <Card>
+              <EmptyState
+                icon="🧾"
+                title="No bills yet"
+                description="A bill is created when you book an appointment."
+              />
+            </Card>
           )}
           {bills.map(bill => (
-            <div key={bill.billId} className="card" data-testid={`bill-${bill.billId}`} style={{ marginBottom: 14 }}>
-              <div style={{ display: 'flex', justifyContent: 'space-between', gap: 12, flexWrap: 'wrap' }}>
+            <Card key={bill.billId} data-testid={`bill-${bill.billId}`}>
+              <div className="row-between row-top">
                 <div>
-                  <p style={{ fontSize: '0.78rem', color: 'var(--color-text-muted)', margin: 0 }}>
+                  <p className="muted text-xs">
                     Bill #{bill.billId} · Appointment #{bill.appointmentId}
                   </p>
-                  <p style={{ margin: '4px 0' }}>
+                  <p>
                     {drName(bill.doctorName)} · {formatDateTime(bill.appointmentStart)}
-                    {bill.appointmentStatus && (
-                      <>
-                        {' '}
-                        · <span style={{ color: 'var(--color-text-muted)' }}>{formatEnum(bill.appointmentStatus)}</span>
-                      </>
-                    )}
+                    {bill.appointmentStatus && <span className="muted"> · {formatEnum(bill.appointmentStatus)}</span>}
                   </p>
-                  <p
-                    style={{
-                      fontSize: '1.8rem',
-                      fontWeight: 700,
-                      margin: '4px 0',
-                      color: 'var(--color-dark)',
-                      textDecoration: bill.paymentStatus === 'VOID' ? 'line-through' : 'none',
-                    }}
-                  >
+                  <p className={`stat-value ${bill.paymentStatus === 'VOID' ? 'strike' : ''}`}>
                     {formatCurrency(bill.totalAmount)}
                   </p>
-                  <div style={{ display: 'flex', gap: 8, alignItems: 'center', flexWrap: 'wrap' }}>
+                  <div className="row">
                     <StatusBadge status={bill.paymentStatus} />
                     {bill.billingStrategy && <StatusBadge status={bill.billingStrategy} />}
-                    <small style={{ color: 'var(--color-text-muted)' }}>{bill.billingRule}</small>
+                    <small className="muted">{bill.billingRule}</small>
                   </div>
                 </div>
-                <div style={{ textAlign: 'right', fontSize: '0.82rem', color: 'var(--color-text-muted)' }}>
-                  <div>Generated {formatDateTime(bill.generatedAt)}</div>
+                <div className="text-right muted text-sm">
+                  <p>Generated {formatDateTime(bill.generatedAt)}</p>
                   {bill.paidAt && (
-                    <div>
+                    <p>
                       Paid {formatDateTime(bill.paidAt)}
                       {bill.paymentMethod ? ` by ${formatEnum(bill.paymentMethod)}` : ''}
-                    </div>
+                    </p>
                   )}
                 </div>
               </div>
-              <p style={{ margin: '10px 0 0', fontSize: '0.85rem' }}>{STATUS_NOTE[bill.paymentStatus]}</p>
-            </div>
+              <p className="mt-2 text-sm">{STATUS_NOTE[bill.paymentStatus]}</p>
+            </Card>
           ))}
         </div>
       )}

@@ -2,10 +2,10 @@ import { useEffect, useState } from 'react'
 import { Link } from 'react-router-dom'
 import PageLayout from '../../components/layout/PageLayout'
 import PageTitle from '../../components/common/PageTitle'
-import Spinner from '../../components/common/Spinner'
 import axiosInstance, { errorMessage } from '../../api/axiosInstance'
 import { ENDPOINTS } from '../../api/endpoints'
 import { useAuth } from '../../context/AuthContext'
+import { Alert, Card, ErrorState, LoadingState } from '../../components/ui'
 
 /** The patient's medical record. Doctors add to it each time they issue a prescription. */
 export default function PatientRecords() {
@@ -13,27 +13,29 @@ export default function PatientRecords() {
   const [record, setRecord] = useState(null)
   const [error, setError] = useState('')
 
-  useEffect(() => {
+  function load() {
+    setError('')
     axiosInstance
       .get(ENDPOINTS.PATIENT_RECORDS(user.userId))
       .then(res => setRecord(res.data))
       .catch(err => setError(errorMessage(err, 'Could not load your medical record.')))
-  }, [user.userId])
+  }
+  useEffect(load, [user.userId])
 
   return (
     <PageLayout>
       <PageTitle title="Medical Record" subtitle="Your consolidated health record" />
-      {error && <div className="alert alert-error">{error}</div>}
-      {!record && !error && <Spinner />}
+      <ErrorState message={error} onRetry={load} />
+      {!record && !error && <LoadingState label="Loading your record…" />}
       {record && (
-        <div className="card" style={{ maxWidth: 820 }}>
+        <Card className="max-w-md stack">
           <Section title="Diagnoses" text={record.diagnoses} />
           <Section title="Treatment notes" text={record.observations} />
-          <div className="alert alert-info" style={{ marginTop: 12, marginBottom: 0 }}>
+          <Alert tone="info" className="mb-0">
             Your record is updated by your doctor after each consultation. See the full details on{' '}
             <Link to="/patient/prescriptions">My Prescriptions</Link>.
-          </div>
-        </div>
+          </Alert>
+        </Card>
       )}
     </PageLayout>
   )
@@ -42,17 +44,17 @@ export default function PatientRecords() {
 function Section({ title, text }) {
   const empty = !text || text.startsWith('No ')
   return (
-    <div style={{ marginBottom: 18 }}>
-      <h3 style={{ marginBottom: 8 }}>{title}</h3>
+    <section>
+      <h3 className="mb-2">{title}</h3>
       {empty ? (
-        <p style={{ color: 'var(--color-text-muted)', margin: 0 }}>{text || 'Nothing recorded yet.'}</p>
+        <p className="muted">{text || 'Nothing recorded yet.'}</p>
       ) : (
-        text.split('\n').map((line, i) => (
-          <p key={i} style={{ margin: 0, padding: '6px 0', borderBottom: '1px solid var(--color-border)' }}>
-            {line}
-          </p>
-        ))
+        <div className="divider-list">
+          {text.split('\n').map((line, i) => (
+            <p key={i}>{line}</p>
+          ))}
+        </div>
       )}
-    </div>
+    </section>
   )
 }

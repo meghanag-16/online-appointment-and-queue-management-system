@@ -2,11 +2,22 @@ import { useEffect, useState } from 'react'
 import PageLayout from '../../components/layout/PageLayout'
 import PageTitle from '../../components/common/PageTitle'
 import StatusBadge from '../../components/common/StatusBadge'
-import Spinner from '../../components/common/Spinner'
 import axiosInstance, { errorMessage } from '../../api/axiosInstance'
 import { ENDPOINTS } from '../../api/endpoints'
 import { usePolling } from '../../hooks/usePolling'
 import { drName, formatCurrency, formatDateTime, formatEnum } from '../../utils/formatters'
+import {
+  Alert,
+  Button,
+  Card,
+  Cell,
+  ErrorState,
+  Input,
+  LoadingState,
+  Table,
+  useConfirm,
+  useToast,
+} from '../../components/ui'
 
 export const PAYMENT_METHODS = ['CASH', 'CARD', 'UPI', 'INSURANCE', 'NET_BANKING']
 const FILTERS = [
@@ -20,12 +31,14 @@ const FILTERS = [
 
 /** Front desk billing: find a bill and mark it paid (with the method), failed or refunded. */
 export default function BillingDesk() {
+  const confirm = useConfirm()
+  const toast = useToast()
   const [status, setStatus] = useState('PENDING')
   const [query, setQuery] = useState('')
   const [search, setSearch] = useState('') // query, applied 300 ms after typing stops
   const [bills, setBills] = useState(null)
   const [methods, setMethods] = useState({})
-  const [message, setMessage] = useState('')
+  const [methodErrors, setMethodErrors] = useState({})
   const [error, setError] = useState('')
   const [loadError, setLoadError] = useState('')
 
@@ -47,21 +60,25 @@ export default function BillingDesk() {
   usePolling(load, 15000, [status, search])
 
   async function update(bill, paymentStatus) {
-    setMessage('')
     setError('')
     const paymentMethod = methods[bill.billId] || ''
     if (paymentStatus === 'PAID' && !paymentMethod) {
-      setError(`Choose how bill #${bill.billId} was paid.`)
+      setMethodErrors(e => ({ ...e, [bill.billId]: 'Choose how it was paid' }))
       return
     }
-    if (
-      paymentStatus === 'REFUNDED' &&
-      !window.confirm(`Refund ${formatCurrency(bill.totalAmount)} to ${bill.patientName}?`)
-    )
-      return
+    setMethodErrors(e => ({ ...e, [bill.billId]: '' }))
+    if (paymentStatus === 'REFUNDED') {
+      const ok = await confirm({
+        title: `Refund ${formatCurrency(bill.totalAmount)}?`,
+        message: `Bill #${bill.billId} for ${bill.patientName} will be marked refunded.`,
+        confirmLabel: 'Refund',
+        danger: true,
+      })
+      if (!ok) return
+    }
     try {
       await axiosInstance.patch(ENDPOINTS.UPDATE_PAYMENT(bill.billId), { paymentStatus, paymentMethod })
-      setMessage(`Bill #${bill.billId} (${bill.patientName}) marked ${formatEnum(paymentStatus).toLowerCase()}.`)
+      toast.success(`Bill #${bill.billId} (${bill.patientName}) marked ${formatEnum(paymentStatus).toLowerCase()}.`)
       load()
     } catch (err) {
       setError(errorMessage(err, 'Could not update the bill.'))
@@ -71,28 +88,26 @@ export default function BillingDesk() {
   return (
     <PageLayout>
       <PageTitle title="Billing" subtitle="Collect payments and keep bills up to date" />
-      {message && <div className="alert alert-success">{message}</div>}
-      {error && <div className="alert alert-error">{error}</div>}
-      {loadError && <div className="alert alert-error">{loadError}</div>}
+      <Alert tone="error">{error}</Alert>
+      <ErrorState message={loadError} onRetry={load} />
 
-      <div style={{ display: 'flex', gap: 10, flexWrap: 'wrap', marginBottom: 16, alignItems: 'center' }}>
-        {FILTERS.map(([value, label]) => (
-          <button
-            key={label}
-            type="button"
-            className={`btn btn-sm ${status === value ? 'btn-primary' : 'btn-outline'}`}
-            onClick={() => setStatus(value)}
-          >
-            {label}
-          </button>
-        ))}
-        <label htmlFor="bill-q" className="sr-only">
-          Search
-        </label>
-        <input
+      <div className="toolbar">
+        <div className="row" role="group" aria-label="Filter by payment status">
+          {FILTERS.map(([value, label]) => (
+            <Button
+              key={label}
+              size="sm"
+              variant={status === value ? 'primary' : 'outline'}
+              onClick={() => setStatus(value)}
+            >
+              {label}
+            </Button>
+          ))}
+        </div>
+        <Input
           id="bill-q"
-          className="form-control"
-          style={{ maxWidth: 300, marginLeft: 'auto' }}
+          label="Search"
+          fieldClassName="push-right"
           placeholder="Patient name or ID, bill or appointment #"
           value={query}
           onChange={e => setQuery(e.target.value)}
@@ -100,112 +115,81 @@ export default function BillingDesk() {
       </div>
 
       {bills === null ? (
-        <Spinner />
+        <LoadingState label="Loading bills…" />
       ) : (
-        <div className="card" style={{ padding: 0 }}>
-          <div className="table-wrapper">
-            <table>
-              <thead>
-                <tr>
-                  <th>Bill</th>
-                  <th>Patient</th>
-                  <th>Visit</th>
-                  <th>Rule</th>
-                  <th>Amount</th>
-                  <th>Status</th>
-                  <th>Action</th>
-                </tr>
-              </thead>
-              <tbody>
-                {bills.length === 0 && (
-                  <tr>
-                    <td colSpan={7} style={{ textAlign: 'center', padding: 24, color: 'var(--color-text-muted)' }}>
-                      No bills found
-                    </td>
-                  </tr>
-                )}
-                {bills.map(b => (
-                  <tr key={b.billId} data-testid={`desk-bill-${b.billId}`}>
-                    <td>
-                      #{b.billId}
-                      <br />
-                      <small style={{ color: 'var(--color-text-muted)' }}>Appt #{b.appointmentId}</small>
-                    </td>
-                    <td>
-                      {b.patientName}
-                      <br />
-                      <small style={{ color: 'var(--color-text-muted)' }}>{b.patientId}</small>
-                    </td>
-                    <td>
-                      {drName(b.doctorName)}
-                      <br />
-                      <small style={{ color: 'var(--color-text-muted)' }}>
-                        {formatDateTime(b.appointmentStart)} · {formatEnum(b.appointmentStatus)}
-                      </small>
-                    </td>
-                    <td title={b.billingRule}>
-                      <StatusBadge status={b.billingStrategy} />
-                    </td>
-                    <td>
-                      <strong>{formatCurrency(b.totalAmount)}</strong>
-                    </td>
-                    <td>
-                      <StatusBadge status={b.paymentStatus} />
-                      {b.paidAt && (
-                        <>
-                          <br />
-                          <small style={{ color: 'var(--color-text-muted)' }}>
-                            {formatEnum(b.paymentMethod)}, {formatDateTime(b.paidAt)}
-                          </small>
-                        </>
+        <Card flush>
+          <Table
+            headers={['Bill', 'Patient', 'Visit', 'Rule', 'Amount', 'Status', 'Action']}
+            empty="No bills found"
+            isEmpty={bills.length === 0}
+          >
+            {bills.map(b => (
+              <tr key={b.billId} data-testid={`desk-bill-${b.billId}`}>
+                <td>
+                  <Cell main={`#${b.billId}`} sub={`Appt #${b.appointmentId}`} />
+                </td>
+                <td>
+                  <Cell main={b.patientName} sub={b.patientId} />
+                </td>
+                <td>
+                  <Cell
+                    main={drName(b.doctorName)}
+                    sub={`${formatDateTime(b.appointmentStart)} · ${formatEnum(b.appointmentStatus)}`}
+                  />
+                </td>
+                <td title={b.billingRule}>
+                  <StatusBadge status={b.billingStrategy} />
+                </td>
+                <td>
+                  <strong>{formatCurrency(b.totalAmount)}</strong>
+                </td>
+                <td>
+                  <StatusBadge status={b.paymentStatus} />
+                  {b.paidAt && (
+                    <span className="cell-sub">
+                      {formatEnum(b.paymentMethod)}, {formatDateTime(b.paidAt)}
+                    </span>
+                  )}
+                </td>
+                <td className="nowrap">
+                  {['PENDING', 'FAILED'].includes(b.paymentStatus) && (
+                    <div className="row">
+                      <select
+                        aria-label={`Payment method for bill ${b.billId}`}
+                        className="form-control form-control-inline"
+                        aria-invalid={methodErrors[b.billId] ? true : undefined}
+                        value={methods[b.billId] || ''}
+                        onChange={e => setMethods(m => ({ ...m, [b.billId]: e.target.value }))}
+                      >
+                        <option value="">Method…</option>
+                        {PAYMENT_METHODS.map(m => (
+                          <option key={m} value={m}>
+                            {formatEnum(m)}
+                          </option>
+                        ))}
+                      </select>
+                      <Button size="sm" onClick={() => update(b, 'PAID')}>
+                        Mark paid
+                      </Button>
+                      {b.paymentStatus === 'PENDING' && (
+                        <Button variant="outline" size="sm" onClick={() => update(b, 'FAILED')}>
+                          Failed
+                        </Button>
                       )}
-                    </td>
-                    <td style={{ whiteSpace: 'nowrap' }}>
-                      {['PENDING', 'FAILED'].includes(b.paymentStatus) && (
-                        <>
-                          <select
-                            aria-label={`Payment method for bill ${b.billId}`}
-                            className="form-control"
-                            style={{ display: 'inline-block', width: 'auto', padding: '4px 8px', marginRight: 6 }}
-                            value={methods[b.billId] || ''}
-                            onChange={e => setMethods(m => ({ ...m, [b.billId]: e.target.value }))}
-                          >
-                            <option value="">Method…</option>
-                            {PAYMENT_METHODS.map(m => (
-                              <option key={m} value={m}>
-                                {formatEnum(m)}
-                              </option>
-                            ))}
-                          </select>
-                          <button type="button" className="btn btn-primary btn-sm" onClick={() => update(b, 'PAID')}>
-                            Mark paid
-                          </button>{' '}
-                          {b.paymentStatus === 'PENDING' && (
-                            <button
-                              type="button"
-                              className="btn btn-outline btn-sm"
-                              onClick={() => update(b, 'FAILED')}
-                            >
-                              Failed
-                            </button>
-                          )}
-                        </>
-                      )}
-                      {b.paymentStatus === 'PAID' && (
-                        <button type="button" className="btn btn-outline btn-sm" onClick={() => update(b, 'REFUNDED')}>
-                          Refund
-                        </button>
-                      )}
-                      {['REFUNDED', 'VOID'].includes(b.paymentStatus) && (
-                        <small style={{ color: 'var(--color-text-muted)' }}>Closed</small>
-                      )}
-                    </td>
-                  </tr>
-                ))}
-              </tbody>
-            </table>
-          </div>
-        </div>
+                      {methodErrors[b.billId] && <small className="form-error block">{methodErrors[b.billId]}</small>}
+                    </div>
+                  )}
+                  {b.paymentStatus === 'PAID' && (
+                    <Button variant="danger-outline" size="sm" onClick={() => update(b, 'REFUNDED')}>
+                      Refund
+                    </Button>
+                  )}
+                  {['REFUNDED', 'VOID'].includes(b.paymentStatus) && <small className="muted">Closed</small>}
+                </td>
+              </tr>
+            ))}
+          </Table>
+        </Card>
       )}
     </PageLayout>
   )

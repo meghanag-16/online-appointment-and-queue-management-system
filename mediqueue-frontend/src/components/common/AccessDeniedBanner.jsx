@@ -1,5 +1,6 @@
 import { useEffect, useState } from 'react'
 import { ACCESS_DENIED_EVENT } from '../../api/axiosInstance'
+import Button from '../ui/Button'
 
 /**
  * Shows "Access Denied" whenever any API call returns 403 (logged in, but not allowed).
@@ -16,17 +17,13 @@ export default function AccessDeniedBanner() {
 
   if (!message) return null
   return (
-    <div
-      className="alert alert-error"
-      role="alert"
-      style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', gap: 12 }}
-    >
+    <div className="alert alert-error row-between" role="alert">
       <span>
         <strong>Access Denied.</strong> {message}
       </span>
-      <button type="button" className="btn btn-outline btn-sm" onClick={() => setMessage('')}>
+      <Button variant="danger-outline" size="sm" onClick={() => setMessage('')}>
         Dismiss
-      </button>
+      </Button>
     </div>
   )
 }

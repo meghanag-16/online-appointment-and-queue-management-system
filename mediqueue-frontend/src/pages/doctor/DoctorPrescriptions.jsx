@@ -9,6 +9,7 @@ import axiosInstance, { errorMessage } from '../../api/axiosInstance'
 import { ENDPOINTS } from '../../api/endpoints'
 import { formatDate } from '../../utils/formatters'
 import { formatTime, todayLocal, toLocalDateString } from '../../utils/dates'
+import { Alert, Button, Card, EmptyState, Input, Select, Textarea, useToast } from '../../components/ui'
 
 const EMPTY = { diagnosisNotes: '', medicationList: '', advice: '', followUpDate: '' }
 const OPEN = ['BOOKED', 'CONFIRMED', 'IN_PROGRESS', 'COMPLETED']
@@ -21,12 +22,12 @@ const PAST_VISIT = ['IN_PROGRESS', 'COMPLETED']
  */
 export default function DoctorPrescriptions() {
   const { user } = useAuth()
+  const toast = useToast()
   const [params] = useSearchParams()
   const [appointments, setAppointments] = useState([])
   const [prescriptions, setPrescriptions] = useState([])
   const [selectedId, setSelectedId] = useState(params.get('appointmentId') || '')
   const [form, setForm] = useState(EMPTY)
-  const [message, setMessage] = useState('')
   const [error, setError] = useState('')
   const [fieldErrors, setFieldErrors] = useState({})
   const [saving, setSaving] = useState(false)
@@ -72,12 +73,11 @@ export default function DoctorPrescriptions() {
   async function submit(e) {
     e.preventDefault()
     if (!selected) {
-      setError('Choose the appointment first.')
+      setFieldErrors({ appointmentId: 'Choose the appointment first.' })
       return
     }
     setSaving(true)
     setError('')
-    setMessage('')
     setFieldErrors({})
     try {
       await axiosInstance.post(ENDPOINTS.PRESCRIPTIONS, {
@@ -87,9 +87,7 @@ export default function DoctorPrescriptions() {
         advice: form.advice,
         followUpDate: form.followUpDate || null,
       })
-      setMessage(
-        `Prescription issued for ${selected.patientName}. The visit is completed and their medical record updated.`,
-      )
+      toast.success(`Prescription issued for ${selected.patientName}. The visit is completed and their record updated.`)
       setForm(EMPTY)
       setSelectedId('')
       load()
@@ -101,136 +99,101 @@ export default function DoctorPrescriptions() {
     }
   }
 
-  const fe = n => (fieldErrors[n] ? <small style={{ color: 'var(--color-danger)' }}>{fieldErrors[n]}</small> : null)
   const tomorrow = toLocalDateString(new Date(Date.now() + 86400000))
 
   return (
     <PageLayout>
       <PageTitle title="Prescriptions" subtitle="Issue prescriptions for your own appointments" />
-      {message && <div className="alert alert-success">{message}</div>}
-      {error && <div className="alert alert-error">{error}</div>}
 
-      <form className="card" style={{ marginBottom: 20, maxWidth: 820 }} onSubmit={submit}>
-        <h3 style={{ marginBottom: 12 }}>New prescription</h3>
-        <div className="form-group">
-          <label htmlFor="rx-appt">Appointment</label>
-          <select
-            id="rx-appt"
-            className="form-control"
-            value={selectedId}
-            onChange={e => setSelectedId(e.target.value)}
-          >
-            <option value="">
-              {pending.length ? 'Choose an appointment…' : 'No appointments waiting for a prescription'}
-            </option>
-            {pending.map(a => (
-              <option key={a.appointmentId} value={a.appointmentId}>
-                {a.appointmentDate === today ? 'Today' : formatDate(a.appointmentDate)} {formatTime(a.startTime)} —{' '}
-                {a.patientName}
-                {a.reasonForVisit ? ` (${a.reasonForVisit})` : ''} · {a.status.replace('_', ' ').toLowerCase()}
-              </option>
-            ))}
-          </select>
-        </div>
+      <Card as="form" title="New prescription" className="max-w-lg mb-6" onSubmit={submit}>
+        <Alert tone="error">{error}</Alert>
+        <Select
+          id="rx-appt"
+          label="Appointment"
+          value={selectedId}
+          onChange={e => setSelectedId(e.target.value)}
+          placeholder={pending.length ? 'Choose an appointment…' : 'No appointments waiting for a prescription'}
+          options={pending.map(a => ({
+            value: a.appointmentId,
+            label: `${a.appointmentDate === today ? 'Today' : formatDate(a.appointmentDate)} ${formatTime(a.startTime)} — ${a.patientName}${a.reasonForVisit ? ` (${a.reasonForVisit})` : ''} · ${a.status.replace('_', ' ').toLowerCase()}`,
+          }))}
+          error={fieldErrors.appointmentId}
+        />
         {selected && (
-          <div
-            style={{
-              display: 'flex',
-              justifyContent: 'space-between',
-              alignItems: 'center',
-              gap: 10,
-              marginBottom: 12,
-              padding: '8px 12px',
-              background: 'var(--color-accent-soft)',
-              borderRadius: 8,
-            }}
-          >
+          <div className="picked mb-4">
             <span>
-              <strong>{selected.patientName}</strong> · <StatusBadge status={selected.status} />
+              <strong>{selected.patientName}</strong> <StatusBadge status={selected.status} />
             </span>
-            <button type="button" className="btn btn-outline btn-sm" onClick={() => setHistory(selected)}>
+            <Button variant="outline" size="sm" onClick={() => setHistory(selected)}>
               View history
-            </button>
+            </Button>
           </div>
         )}
-        <div className="form-group">
-          <label htmlFor="rx-diag">Diagnosis</label>
-          <textarea
-            id="rx-diag"
-            className="form-control"
-            rows={2}
-            value={form.diagnosisNotes}
-            onChange={set('diagnosisNotes')}
-            required
-          />
-          {fe('diagnosisNotes')}
-        </div>
-        <div className="form-group">
-          <label htmlFor="rx-meds">Medications</label>
-          <textarea
-            id="rx-meds"
-            className="form-control"
-            rows={3}
-            placeholder="e.g. Paracetamol 500mg twice daily for 3 days"
-            value={form.medicationList}
-            onChange={set('medicationList')}
-            required
-          />
-          {fe('medicationList')}
-        </div>
-        <div className="form-group">
-          <label htmlFor="rx-advice">Advice (optional)</label>
-          <textarea id="rx-advice" className="form-control" rows={2} value={form.advice} onChange={set('advice')} />
-        </div>
-        <div className="form-group" style={{ maxWidth: 240 }}>
-          <label htmlFor="rx-follow">Follow-up date (optional)</label>
-          <input
-            id="rx-follow"
-            type="date"
-            className="form-control"
-            min={tomorrow}
-            value={form.followUpDate}
-            onChange={set('followUpDate')}
-          />
-        </div>
-        <button type="submit" className="btn btn-primary" disabled={saving || !selected}>
-          {saving ? 'Saving…' : 'Issue prescription'}
-        </button>
-      </form>
+        <Textarea
+          id="rx-diag"
+          label="Diagnosis"
+          rows={2}
+          required
+          value={form.diagnosisNotes}
+          onChange={set('diagnosisNotes')}
+          error={fieldErrors.diagnosisNotes}
+        />
+        <Textarea
+          id="rx-meds"
+          label="Medications"
+          required
+          placeholder="e.g. Paracetamol 500mg twice daily for 3 days"
+          value={form.medicationList}
+          onChange={set('medicationList')}
+          error={fieldErrors.medicationList}
+        />
+        <Textarea id="rx-advice" label="Advice (optional)" rows={2} value={form.advice} onChange={set('advice')} />
+        <Input
+          id="rx-follow"
+          label="Follow-up date (optional)"
+          type="date"
+          min={tomorrow}
+          fieldClassName="max-w-sm"
+          hint="A visit with you within 7 days after this date is billed at the follow-up rate."
+          value={form.followUpDate}
+          onChange={set('followUpDate')}
+          error={fieldErrors.followUpDate}
+        />
+        <Button type="submit" loading={saving} disabled={!selected}>
+          Issue prescription
+        </Button>
+      </Card>
 
-      <div className="card">
-        <h3 style={{ marginBottom: 12 }}>Issued prescriptions</h3>
+      <Card title="Issued prescriptions" className="max-w-lg">
         {prescriptions.length === 0 ? (
-          <p style={{ color: 'var(--color-text-muted)' }}>None yet.</p>
+          <EmptyState icon="💊" title="None yet" />
         ) : (
-          prescriptions.map(p => (
-            <div key={p.prescriptionId} style={{ padding: '12px 0', borderBottom: '1px solid var(--color-border)' }}>
-              <div style={{ display: 'flex', justifyContent: 'space-between', gap: 8 }}>
-                <strong>{p.patientName}</strong>
-                <span style={{ fontSize: 12, color: 'var(--color-text-muted)' }}>
-                  {formatDate(p.appointmentDate || p.issuedAt)} · #{p.appointmentId}
-                </span>
-              </div>
-              <div style={{ fontSize: 13 }}>
-                <strong>Diagnosis:</strong> {p.diagnosisNotes}
-              </div>
-              <div style={{ fontSize: 13 }}>
-                <strong>Medications:</strong> {p.medicationList}
-              </div>
-              {p.advice && (
-                <div style={{ fontSize: 13 }}>
-                  <strong>Advice:</strong> {p.advice}
+          <div className="divider-list">
+            {prescriptions.map(p => (
+              <div key={p.prescriptionId}>
+                <div className="row-between">
+                  <strong>{p.patientName}</strong>
+                  <span className="muted text-xs">
+                    {formatDate(p.appointmentDate || p.issuedAt)} · #{p.appointmentId}
+                  </span>
                 </div>
-              )}
-              {p.followUpDate && (
-                <div style={{ fontSize: 12, color: 'var(--color-text-muted)' }}>
-                  Follow-up: {formatDate(p.followUpDate)}
-                </div>
-              )}
-            </div>
-          ))
+                <p className="text-sm">
+                  <strong>Diagnosis:</strong> {p.diagnosisNotes}
+                </p>
+                <p className="text-sm">
+                  <strong>Medications:</strong> {p.medicationList}
+                </p>
+                {p.advice && (
+                  <p className="text-sm">
+                    <strong>Advice:</strong> {p.advice}
+                  </p>
+                )}
+                {p.followUpDate && <p className="muted text-xs">Follow-up: {formatDate(p.followUpDate)}</p>}
+              </div>
+            ))}
+          </div>
         )}
-      </div>
+      </Card>
 
       {history && (
         <PatientHistoryDialog

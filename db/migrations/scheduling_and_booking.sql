@@ -1,5 +1,5 @@
 -- patient-only sign-up, scheduling and booking. Run ONCE on a database created
--- before this change; fresh installs get all of this from schema.sql.
+-- before this change; fresh installs get all of this from the Flyway migrations (mediqueue-backend/src/main/resources/db/migration).
 --   mysql -u root -p mediqueue < db/migrations/scheduling_and_booking.sql
 -- Docker: docker exec -i mediqueue-db mysql -uroot -proot mediqueue < db/migrations/scheduling_and_booking.sql
 USE mediqueue;

@@ -2,10 +2,10 @@ import { useEffect, useState } from 'react'
 import PageLayout from '../../components/layout/PageLayout'
 import PageTitle from '../../components/common/PageTitle'
 import StatusBadge from '../../components/common/StatusBadge'
-import Spinner from '../../components/common/Spinner'
 import { getAllComplaints, updateComplaintStatus } from '../../api/complaintApi'
 import { errorMessage } from '../../api/axiosInstance'
 import { formatDate, formatDateTime } from '../../utils/formatters'
+import { Alert, Button, Card, EmptyState, ErrorState, LoadingState, Textarea, useToast } from '../../components/ui'
 
 const FILTERS = [
   ['', 'All'],
@@ -16,18 +16,21 @@ const FILTERS = [
 
 /** Open → Under review → Resolved. The resolution note is saved and shown to the patient. */
 export default function AdminComplaints() {
+  const toast = useToast()
   const [filter, setFilter] = useState('OPEN')
   const [complaints, setComplaints] = useState(null)
   const [notes, setNotes] = useState({})
-  const [message, setMessage] = useState('')
+  const [noteErrors, setNoteErrors] = useState({})
+  const [loadError, setLoadError] = useState('')
   const [error, setError] = useState('')
 
   async function load() {
     try {
       setComplaints((await getAllComplaints(filter)).data)
+      setLoadError('')
     } catch (err) {
       setComplaints([])
-      setError(errorMessage(err, 'Could not load complaints.'))
+      setLoadError(errorMessage(err, 'Could not load complaints.'))
     }
   }
   useEffect(() => {
@@ -35,16 +38,16 @@ export default function AdminComplaints() {
   }, [filter]) // eslint-disable-line react-hooks/exhaustive-deps
 
   async function move(c, status) {
-    setMessage('')
     setError('')
     const note = (notes[c.complaintId] || '').trim()
     if (status === 'RESOLVED' && !note) {
-      setError('Write a resolution note first: the patient will see it.')
+      setNoteErrors(e => ({ ...e, [c.complaintId]: 'Write a resolution note first: the patient will see it.' }))
       return
     }
+    setNoteErrors(e => ({ ...e, [c.complaintId]: '' }))
     try {
       await updateComplaintStatus(c.complaintId, status, note || undefined)
-      setMessage(
+      toast.success(
         status === 'RESOLVED'
           ? `${c.complaintId} resolved; ${c.patientName} has been notified.`
           : `${c.complaintId} is now under review.`,
@@ -59,91 +62,75 @@ export default function AdminComplaints() {
   return (
     <PageLayout>
       <PageTitle title="Complaints" subtitle="Review patient complaints and record how each was resolved" />
-      {message && <div className="alert alert-success">{message}</div>}
-      {error && <div className="alert alert-error">{error}</div>}
-      <div style={{ display: 'flex', gap: 8, marginBottom: 16 }}>
+      <ErrorState message={loadError} onRetry={load} />
+      <Alert tone="error">{error}</Alert>
+      <div className="row mb-4" role="group" aria-label="Filter by status">
         {FILTERS.map(([v, label]) => (
-          <button
-            key={label}
-            type="button"
-            className={`btn btn-sm ${filter === v ? 'btn-primary' : 'btn-outline'}`}
-            onClick={() => setFilter(v)}
-          >
+          <Button key={label} size="sm" variant={filter === v ? 'primary' : 'outline'} onClick={() => setFilter(v)}>
             {label}
-          </button>
+          </Button>
         ))}
       </div>
       {complaints === null ? (
-        <Spinner />
+        <LoadingState label="Loading complaints…" />
       ) : (
-        <div style={{ maxWidth: 900 }}>
+        <div className="stack max-w-lg">
           {complaints.length === 0 && (
-            <div className="card">
-              <p style={{ color: 'var(--color-text-muted)', margin: 0 }}>No complaints here.</p>
-            </div>
+            <Card>
+              <EmptyState icon="✅" title="No complaints here" />
+            </Card>
           )}
           {complaints.map(c => (
-            <div
-              key={c.complaintId}
-              className="card"
-              style={{ marginBottom: 14 }}
-              data-testid={`complaint-${c.complaintId}`}
-            >
-              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', gap: 12 }}>
+            <Card key={c.complaintId} data-testid={`complaint-${c.complaintId}`}>
+              <div className="row-between">
                 <div>
                   <strong>
                     {c.complaintId} · {c.issueType}
                   </strong>
-                  <div style={{ fontSize: '0.82rem', color: 'var(--color-text-muted)' }}>
+                  <p className="muted text-sm">
                     {c.patientName} ({c.patientId}) · raised {formatDate(c.createdOn)}
                     {c.appointmentId ? ` · appointment #${c.appointmentId}` : ''}
                     {c.billId ? ` · bill #${c.billId}` : ''}
-                  </div>
+                  </p>
                 </div>
                 <StatusBadge status={c.status} />
               </div>
-              <p style={{ margin: '10px 0' }}>{c.description}</p>
+              <p className="mt-2 mb-4 pre-line">{c.description}</p>
               {c.resolution && (
-                <div className="alert alert-info" style={{ marginBottom: 10 }}>
+                <Alert tone="info">
                   <strong>Note:</strong> {c.resolution}
-                  {c.resolvedAt && (
-                    <small style={{ display: 'block', color: 'var(--color-text-muted)' }}>
-                      Resolved {formatDateTime(c.resolvedAt)}
-                    </small>
-                  )}
-                </div>
+                  {c.resolvedAt && <span className="block text-xs">Resolved {formatDateTime(c.resolvedAt)}</span>}
+                </Alert>
               )}
               {c.status !== 'RESOLVED' && (
-                <div style={{ display: 'flex', gap: 8, alignItems: 'flex-start', flexWrap: 'wrap' }}>
-                  <label htmlFor={`note-${c.complaintId}`} className="sr-only">
-                    Note
-                  </label>
-                  <textarea
+                <div className="row row-top">
+                  <Textarea
                     id={`note-${c.complaintId}`}
-                    className="form-control"
+                    label={c.status === 'OPEN' ? 'Note (optional)' : 'Resolution note'}
+                    required={c.status === 'UNDER_REVIEW'}
                     rows={2}
-                    style={{ flex: 1, minWidth: 260 }}
+                    fieldClassName="grow"
+                    maxLength={4000}
                     placeholder={
-                      c.status === 'OPEN'
-                        ? 'Optional note while you look into it'
-                        : 'Resolution note (required, shown to the patient)'
+                      c.status === 'OPEN' ? 'What you are checking' : 'How it was resolved (shown to the patient)'
                     }
                     value={notes[c.complaintId] || ''}
+                    error={noteErrors[c.complaintId]}
                     onChange={e => setNotes(n => ({ ...n, [c.complaintId]: e.target.value }))}
                   />
                   {c.status === 'OPEN' && (
-                    <button type="button" className="btn btn-outline" onClick={() => move(c, 'UNDER_REVIEW')}>
+                    <Button variant="outline" className="mt-6" onClick={() => move(c, 'UNDER_REVIEW')}>
                       Start review
-                    </button>
+                    </Button>
                   )}
                   {c.status === 'UNDER_REVIEW' && (
-                    <button type="button" className="btn btn-primary" onClick={() => move(c, 'RESOLVED')}>
+                    <Button className="mt-6" onClick={() => move(c, 'RESOLVED')}>
                       Resolve
-                    </button>
+                    </Button>
                   )}
                 </div>
               )}
-            </div>
+            </Card>
           ))}
         </div>
       )}

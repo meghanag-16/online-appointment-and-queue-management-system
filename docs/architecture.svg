@@ -1,0 +1,152 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1200 800" width="1200" height="800" font-family="Segoe UI, Helvetica, Arial, sans-serif" role="img" aria-labelledby="t d">
+  <title id="t">MediQueue architecture</title>
+  <desc id="d">Users reach the React site on Render, which calls the Spring Boot API on Render; the API uses a hosted MySQL database and a pluggable email/SMS sender. GitHub Actions tests every change and Render deploys main after the checks pass.</desc>
+  <defs>
+    <marker id="arrow" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="8" markerHeight="8" orient="auto-start-reverse">
+      <path d="M0,0 L10,5 L0,10 z" fill="#555"/>
+    </marker>
+    <marker id="arrowAccent" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="8" markerHeight="8" orient="auto-start-reverse">
+      <path d="M0,0 L10,5 L0,10 z" fill="#e7557e"/>
+    </marker>
+  </defs>
+
+  <rect width="1200" height="800" fill="#ffffff"/>
+
+  <!-- title -->
+  <text x="40" y="48" font-size="26" font-weight="700" fill="#2c2c2c">MediQueue — architecture</text>
+  <text x="40" y="74" font-size="14" fill="#6b6b6b">Online appointment and queue management · deployed on Render with a hosted MySQL database</text>
+
+  <!-- ── users ── -->
+  <rect x="40" y="110" width="190" height="300" rx="14" fill="#f7f7f7" stroke="#e0e0e0"/>
+  <text x="135" y="140" font-size="16" font-weight="700" fill="#2c2c2c" text-anchor="middle">Users</text>
+  <g font-size="14" fill="#2c2c2c">
+    <rect x="60" y="158" width="150" height="38" rx="8" fill="#fff" stroke="#e0e0e0"/><text x="135" y="182" text-anchor="middle">Patient</text>
+    <rect x="60" y="204" width="150" height="38" rx="8" fill="#fff" stroke="#e0e0e0"/><text x="135" y="228" text-anchor="middle">Doctor</text>
+    <rect x="60" y="250" width="150" height="38" rx="8" fill="#fff" stroke="#e0e0e0"/><text x="135" y="274" text-anchor="middle">Lab technician</text>
+    <rect x="60" y="296" width="150" height="38" rx="8" fill="#fff" stroke="#e0e0e0"/><text x="135" y="320" text-anchor="middle">Receptionist</text>
+    <rect x="60" y="342" width="150" height="38" rx="8" fill="#fff" stroke="#e0e0e0"/><text x="135" y="366" text-anchor="middle">Administrator</text>
+  </g>
+
+  <!-- ── Render: static site ── -->
+  <rect x="285" y="110" width="245" height="300" rx="14" fill="#fde8ef" stroke="#e7557e" stroke-width="1.5"/>
+  <text x="407" y="138" font-size="12" font-weight="700" fill="#e7557e" text-anchor="middle" letter-spacing="1">RENDER · STATIC SITE</text>
+  <text x="407" y="162" font-size="16" font-weight="700" fill="#2c2c2c" text-anchor="middle">mediqueue-web</text>
+  <rect x="305" y="180" width="205" height="210" rx="10" fill="#fff" stroke="#f3b6c8"/>
+  <g font-size="13" fill="#2c2c2c">
+    <text x="320" y="206" font-weight="700">React 18 single-page app</text>
+    <text x="320" y="230">• Landing page + 5 role portals</text>
+    <text x="320" y="252">• Design system: tokens, Button,</text>
+    <text x="320" y="270">   Card, Table, Modal, Toast…</text>
+    <text x="320" y="292">• Pickers instead of typed IDs</text>
+    <text x="320" y="314">• Live queue refresh (polling)</text>
+    <text x="320" y="336">• One Axios client: JWT on every</text>
+    <text x="320" y="354">   call, 401 → login, 403 → banner</text>
+    <text x="320" y="378" fill="#6b6b6b">Built by Vite · served over HTTPS</text>
+  </g>
+
+  <!-- ── Render: API service ── -->
+  <rect x="585" y="96" width="350" height="470" rx="14" fill="#f2f7fd" stroke="#2a6fb0" stroke-width="1.5"/>
+  <text x="760" y="124" font-size="12" font-weight="700" fill="#2a6fb0" text-anchor="middle" letter-spacing="1">RENDER · WEB SERVICE (DOCKER)</text>
+  <text x="760" y="148" font-size="16" font-weight="700" fill="#2c2c2c" text-anchor="middle">mediqueue-api · Spring Boot 3 / Java 17</text>
+
+  <rect x="605" y="164" width="310" height="54" rx="10" fill="#fff" stroke="#b9d3ee"/>
+  <text x="620" y="186" font-size="13" font-weight="700" fill="#2c2c2c">REST controllers /api/v1 · health check</text>
+  <text x="620" y="206" font-size="12.5" fill="#444">Spring Security + JWT · role and ownership rules</text>
+
+  <rect x="605" y="228" width="310" height="76" rx="10" fill="#fff" stroke="#b9d3ee"/>
+  <text x="620" y="250" font-size="13" font-weight="700" fill="#2c2c2c">Services</text>
+  <text x="620" y="270" font-size="12.5" fill="#444">Booking &amp; slots · Virtual queue · Prescriptions</text>
+  <text x="620" y="290" font-size="12.5" fill="#444">Lab reports · Billing · Complaints · Admin &amp; audit</text>
+
+  <rect x="605" y="314" width="310" height="70" rx="10" fill="#fff" stroke="#b9d3ee"/>
+  <text x="620" y="336" font-size="13" font-weight="700" fill="#2c2c2c">Observer: appointment events</text>
+  <text x="620" y="356" font-size="12.5" fill="#444">booked · cancelled · moved · status · priority →</text>
+  <text x="620" y="374" font-size="12.5" fill="#444">queue, billing, notifications, audit log</text>
+
+  <g font-size="12.5" text-anchor="middle">
+    <rect x="605" y="394" width="98" height="54" rx="10" fill="#fff" stroke="#b9d3ee"/>
+    <text x="654" y="416" font-weight="700" fill="#2c2c2c">Strategy</text><text x="654" y="434" fill="#444">billing rates</text>
+    <rect x="711" y="394" width="98" height="54" rx="10" fill="#fff" stroke="#b9d3ee"/>
+    <text x="760" y="416" font-weight="700" fill="#2c2c2c">Factory</text><text x="760" y="434" fill="#444">user types</text>
+    <rect x="817" y="394" width="98" height="54" rx="10" fill="#fff" stroke="#b9d3ee"/>
+    <text x="866" y="416" font-weight="700" fill="#2c2c2c">Facade</text><text x="866" y="434" fill="#444">notifications</text>
+  </g>
+
+  <rect x="605" y="458" width="150" height="54" rx="10" fill="#fff" stroke="#b9d3ee"/>
+  <text x="680" y="480" font-size="12.5" font-weight="700" fill="#2c2c2c" text-anchor="middle">Schedulers</text>
+  <text x="680" y="498" font-size="12" fill="#444" text-anchor="middle">slots nightly · reminders</text>
+  <rect x="765" y="458" width="150" height="54" rx="10" fill="#fff" stroke="#b9d3ee"/>
+  <text x="840" y="480" font-size="12.5" font-weight="700" fill="#2c2c2c" text-anchor="middle">JPA + Flyway</text>
+  <text x="840" y="498" font-size="12" fill="#444" text-anchor="middle">schema migrations</text>
+  <text x="760" y="546" font-size="12" fill="#6b6b6b" text-anchor="middle">Free instance · sleeps when idle · /api/v1/health</text>
+
+  <!-- ── database ── -->
+  <g>
+    <path d="M970,150 a105,18 0 0 1 210,0 v210 a105,18 0 0 1 -210,0 z" fill="#e6f6ec" stroke="#1e8e4e" stroke-width="1.5"/>
+    <ellipse cx="1075" cy="150" rx="105" ry="18" fill="#f3fbf6" stroke="#1e8e4e" stroke-width="1.5"/>
+    <text x="1075" y="196" font-size="12" font-weight="700" fill="#1e8e4e" text-anchor="middle" letter-spacing="1">HOSTED MYSQL 8</text>
+    <text x="1075" y="216" font-size="13" fill="#2c2c2c" text-anchor="middle">e.g. Aiven · TLS</text>
+    <g font-size="12" fill="#444" text-anchor="middle">
+      <text x="1075" y="246">users · doctors · patients</text>
+      <text x="1075" y="266">time_slots · appointments</text>
+      <text x="1075" y="286">virtual_queue · prescriptions</text>
+      <text x="1075" y="306">lab_reports + report files</text>
+      <text x="1075" y="326">bills · complaints</text>
+      <text x="1075" y="346">notifications · audit_log</text>
+    </g>
+  </g>
+
+  <!-- ── email / sms ── -->
+  <rect x="970" y="420" width="210" height="76" rx="12" fill="#fff3e0" stroke="#b86e00" stroke-width="1.2"/>
+  <text x="1075" y="446" font-size="13" font-weight="700" fill="#2c2c2c" text-anchor="middle">Email / SMS sender</text>
+  <text x="1075" y="466" font-size="12" fill="#444" text-anchor="middle">pluggable; logs in dev</text>
+  <text x="1075" y="484" font-size="12" fill="#444" text-anchor="middle">every message stored in-app</text>
+
+  <!-- ── runtime arrows ── -->
+  <line x1="230" y1="260" x2="281" y2="260" stroke="#555" stroke-width="2" marker-end="url(#arrow)"/>
+  <text x="256" y="250" font-size="11" fill="#6b6b6b" text-anchor="middle">HTTPS</text>
+
+  <line x1="530" y1="260" x2="581" y2="260" stroke="#555" stroke-width="2" marker-end="url(#arrow)"/>
+  <text x="556" y="240" font-size="11" fill="#6b6b6b" text-anchor="middle">REST</text>
+  <text x="556" y="252" font-size="11" fill="#6b6b6b" text-anchor="middle">+ JWT</text>
+
+  <line x1="935" y1="255" x2="966" y2="255" stroke="#555" stroke-width="2" marker-end="url(#arrow)"/>
+  <text x="951" y="245" font-size="11" fill="#6b6b6b" text-anchor="middle">JDBC</text>
+
+  <line x1="935" y1="458" x2="966" y2="458" stroke="#555" stroke-width="2" marker-end="url(#arrow)"/>
+
+  <!-- ── delivery band ── -->
+  <rect x="40" y="610" width="1125" height="160" rx="14" fill="#fafafa" stroke="#e0e0e0"/>
+  <text x="60" y="638" font-size="12" font-weight="700" fill="#6b6b6b" letter-spacing="1">DELIVERY</text>
+
+  <rect x="60" y="656" width="170" height="90" rx="10" fill="#fff" stroke="#2c2c2c"/>
+  <text x="145" y="684" font-size="14" font-weight="700" fill="#2c2c2c" text-anchor="middle">GitHub</text>
+  <text x="145" y="704" font-size="12" fill="#444" text-anchor="middle">pull request → main</text>
+  <text x="145" y="722" font-size="12" fill="#444" text-anchor="middle">Dependabot updates</text>
+
+  <rect x="290" y="656" width="440" height="90" rx="10" fill="#fff" stroke="#2c2c2c"/>
+  <text x="510" y="684" font-size="14" font-weight="700" fill="#2c2c2c" text-anchor="middle">GitHub Actions CI</text>
+  <text x="510" y="706" font-size="12" fill="#444" text-anchor="middle">lint (Spotless, Checkstyle, ESLint, Prettier) · unit tests</text>
+  <text x="510" y="724" font-size="12" fill="#444" text-anchor="middle">integration tests on MySQL · coverage gate · Docker builds</text>
+  <text x="510" y="740" font-size="12" fill="#444" text-anchor="middle">Cypress end-to-end on the full Docker Compose stack</text>
+
+  <rect x="790" y="656" width="160" height="90" rx="10" fill="#fff" stroke="#2c2c2c"/>
+  <text x="870" y="684" font-size="14" font-weight="700" fill="#2c2c2c" text-anchor="middle">GHCR</text>
+  <text x="870" y="704" font-size="12" fill="#444" text-anchor="middle">Docker images</text>
+  <text x="870" y="722" font-size="12" fill="#444" text-anchor="middle">tagged per commit</text>
+
+  <rect x="985" y="656" width="160" height="90" rx="10" fill="#fff" stroke="#e7557e"/>
+  <text x="1065" y="684" font-size="14" font-weight="700" fill="#e7557e" text-anchor="middle">Smoke test</text>
+  <text x="1065" y="704" font-size="12" fill="#444" text-anchor="middle">health of the live</text>
+  <text x="1065" y="722" font-size="12" fill="#444" text-anchor="middle">site after deploys</text>
+
+  <line x1="230" y1="701" x2="286" y2="701" stroke="#555" stroke-width="2" marker-end="url(#arrow)"/>
+  <line x1="730" y1="701" x2="786" y2="701" stroke="#555" stroke-width="2" marker-end="url(#arrow)"/>
+  <line x1="950" y1="701" x2="981" y2="701" stroke="#555" stroke-width="2" marker-end="url(#arrow)"/>
+
+  <!-- deploy: checks pass → Render builds main -->
+  <path d="M510,656 L510,590 L407,590 L407,414" fill="none" stroke="#e7557e" stroke-width="2" stroke-dasharray="6 5" marker-end="url(#arrowAccent)"/>
+  <path d="M510,590 L760,590 L760,570" fill="none" stroke="#e7557e" stroke-width="2" stroke-dasharray="6 5" marker-end="url(#arrowAccent)"/>
+  <rect x="520" y="578" width="196" height="22" rx="11" fill="#fff"/>
+  <text x="618" y="594" font-size="12" font-weight="700" fill="#e7557e" text-anchor="middle">checks pass → Render deploys</text>
+</svg>

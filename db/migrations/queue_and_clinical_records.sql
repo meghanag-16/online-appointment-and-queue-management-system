@@ -1,5 +1,5 @@
 -- Virtual queue and clinical records. Run ONCE on a database created before this change
--- (after scheduling_and_booking.sql); fresh installs get all of this from schema.sql.
+-- (after scheduling_and_booking.sql); fresh installs get all of this from the Flyway migrations (mediqueue-backend/src/main/resources/db/migration).
 --   mysql -u root -p mediqueue < db/migrations/queue_and_clinical_records.sql
 -- Docker: docker exec -i mediqueue-db mysql -uroot -proot mediqueue < db/migrations/queue_and_clinical_records.sql
 USE mediqueue;

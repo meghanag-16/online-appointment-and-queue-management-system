@@ -6,43 +6,38 @@ import com.mediqueue.dto.LabAppointmentResponse;
 import com.mediqueue.dto.LabReportResponse;
 import com.mediqueue.entity.Appointment;
 import com.mediqueue.entity.LabReport;
+import com.mediqueue.entity.LabReportFile;
 import com.mediqueue.entity.enums.AppointmentStatus;
 import com.mediqueue.exception.BadRequestException;
 import com.mediqueue.exception.ResourceNotFoundException;
 import com.mediqueue.lab.LabFileValidator;
 import com.mediqueue.lab.LabFileValidator.AcceptedFile;
 import com.mediqueue.repository.AppointmentRepository;
+import com.mediqueue.repository.LabReportFileRepository;
 import com.mediqueue.repository.LabReportRepository;
 import com.mediqueue.security.AccessGuard;
 import com.mediqueue.security.CurrentUserService;
 import com.mediqueue.service.LabService;
 import com.mediqueue.service.facade.NotificationFacade;
 import java.io.IOException;
-import java.io.InputStream;
 import java.io.UncheckedIOException;
 import java.nio.file.Files;
 import java.nio.file.Path;
-import java.nio.file.StandardCopyOption;
+import java.util.Arrays;
 import java.util.EnumSet;
 import java.util.List;
 import java.util.Set;
-import java.util.UUID;
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Value;
+import org.springframework.core.io.ByteArrayResource;
 import org.springframework.core.io.FileSystemResource;
 import org.springframework.data.domain.PageRequest;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
-import org.springframework.transaction.support.TransactionSynchronization;
-import org.springframework.transaction.support.TransactionSynchronizationManager;
 import org.springframework.web.multipart.MultipartFile;
 
 @Service
 @Transactional
 public class LabServiceImpl implements LabService {
-
-    private static final Logger log = LoggerFactory.getLogger(LabServiceImpl.class);
 
     /** Reports can't be attached to visits that never happened. */
     private static final Set<AppointmentStatus> NO_UPLOAD =
@@ -54,6 +49,7 @@ public class LabServiceImpl implements LabService {
     private final CurrentUserService currentUser;
     private final NotificationFacade notificationFacade;
     private final AuditService auditService;
+    private final LabReportFileRepository labReportFileRepository;
     private final Path uploadRoot;
 
     public LabServiceImpl(
@@ -63,6 +59,7 @@ public class LabServiceImpl implements LabService {
             CurrentUserService currentUser,
             NotificationFacade notificationFacade,
             AuditService auditService,
+            LabReportFileRepository labReportFileRepository,
             @Value("${app.upload.dir:uploads}") String uploadDir) {
         this.labReportRepository = labReportRepository;
         this.appointmentRepository = appointmentRepository;
@@ -70,6 +67,7 @@ public class LabServiceImpl implements LabService {
         this.currentUser = currentUser;
         this.notificationFacade = notificationFacade;
         this.auditService = auditService;
+        this.labReportFileRepository = labReportFileRepository;
         this.uploadRoot = Path.of(uploadDir, "lab").toAbsolutePath().normalize();
     }
 
@@ -131,32 +129,24 @@ public class LabServiceImpl implements LabService {
         if (file == null || file.isEmpty())
             throw new BadRequestException("Choose a file to upload");
 
+        byte[] bytes = readAll(file);
         AcceptedFile accepted =
-                LabFileValidator.validate(file.getOriginalFilename(), file.getSize(), head(file));
-        // Stored under a generated name: the uploaded name never becomes part of a path on disk.
-        Path destination =
-                uploadRoot.resolve(UUID.randomUUID() + "." + accepted.extension()).normalize();
-        if (!destination.startsWith(uploadRoot)) throw new BadRequestException("Invalid file name");
-        try {
-            Files.createDirectories(uploadRoot);
-            try (InputStream in = file.getInputStream()) {
-                Files.copy(in, destination, StandardCopyOption.REPLACE_EXISTING);
-            }
-        } catch (IOException e) {
-            throw new UncheckedIOException("Unable to save the uploaded file", e);
-        }
-        deleteFileIfRolledBack(destination);
+                LabFileValidator.validate(
+                        file.getOriginalFilename(),
+                        bytes.length,
+                        Arrays.copyOf(bytes, Math.min(bytes.length, 16)));
 
         LabReport report = new LabReport();
         report.setAppointment(appointment);
         report.setReportType(testName);
         report.setRemarks(remarks == null || remarks.isBlank() ? null : remarks.trim());
-        report.setFilePath(destination.toString());
         report.setOriginalFileName(LabFileValidator.cleanFileName(file.getOriginalFilename()));
         report.setContentType(accepted.contentType());
-        report.setFileSize(file.getSize());
+        report.setFileSize((long) bytes.length);
         report.setUploadedBy(currentUser.userId());
-        LabReport saved = labReportRepository.save(report);
+        LabReport saved = labReportRepository.saveAndFlush(report);
+        // The file is stored in the database, so it survives restarts on hosts without a disk.
+        labReportFileRepository.save(new LabReportFile(saved.getReportId(), bytes));
 
         notificationFacade.reportReady(saved); // REPORT_READY to the patient
         auditService.record(
@@ -214,11 +204,6 @@ public class LabServiceImpl implements LabService {
                                                 "Lab report not found: " + reportId));
         accessGuard.requireAppointmentDocumentRead(report.getAppointment(), true);
 
-        Path path = Path.of(report.getFilePath()).toAbsolutePath().normalize();
-        if (!Files.isRegularFile(path)) {
-            throw new ResourceNotFoundException(
-                    "The file for report #" + reportId + " is missing on the server");
-        }
         String name =
                 report.getOriginalFileName() != null
                         ? report.getOriginalFileName()
@@ -227,6 +212,24 @@ public class LabServiceImpl implements LabService {
                 report.getContentType() != null
                         ? report.getContentType()
                         : "application/octet-stream";
+        var stored = labReportFileRepository.findById(reportId);
+        if (stored.isPresent()) {
+            byte[] data = stored.get().getData();
+            return new Download(new ByteArrayResource(data), name, type, data.length);
+        }
+        return legacyFileOnDisk(report, name, type);
+    }
+
+    /** Reports uploaded by older versions were written to disk under app.upload.dir. */
+    private Download legacyFileOnDisk(LabReport report, String name, String type) {
+        Path path =
+                report.getFilePath() == null
+                        ? null
+                        : Path.of(report.getFilePath()).toAbsolutePath().normalize();
+        if (path == null || !path.startsWith(uploadRoot) || !Files.isRegularFile(path)) {
+            throw new ResourceNotFoundException(
+                    "The file for report #" + report.getReportId() + " is missing on the server");
+        }
         try {
             return new Download(new FileSystemResource(path), name, type, Files.size(path));
         } catch (IOException e) {
@@ -240,29 +243,11 @@ public class LabServiceImpl implements LabService {
                 .orElseThrow(() -> new ResourceNotFoundException("Appointment not found: " + id));
     }
 
-    private static byte[] head(MultipartFile file) {
-        try (InputStream in = file.getInputStream()) {
-            return in.readNBytes(16);
+    private static byte[] readAll(MultipartFile file) {
+        try {
+            return file.getBytes();
         } catch (IOException e) {
             throw new UncheckedIOException("Unable to read the uploaded file", e);
         }
-    }
-
-    /** If saving the database row fails, don't leave an orphan file behind. */
-    private static void deleteFileIfRolledBack(Path file) {
-        if (!TransactionSynchronizationManager.isSynchronizationActive()) return;
-        TransactionSynchronizationManager.registerSynchronization(
-                new TransactionSynchronization() {
-                    @Override
-                    public void afterCompletion(int status) {
-                        if (status != STATUS_COMMITTED) {
-                            try {
-                                Files.deleteIfExists(file);
-                            } catch (IOException e) {
-                                log.warn("Could not delete orphan upload {}", file, e);
-                            }
-                        }
-                    }
-                });
     }
 }

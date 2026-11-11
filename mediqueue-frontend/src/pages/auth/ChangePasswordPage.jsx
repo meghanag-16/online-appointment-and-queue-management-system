@@ -4,6 +4,7 @@ import { useAuth } from '../../context/AuthContext'
 import axiosInstance, { errorMessage } from '../../api/axiosInstance'
 import { ENDPOINTS } from '../../api/endpoints'
 import { getHomeForRole } from '../../utils/roleRoutes'
+import { Alert, Button, Input } from '../../components/ui'
 
 /**
  * Shown straight after login when the account still has the temporary password the administrator
@@ -14,17 +15,17 @@ export default function ChangePasswordPage() {
   const navigate = useNavigate()
   const [form, setForm] = useState({ currentPassword: '', newPassword: '', confirm: '' })
   const [error, setError] = useState('')
+  const [fieldErrors, setFieldErrors] = useState({})
   const [saving, setSaving] = useState(false)
 
   const set = f => e => setForm(v => ({ ...v, [f]: e.target.value }))
+  const mismatch = form.confirm && form.newPassword !== form.confirm ? 'The new passwords do not match.' : ''
 
   async function submit(e) {
     e.preventDefault()
     setError('')
-    if (form.newPassword !== form.confirm) {
-      setError('The new passwords do not match.')
-      return
-    }
+    setFieldErrors({})
+    if (mismatch) return
     setSaving(true)
     try {
       await axiosInstance.put(ENDPOINTS.ME_PASSWORD, {
@@ -35,101 +36,72 @@ export default function ChangePasswordPage() {
       navigate(getHomeForRole(user?.role), { replace: true })
     } catch (err) {
       setError(errorMessage(err, 'Could not change the password.'))
+      setFieldErrors(err.response?.data?.fieldErrors || {})
     } finally {
       setSaving(false)
     }
   }
 
   return (
-    <div
-      style={{
-        minHeight: '100vh',
-        display: 'flex',
-        alignItems: 'center',
-        justifyContent: 'center',
-        background: 'linear-gradient(135deg, var(--color-dark) 0%, #3d3d3d 100%)',
-        padding: 16,
-      }}
-    >
-      <div
-        className="animate-in"
-        style={{
-          background: 'var(--color-white)',
-          borderRadius: 16,
-          padding: '36px 32px',
-          width: '100%',
-          maxWidth: 420,
-          boxShadow: 'var(--shadow-lg)',
-        }}
-      >
-        <h1 style={{ fontFamily: 'var(--font-display)', fontWeight: 400, fontSize: '1.5rem', marginBottom: 6 }}>
-          Choose a new password
-        </h1>
-        <p style={{ color: 'var(--color-text-muted)', fontSize: '0.9rem', marginBottom: 20 }}>
-          Welcome{user?.name ? `, ${user.name}` : ''}. You signed in with a temporary password from the administrator.
-          Please replace it with one only you know.
-        </p>
-        {error && <div className="alert alert-error">{error}</div>}
+    <div className="auth-screen">
+      <div className="auth-panel animate-in">
+        <div className="auth-head">
+          <h1>Choose a new password</h1>
+          <p className="muted text-sm">
+            Welcome{user?.name ? `, ${user.name}` : ''}. You signed in with a temporary password from the administrator.
+            Please replace it with one only you know.
+          </p>
+        </div>
+        <Alert tone="error">{error}</Alert>
         <form onSubmit={submit}>
-          <div className="form-group">
-            <label htmlFor="cp-current">Temporary password</label>
-            <input
-              id="cp-current"
-              type="password"
-              className="form-control"
-              autoComplete="current-password"
-              value={form.currentPassword}
-              onChange={set('currentPassword')}
-              required
-            />
-          </div>
-          <div className="form-group">
-            <label htmlFor="cp-new">New password</label>
-            <input
-              id="cp-new"
-              type="password"
-              className="form-control"
-              autoComplete="new-password"
-              minLength={8}
-              placeholder="At least 8 characters"
-              value={form.newPassword}
-              onChange={set('newPassword')}
-              required
-            />
-          </div>
-          <div className="form-group">
-            <label htmlFor="cp-confirm">Confirm new password</label>
-            <input
-              id="cp-confirm"
-              type="password"
-              className="form-control"
-              autoComplete="new-password"
-              minLength={8}
-              value={form.confirm}
-              onChange={set('confirm')}
-              required
-            />
-          </div>
-          <button
-            type="submit"
-            className="btn btn-primary"
-            disabled={saving}
-            style={{ width: '100%', justifyContent: 'center', padding: 12 }}
-          >
-            {saving ? 'Saving…' : 'Save new password'}
-          </button>
+          <Input
+            id="cp-current"
+            label="Temporary password"
+            type="password"
+            autoComplete="current-password"
+            value={form.currentPassword}
+            onChange={set('currentPassword')}
+            required
+            error={fieldErrors.currentPassword}
+          />
+          <Input
+            id="cp-new"
+            label="New password"
+            type="password"
+            autoComplete="new-password"
+            minLength={8}
+            hint="At least 8 characters"
+            value={form.newPassword}
+            onChange={set('newPassword')}
+            required
+            error={fieldErrors.newPassword}
+          />
+          <Input
+            id="cp-confirm"
+            label="Confirm new password"
+            type="password"
+            autoComplete="new-password"
+            minLength={8}
+            value={form.confirm}
+            onChange={set('confirm')}
+            required
+            error={mismatch}
+          />
+          <Button type="submit" size="lg" block loading={saving} disabled={!!mismatch}>
+            Save new password
+          </Button>
         </form>
-        <p style={{ textAlign: 'center', marginTop: 16 }}>
-          <button
-            type="button"
-            className="btn btn-outline btn-sm"
+        <p className="auth-foot">
+          <Button
+            variant="outline"
+            size="sm"
             onClick={() => {
               logout()
               navigate('/login', { replace: true })
             }}
           >
             Log out
-          </button>
+          </Button>
         </p>
       </div>
     </div>

@@ -1,6 +1,8 @@
 FROM node:20-alpine AS build
 WORKDIR /app
 COPY package*.json ./
+# Cypress is only needed for end-to-end tests, not inside the image
+ENV CYPRESS_INSTALL_BINARY=0
 RUN npm ci
 COPY . .
 ARG VITE_API_BASE_URL=/api/v1

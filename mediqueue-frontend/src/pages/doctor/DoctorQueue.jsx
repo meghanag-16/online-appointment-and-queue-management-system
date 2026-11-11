@@ -2,13 +2,13 @@ import { useState } from 'react'
 import { useNavigate } from 'react-router-dom'
 import PageLayout from '../../components/layout/PageLayout'
 import PageTitle from '../../components/common/PageTitle'
-import Spinner from '../../components/common/Spinner'
 import QueueTable from '../../components/queue/QueueTable'
 import PatientHistoryDialog from '../../components/clinical/PatientHistoryDialog'
 import axiosInstance, { errorMessage } from '../../api/axiosInstance'
 import { ENDPOINTS } from '../../api/endpoints'
 import { useAuth } from '../../context/AuthContext'
 import { usePolling } from '../../hooks/usePolling'
+import { Alert, Button, ErrorState, LoadingState, useConfirm, useToast } from '../../components/ui'
 
 const REFRESH_MS = 5000
 
@@ -16,10 +16,11 @@ const REFRESH_MS = 5000
 export default function DoctorQueue() {
   const { user } = useAuth()
   const navigate = useNavigate()
+  const confirm = useConfirm()
+  const toast = useToast()
   const [queue, setQueue] = useState(null)
   const [error, setError] = useState('')
   const [loadError, setLoadError] = useState('')
-  const [message, setMessage] = useState('')
   const [busy, setBusy] = useState(false)
   const [history, setHistory] = useState(null)
   const [updatedAt, setUpdatedAt] = useState(null)
@@ -39,10 +40,9 @@ export default function DoctorQueue() {
   async function act(request, success) {
     setBusy(true)
     setError('')
-    setMessage('')
     try {
       const res = await request()
-      setMessage(typeof success === 'function' ? success(res.data) : success)
+      toast.success(typeof success === 'function' ? success(res.data) : success)
       await load()
     } catch (err) {
       setError(errorMessage(err, 'That did not work.'))
@@ -57,20 +57,30 @@ export default function DoctorQueue() {
       e => `${e.patientName} has been called in.`,
     )
 
+  async function noShow(e) {
+    const ok = await confirm({
+      title: `Mark ${e.patientName} as a no-show?`,
+      message: 'They leave the queue and the appointment is closed.',
+      confirmLabel: 'Mark no-show',
+      danger: true,
+    })
+    if (ok) act(() => axiosInstance.post(ENDPOINTS.QUEUE_NO_SHOW(e.queueId)), `${e.patientName} marked as a no-show.`)
+  }
+
   const waiting = queue?.filter(e => e.visitStatus === 'WAITING').length ?? 0
   const current = queue?.find(e => e.visitStatus === 'CALLED' || e.visitStatus === 'IN_CONSULTATION')
 
   function actions(e) {
     const historyBtn = (
-      <button className="btn btn-outline btn-sm" onClick={() => setHistory(e)}>
+      <Button variant="outline" size="sm" onClick={() => setHistory(e)}>
         History
-      </button>
+      </Button>
     )
     if (e.visitStatus === 'CALLED')
       return (
         <>
-          <button
-            className="btn btn-primary btn-sm"
+          <Button
+            size="sm"
             disabled={busy}
             data-testid="start-btn"
             onClick={() =>
@@ -81,32 +91,27 @@ export default function DoctorQueue() {
             }
           >
             Start
-          </button>{' '}
-          <button
-            className="btn btn-outline btn-sm"
-            disabled={busy}
-            onClick={() =>
-              window.confirm(`Mark ${e.patientName} as a no-show?`) &&
-              act(() => axiosInstance.post(ENDPOINTS.QUEUE_NO_SHOW(e.queueId)), `${e.patientName} marked as a no-show.`)
-            }
-          >
+          </Button>
+          <Button variant="danger-outline" size="sm" disabled={busy} onClick={() => noShow(e)}>
             No-show
-          </button>{' '}
+          </Button>
           {historyBtn}
         </>
       )
     if (e.visitStatus === 'IN_CONSULTATION')
       return (
         <>
-          <button
-            className="btn btn-primary btn-sm"
+          <Button
+            size="sm"
             disabled={busy}
+            data-testid="write-prescription-btn"
             onClick={() => navigate(`/doctor/prescriptions?appointmentId=${e.appointmentId}`)}
           >
             Write prescription
-          </button>{' '}
-          <button
-            className="btn btn-outline btn-sm"
+          </Button>
+          <Button
+            variant="outline"
+            size="sm"
             disabled={busy}
             data-testid="finish-btn"
             onClick={() =>
@@ -114,20 +119,21 @@ export default function DoctorQueue() {
             }
           >
             Finish
-          </button>{' '}
+          </Button>
           {historyBtn}
         </>
       )
     if (e.visitStatus === 'FINISHED')
       return e.hasPrescription ? (
-        <span style={{ fontSize: 12, color: 'var(--color-success)' }}>Prescribed</span>
+        <span className="text-success text-xs">Prescribed</span>
       ) : (
-        <button
-          className="btn btn-outline btn-sm"
+        <Button
+          variant="outline"
+          size="sm"
           onClick={() => navigate(`/doctor/prescriptions?appointmentId=${e.appointmentId}`)}
         >
           Write prescription
-        </button>
+        </Button>
       )
     return historyBtn
   }
@@ -135,20 +141,14 @@ export default function DoctorQueue() {
   return (
     <PageLayout>
       <PageTitle title="Today's Queue" subtitle="High priority first, then by slot time. Updates automatically." />
-      {message && <div className="alert alert-success">{message}</div>}
-      {error && <div className="alert alert-error">{error}</div>}
-      {loadError && <div className="alert alert-error">{loadError}</div>}
+      <Alert tone="error">{error}</Alert>
+      <ErrorState message={loadError} onRetry={load} />
 
-      <div style={{ display: 'flex', gap: 12, alignItems: 'center', flexWrap: 'wrap', marginBottom: 16 }}>
-        <button
-          className="btn btn-primary"
-          onClick={callNext}
-          disabled={busy || !!current || waiting === 0}
-          data-testid="call-next-btn"
-        >
+      <div className="toolbar">
+        <Button onClick={callNext} disabled={busy || !!current || waiting === 0} data-testid="call-next-btn">
           Call next patient
-        </button>
-        <span style={{ fontSize: 13, color: 'var(--color-text-muted)' }}>
+        </Button>
+        <span className="muted text-sm">
           {current
             ? `Now: ${current.patientName} (${current.visitStatus === 'CALLED' ? 'called' : 'in consultation'})`
             : 'Nobody called yet'}
@@ -160,7 +160,7 @@ export default function DoctorQueue() {
       </div>
 
       {queue === null ? (
-        <Spinner />
+        <LoadingState label="Loading today's queue…" />
       ) : (
         <QueueTable entries={queue} renderActions={actions} emptyText="Nobody is waiting today." />
       )}

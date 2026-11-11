@@ -1,5 +1,8 @@
 import StatusBadge from '../common/StatusBadge'
+import { Card, Cell, Table } from '../ui'
 import { formatTime } from '../../utils/dates'
+
+const HEADERS = ['#', 'Patient', 'Slot', 'Reason', 'Priority', 'Status', 'Actions']
 
 /**
  * One doctor's queue for a day. Columns are shared; the actions column is supplied by the page
@@ -11,86 +14,75 @@ export default function QueueTable({ entries, renderActions, emptyText = 'Nobody
   const active = entries.filter(e => e.visitStatus !== 'FINISHED')
   const finished = entries.filter(e => e.visitStatus === 'FINISHED')
   return (
-    <div className="card" style={{ padding: 0 }}>
-      <div className="table-wrapper">
-        <table data-testid="queue-table">
-          <thead>
-            <tr>
-              <th>#</th>
-              <th>Patient</th>
-              <th>Slot</th>
-              <th>Reason</th>
-              <th>Priority</th>
-              <th>Status</th>
-              <th>Actions</th>
-            </tr>
-          </thead>
-          <tbody>
-            {active.length === 0 && (
-              <tr>
-                <td colSpan={7} style={{ textAlign: 'center', padding: 24, color: 'var(--color-text-muted)' }}>
-                  {emptyText}
-                </td>
-              </tr>
-            )}
-            {active.map(e => (
-              <tr key={e.queueId} style={rowStyle(e)} data-testid={`queue-row-${e.appointmentId}`}>
-                <td style={{ fontWeight: 700, fontSize: '1.05rem' }}>
-                  {e.queuePosition}
-                  {e.overridePosition != null && (
-                    <span title="Position set by the administrator" style={{ fontSize: 11, marginLeft: 4 }}>
-                      📌
-                    </span>
-                  )}
-                </td>
-                <td>
-                  <strong>{e.patientName}</strong>
-                </td>
-                <td style={{ fontSize: 12 }}>
-                  {e.slotStart ? `${formatTime(e.slotStart)} – ${formatTime(e.slotEnd)}` : '—'}
-                </td>
-                <td style={{ fontSize: 12, maxWidth: 180 }}>{e.reasonForVisit || '—'}</td>
-                <td>
-                  <StatusBadge status={e.priority || 'NORMAL'} />
-                </td>
-                <td>
-                  <StatusBadge status={e.visitStatus} />
-                </td>
-                <td style={{ whiteSpace: 'nowrap' }}>{renderActions(e)}</td>
-              </tr>
-            ))}
-            {finished.length > 0 && (
-              <tr>
-                <td
-                  colSpan={7}
-                  style={{ background: 'var(--color-bg)', fontSize: 12, color: 'var(--color-text-muted)' }}
-                >
-                  Seen today ({finished.length})
-                </td>
-              </tr>
-            )}
-            {finished.map(e => (
-              <tr key={e.queueId} style={{ opacity: 0.7 }}>
-                <td>—</td>
-                <td>{e.patientName}</td>
-                <td style={{ fontSize: 12 }}>{e.slotStart ? formatTime(e.slotStart) : '—'}</td>
-                <td style={{ fontSize: 12 }}>{e.reasonForVisit || '—'}</td>
-                <td>
-                  <StatusBadge status={e.priority || 'NORMAL'} />
-                </td>
-                <td>
-                  <StatusBadge status="FINISHED" />
-                </td>
-                <td style={{ whiteSpace: 'nowrap' }}>{renderActions(e)}</td>
-              </tr>
-            ))}
-          </tbody>
-        </table>
-      </div>
-    </div>
+    <Card flush>
+      <Table headers={HEADERS} testId="queue-table" empty={emptyText} isEmpty={entries.length === 0}>
+        {active.length === 0 && (
+          <tr>
+            <td colSpan={HEADERS.length} className="text-center muted">
+              {emptyText}
+            </td>
+          </tr>
+        )}
+        {active.map(e => (
+          <tr key={e.queueId} className={rowClass(e)} data-testid={`queue-row-${e.appointmentId}`}>
+            <td className="strong text-lg">
+              {e.queuePosition}
+              {e.overridePosition != null && (
+                <span title="Position set by the administrator" className="text-xs">
+                  {' '}
+                  📌
+                </span>
+              )}
+            </td>
+            <td>
+              <strong>{e.patientName}</strong>
+            </td>
+            <td className="text-sm nowrap">
+              {e.slotStart ? `${formatTime(e.slotStart)} – ${formatTime(e.slotEnd)}` : '—'}
+            </td>
+            <td className="text-sm">{e.reasonForVisit || '—'}</td>
+            <td>
+              <StatusBadge status={e.priority || 'NORMAL'} />
+            </td>
+            <td>
+              <StatusBadge status={e.visitStatus} />
+            </td>
+            <td className="nowrap">
+              <div className="row">{renderActions(e)}</div>
+            </td>
+          </tr>
+        ))}
+        {finished.length > 0 && (
+          <tr className="row-group">
+            <td colSpan={HEADERS.length}>Seen today ({finished.length})</td>
+          </tr>
+        )}
+        {finished.map(e => (
+          <tr key={e.queueId} className="row-faded">
+            <td>—</td>
+            <td>
+              <Cell main={e.patientName} />
+            </td>
+            <td className="text-sm">{e.slotStart ? formatTime(e.slotStart) : '—'}</td>
+            <td className="text-sm">{e.reasonForVisit || '—'}</td>
+            <td>
+              <StatusBadge status={e.priority || 'NORMAL'} />
+            </td>
+            <td>
+              <StatusBadge status="FINISHED" />
+            </td>
+            <td className="nowrap">
+              <div className="row">{renderActions(e)}</div>
+            </td>
+          </tr>
+        ))}
+      </Table>
+    </Card>
   )
 }
 
-const rowStyle = e => ({
-  background: e.visitStatus === 'IN_CONSULTATION' ? '#f6efff' : e.visitStatus === 'CALLED' ? '#fff8ec' : undefined,
-})
+function rowClass(e) {
+  if (e.visitStatus === 'IN_CONSULTATION') return 'row-active'
+  if (e.visitStatus === 'CALLED') return 'row-called'
+  return undefined
+}

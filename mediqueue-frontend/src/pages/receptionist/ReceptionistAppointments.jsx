@@ -1,7 +1,6 @@
 import { useState, useEffect } from 'react'
 import PageLayout from '../../components/layout/PageLayout'
 import PageTitle from '../../components/common/PageTitle'
-import Spinner from '../../components/common/Spinner'
 import StatusBadge from '../../components/common/StatusBadge'
 import PatientPicker from '../../components/booking/PatientPicker'
 import DoctorPicker from '../../components/booking/DoctorPicker'
@@ -13,16 +12,32 @@ import axiosInstance, { errorMessage } from '../../api/axiosInstance'
 import { ENDPOINTS } from '../../api/endpoints'
 import { formatSlot, formatTime } from '../../utils/dates'
 import { formatEnum } from '../../utils/formatters'
+import {
+  Alert,
+  Button,
+  Card,
+  Cell,
+  ErrorState,
+  Input,
+  LoadingState,
+  Select,
+  Table,
+  Textarea,
+  useConfirm,
+  useToast,
+} from '../../components/ui'
 
 const STATUS_OPTIONS = ['BOOKED', 'CONFIRMED', 'IN_PROGRESS', 'COMPLETED', 'CANCELLED', 'NO_SHOW']
 
 export default function ReceptionistAppointments() {
+  const confirm = useConfirm()
+  const toast = useToast()
   const [appointments, setAppointments] = useState([])
   const [loading, setLoading] = useState(true)
   const [filterDate, setFilterDate] = useState('')
   const [filterStatus, setFilterStatus] = useState('')
   const [filterName, setFilterName] = useState('')
-  const [message, setMessage] = useState('')
+  const [loadError, setLoadError] = useState('')
   const [error, setError] = useState('')
   const [rescheduling, setRescheduling] = useState(null)
 
@@ -47,22 +62,29 @@ export default function ReceptionistAppointments() {
     try {
       const res = await axiosInstance.get(ENDPOINTS.APPOINTMENTS_ALL(filterDate))
       setAppointments(res.data)
+      setLoadError('')
     } catch (err) {
       setAppointments([])
-      setError(errorMessage(err, 'Could not load appointments.'))
+      setLoadError(errorMessage(err, 'Could not load appointments.'))
     } finally {
       setLoading(false)
     }
   }
 
   async function handleStatusChange(a, status) {
-    if (status === 'CANCELLED' && !window.confirm(`Cancel ${a.patientName}'s appointment? The slot will be freed.`))
-      return
-    setMessage('')
+    if (status === 'CANCELLED') {
+      const ok = await confirm({
+        title: `Cancel ${a.patientName}'s appointment?`,
+        message: 'The slot is freed and the patient is notified.',
+        confirmLabel: 'Cancel appointment',
+        danger: true,
+      })
+      if (!ok) return
+    }
     setError('')
     try {
       await axiosInstance.patch(ENDPOINTS.UPDATE_STATUS(a.appointmentId), { status })
-      setMessage(`Appointment ${a.appointmentId} marked ${formatEnum(status)}.`)
+      toast.success(`Appointment ${a.appointmentId} marked ${formatEnum(status)}.`)
       fetchAppointments()
     } catch (err) {
       setError(errorMessage(err, 'Could not update the status.'))
@@ -71,11 +93,10 @@ export default function ReceptionistAppointments() {
 
   async function togglePriority(a) {
     const next = a.priority === 'HIGH_PRIORITY' ? 'NORMAL' : 'HIGH_PRIORITY'
-    setMessage('')
     setError('')
     try {
       await axiosInstance.patch(ENDPOINTS.APPOINTMENT_PRIORITY(a.appointmentId), { priority: next })
-      setMessage(
+      toast.success(
         `${a.patientName} is now ${next === 'HIGH_PRIORITY' ? 'high priority — moved up in the queue' : 'normal priority'}.`,
       )
       fetchAppointments()
@@ -85,12 +106,17 @@ export default function ReceptionistAppointments() {
   }
 
   async function handleCancel(a) {
-    if (!window.confirm(`Cancel ${a.patientName}'s appointment on ${formatSlot(a.startTime)}?`)) return
-    setMessage('')
+    const ok = await confirm({
+      title: `Cancel ${a.patientName}'s appointment?`,
+      message: `The appointment on ${formatSlot(a.startTime)} will be cancelled and the slot freed.`,
+      confirmLabel: 'Cancel appointment',
+      danger: true,
+    })
+    if (!ok) return
     setError('')
     try {
       await axiosInstance.patch(ENDPOINTS.CANCEL_APPOINTMENT(a.appointmentId))
-      setMessage('Appointment cancelled and the slot freed.')
+      toast.success('Appointment cancelled and the slot freed.')
       fetchAppointments()
     } catch (err) {
       setError(errorMessage(err, 'Could not cancel the appointment.'))
@@ -114,7 +140,6 @@ export default function ReceptionistAppointments() {
       return
     }
     setBookErr('')
-    setMessage('')
     setAlternates([])
     setBooking(true)
     try {
@@ -125,7 +150,7 @@ export default function ReceptionistAppointments() {
         reasonForVisit: reason,
         priority,
       })
-      setMessage(`Booked ${res.data.patientName} with ${res.data.doctorName} on ${formatSlot(res.data.startTime)}.`)
+      toast.success(`Booked ${res.data.patientName} with ${res.data.doctorName} on ${formatSlot(res.data.startTime)}.`)
       resetBooking()
       setShowBook(false)
       fetchAppointments()
@@ -153,63 +178,40 @@ export default function ReceptionistAppointments() {
     return matchStatus && matchName
   })
 
-  const labelStyle = { fontSize: 12, color: 'var(--color-text-muted)', display: 'block', marginBottom: 4 }
-  const filterInput = { padding: '8px 12px', border: '1px solid var(--color-border)', borderRadius: 6, fontSize: 14 }
-
   return (
     <PageLayout>
       <PageTitle title="Appointments" subtitle="View, manage and book appointments" />
-      {message && <div className="alert alert-success">{message}</div>}
-      {error && <div className="alert alert-error">{error}</div>}
+      <Alert tone="error">{error}</Alert>
+      <ErrorState message={loadError} onRetry={fetchAppointments} />
 
-      <div style={{ display: 'flex', gap: 12, flexWrap: 'wrap', marginBottom: 20, alignItems: 'flex-end' }}>
-        <div>
-          <label style={labelStyle} htmlFor="f-date">
-            Filter by Date
-          </label>
-          <input
-            id="f-date"
-            type="date"
-            value={filterDate}
-            onChange={e => setFilterDate(e.target.value)}
-            style={filterInput}
-          />
-        </div>
-        <div>
-          <label style={labelStyle} htmlFor="f-status">
-            Filter by Status
-          </label>
-          <select
-            id="f-status"
-            value={filterStatus}
-            onChange={e => setFilterStatus(e.target.value)}
-            style={filterInput}
-          >
-            <option value="">All Statuses</option>
-            {STATUS_OPTIONS.map(s => (
-              <option key={s} value={s}>
-                {formatEnum(s)}
-              </option>
-            ))}
-          </select>
-        </div>
-        <div>
-          <label style={labelStyle} htmlFor="f-name">
-            Search Name
-          </label>
-          <input
-            id="f-name"
-            placeholder="Patient or doctor name"
-            value={filterName}
-            onChange={e => setFilterName(e.target.value)}
-            style={filterInput}
-          />
-        </div>
-        <button className="btn btn-outline" onClick={fetchAppointments}>
+      <div className="toolbar">
+        <Input
+          id="f-date"
+          label="Filter by Date"
+          type="date"
+          value={filterDate}
+          onChange={e => setFilterDate(e.target.value)}
+        />
+        <Select
+          id="f-status"
+          label="Filter by Status"
+          value={filterStatus}
+          onChange={e => setFilterStatus(e.target.value)}
+          placeholder="All Statuses"
+          options={STATUS_OPTIONS.map(s => ({ value: s, label: formatEnum(s) }))}
+        />
+        <Input
+          id="f-name"
+          label="Search Name"
+          placeholder="Patient or doctor name"
+          value={filterName}
+          onChange={e => setFilterName(e.target.value)}
+        />
+        <Button variant="outline" onClick={fetchAppointments}>
           Refresh
-        </button>
-        <button
-          className={showBook ? 'btn btn-outline' : 'btn btn-dark'}
+        </Button>
+        <Button
+          variant={showBook ? 'outline' : 'dark'}
           data-testid="book-for-patient"
           onClick={() => {
             setShowBook(b => !b)
@@ -217,13 +219,12 @@ export default function ReceptionistAppointments() {
           }}
         >
           {showBook ? '✕ Close' : '+ Book for Patient'}
-        </button>
+        </Button>
       </div>
 
       {showBook && (
-        <form className="card" style={{ marginBottom: 24 }} onSubmit={handleBook}>
-          <h3 style={{ marginBottom: 16 }}>Book appointment for a patient</h3>
-          {bookErr && <div className="alert alert-error">{bookErr}</div>}
+        <Card as="form" className="mb-6" title="Book appointment for a patient" onSubmit={handleBook}>
+          <Alert tone="error">{bookErr}</Alert>
 
           <div className="form-group">
             <span className="form-label" id="b-patient">
@@ -266,134 +267,101 @@ export default function ReceptionistAppointments() {
           )}
           <AlternateSlots alternates={alternates} onPick={pickAlternate} />
 
-          <div style={{ display: 'grid', gridTemplateColumns: '2fr 1fr', gap: 12, marginTop: 12 }}>
-            <div className="form-group">
-              <label htmlFor="b-reason">Reason for visit</label>
-              <textarea
-                id="b-reason"
-                className="form-control"
-                rows={2}
-                maxLength={2000}
-                value={reason}
-                onChange={e => setReason(e.target.value)}
-              />
-            </div>
-            <div className="form-group">
-              <label htmlFor="b-priority">Priority</label>
-              <select
-                id="b-priority"
-                className="form-control"
-                value={priority}
-                onChange={e => setPriority(e.target.value)}
-              >
-                <option value="NORMAL">Normal</option>
-                <option value="HIGH_PRIORITY">High priority</option>
-              </select>
-            </div>
+          <div className="grid-form mt-4">
+            <Textarea
+              id="b-reason"
+              label="Reason for visit"
+              rows={2}
+              maxLength={2000}
+              value={reason}
+              onChange={e => setReason(e.target.value)}
+            />
+            <Select
+              id="b-priority"
+              label="Priority"
+              value={priority}
+              onChange={e => setPriority(e.target.value)}
+              hint="High priority moves the patient up in the doctor's queue and uses the emergency rate."
+              options={[
+                { value: 'NORMAL', label: 'Normal' },
+                { value: 'HIGH_PRIORITY', label: 'High priority' },
+              ]}
+            />
           </div>
           {slot && (
-            <p style={{ marginBottom: 12 }}>
+            <p className="mb-4">
               Selected: <strong>{formatSlot(slot.startTime)}</strong>
             </p>
           )}
-          <div style={{ textAlign: 'right' }}>
-            <button type="submit" className="btn btn-primary" disabled={booking || !patient || !doctor || !slot}>
-              {booking ? 'Booking…' : 'Book Appointment'}
-            </button>
+          <div className="row-end">
+            <Button type="submit" loading={booking} disabled={!patient || !doctor || !slot} data-testid="desk-book-btn">
+              Book Appointment
+            </Button>
           </div>
-        </form>
+        </Card>
       )}
 
       {loading ? (
-        <Spinner />
+        <LoadingState label="Loading appointments…" />
       ) : (
-        <div className="card" style={{ padding: 0 }}>
-          <div
-            style={{
-              padding: '14px 20px',
-              borderBottom: '1px solid var(--color-border)',
-              display: 'flex',
-              justifyContent: 'space-between',
-              alignItems: 'center',
-            }}
+        <Card
+          flush
+          title={filterDate ? `Appointments on ${filterDate}` : 'All Appointments'}
+          actions={<span className="muted text-sm">{filtered.length} records</span>}
+        >
+          <Table
+            headers={['ID', 'Patient', 'Doctor', 'Date', 'Time', 'Reason', 'Priority', 'Status', 'Actions']}
+            empty="No appointments found"
+            isEmpty={filtered.length === 0}
+            testId="desk-appointments"
           >
-            <h3 style={{ margin: 0 }}>{filterDate ? `Appointments on ${filterDate}` : 'All Appointments'}</h3>
-            <span style={{ fontSize: 13, color: 'var(--color-text-muted)' }}>{filtered.length} records</span>
-          </div>
-          <div className="table-wrapper">
-            <table>
-              <thead>
-                <tr>
-                  <th>ID</th>
-                  <th>Patient</th>
-                  <th>Doctor</th>
-                  <th>Date</th>
-                  <th>Time</th>
-                  <th>Reason</th>
-                  <th>Priority</th>
-                  <th>Status</th>
-                  <th>Actions</th>
-                </tr>
-              </thead>
-              <tbody>
-                {filtered.length === 0 && (
-                  <tr>
-                    <td colSpan={9} style={{ textAlign: 'center', padding: 24, color: 'var(--color-text-muted)' }}>
-                      No appointments found
-                    </td>
-                  </tr>
-                )}
-                {filtered.map(a => (
-                  <tr key={a.appointmentId}>
-                    <td style={{ fontSize: 11 }}>{a.appointmentId}</td>
-                    <td>
-                      <strong style={{ fontSize: 13 }}>{a.patientName}</strong>
-                      <div style={{ fontSize: 11, color: 'var(--color-text-muted)' }}>{a.patientId}</div>
-                    </td>
-                    <td style={{ fontSize: 13 }}>{a.doctorName}</td>
-                    <td style={{ fontSize: 13 }}>{a.appointmentDate || '—'}</td>
-                    <td style={{ fontSize: 12 }}>
-                      {a.startTime ? `${formatTime(a.startTime)} – ${formatTime(a.endTime)}` : '—'}
-                    </td>
-                    <td style={{ fontSize: 12, maxWidth: 140 }}>{a.reasonForVisit || '—'}</td>
-                    <td>
-                      <StatusBadge status={a.priority || 'NORMAL'} />
-                    </td>
-                    <td>
-                      <StatusBadge status={a.status} />
-                    </td>
-                    <td style={{ whiteSpace: 'nowrap' }}>
-                      <AppointmentStatusSelect appointment={a} onChange={handleStatusChange} />{' '}
-                      {['BOOKED', 'CONFIRMED', 'IN_PROGRESS'].includes(a.status) && (
-                        <button
-                          className="btn btn-outline btn-sm"
-                          onClick={() => togglePriority(a)}
-                          data-testid={`priority-${a.appointmentId}`}
-                        >
-                          {a.priority === 'HIGH_PRIORITY' ? 'Unmark priority' : 'Mark high priority'}
-                        </button>
-                      )}{' '}
-                      {a.canReschedule && (
-                        <button className="btn btn-outline btn-sm" onClick={() => setRescheduling(a)}>
-                          Reschedule
-                        </button>
-                      )}{' '}
-                      {a.canCancel && (
-                        <button
-                          className="btn btn-outline btn-sm"
-                          style={{ color: 'var(--color-danger)' }}
-                          onClick={() => handleCancel(a)}
-                        >
-                          Cancel
-                        </button>
-                      )}
-                    </td>
-                  </tr>
-                ))}
-              </tbody>
-            </table>
-          </div>
-        </div>
+            {filtered.map(a => (
+              <tr key={a.appointmentId} data-testid={`desk-appointment-${a.appointmentId}`}>
+                <td className="text-xs">{a.appointmentId}</td>
+                <td>
+                  <Cell main={<strong>{a.patientName}</strong>} sub={a.patientId} />
+                </td>
+                <td>{a.doctorName}</td>
+                <td>{a.appointmentDate || '—'}</td>
+                <td className="text-sm nowrap">
+                  {a.startTime ? `${formatTime(a.startTime)} – ${formatTime(a.endTime)}` : '—'}
+                </td>
+                <td className="text-sm">{a.reasonForVisit || '—'}</td>
+                <td>
+                  <StatusBadge status={a.priority || 'NORMAL'} />
+                </td>
+                <td>
+                  <StatusBadge status={a.status} />
+                </td>
+                <td className="nowrap">
+                  <div className="row">
+                    <AppointmentStatusSelect appointment={a} onChange={handleStatusChange} />
+                    {['BOOKED', 'CONFIRMED', 'IN_PROGRESS'].includes(a.status) && (
+                      <Button
+                        variant="outline"
+                        size="sm"
+                        onClick={() => togglePriority(a)}
+                        data-testid={`priority-${a.appointmentId}`}
+                      >
+                        {a.priority === 'HIGH_PRIORITY' ? 'Unmark priority' : 'Mark high priority'}
+                      </Button>
+                    )}
+                    {a.canReschedule && (
+                      <Button variant="outline" size="sm" onClick={() => setRescheduling(a)}>
+                        Reschedule
+                      </Button>
+                    )}
+                    {a.canCancel && (
+                      <Button variant="danger-outline" size="sm" onClick={() => handleCancel(a)}>
+                        Cancel
+                      </Button>
+                    )}
+                  </div>
+                </td>
+              </tr>
+            ))}
+          </Table>
+        </Card>
       )}
 
       {rescheduling && (
@@ -402,7 +370,7 @@ export default function ReceptionistAppointments() {
           onClose={() => setRescheduling(null)}
           onDone={u => {
             setRescheduling(null)
-            setMessage(`Moved to ${formatSlot(u.startTime)}.`)
+            toast.success(`Moved to ${formatSlot(u.startTime)}.`)
             fetchAppointments()
           }}
         />
