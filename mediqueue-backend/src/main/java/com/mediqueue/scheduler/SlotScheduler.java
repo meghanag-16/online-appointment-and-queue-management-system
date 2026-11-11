@@ -55,9 +55,7 @@ public class SlotScheduler {
 
     @Transactional
     public void generateSlotsForNextDays() {
-        List<Doctor> doctors = doctorRepository.findAll().stream()
-            .filter(d -> d.getAccountStatus() == AccountStatus.ACTIVE)
-            .toList();
+        List<Doctor> doctors = doctorRepository.findByAccountStatus(AccountStatus.ACTIVE);
 
         LocalDate today = LocalDate.now();
 

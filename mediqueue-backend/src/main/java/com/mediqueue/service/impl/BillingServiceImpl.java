@@ -9,6 +9,7 @@ import com.mediqueue.entity.enums.PaymentStatus;
 import com.mediqueue.exception.ResourceNotFoundException;
 import com.mediqueue.repository.AppointmentRepository;
 import com.mediqueue.repository.BillRepository;
+import com.mediqueue.security.AccessGuard;
 import com.mediqueue.service.BillingService;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
@@ -27,16 +28,19 @@ public class BillingServiceImpl implements BillingService {
     private final EmergencyBilling      emergencyBilling;
     private final FollowUpBilling       followUpBilling;
     private final BillingContext        billingContext;
+    private final AccessGuard           accessGuard;
 
     public BillingServiceImpl(BillRepository billRepository, AppointmentRepository appointmentRepository,
                             StandardBilling standardBilling, EmergencyBilling emergencyBilling,
-                            FollowUpBilling followUpBilling, BillingContext billingContext) {
+                            FollowUpBilling followUpBilling, BillingContext billingContext,
+                            AccessGuard accessGuard) {
         this.billRepository = billRepository;
         this.appointmentRepository = appointmentRepository;
         this.standardBilling = standardBilling;
         this.emergencyBilling = emergencyBilling;
         this.followUpBilling = followUpBilling;
         this.billingContext = billingContext;
+        this.accessGuard = accessGuard;
     }
 
     @Override
@@ -73,6 +77,9 @@ public class BillingServiceImpl implements BillingService {
     // NOT readOnly — if no bill exists yet this auto-generates (inserts) a standard one,
     // which fails inside a read-only transaction on MySQL.
     public BillResponse getBill(Long appointmentId) {
+        Appointment appointment = appointmentRepository.findById(appointmentId)
+            .orElseThrow(() -> new ResourceNotFoundException("Appointment not found: " + appointmentId));
+        accessGuard.requireAppointmentDocumentRead(appointment, false);
         return billRepository.findByAppointment_AppointmentId(appointmentId)
             .map(bill -> toResponse(bill, null))
             .orElseGet(() -> generateBill(appointmentId, "STANDARD"));
@@ -81,6 +88,7 @@ public class BillingServiceImpl implements BillingService {
     @Override
     @Transactional(readOnly = true)
     public List<BillResponse> getBillsForPatient(String patientId) {
+        accessGuard.requireSelfOrStaff(patientId);
         return billRepository.findByAppointment_Patient_UserId(patientId)
             .stream()
             .map(bill -> toResponse(bill, null))
@@ -92,7 +100,14 @@ public class BillingServiceImpl implements BillingService {
         Bill bill = billRepository.findById(billId)
             .orElseThrow(() -> new ResourceNotFoundException("Bill not found: " + billId));
 
-        bill.setPaymentStatus(PaymentStatus.valueOf(req.getPaymentStatus().toUpperCase()));
+        if (req.getPaymentStatus() == null || req.getPaymentStatus().isBlank()) {
+            throw new IllegalArgumentException("Payment status is required");
+        }
+        try {
+            bill.setPaymentStatus(PaymentStatus.valueOf(req.getPaymentStatus().trim().toUpperCase()));
+        } catch (IllegalArgumentException e) {
+            throw new IllegalArgumentException("Invalid payment status: " + req.getPaymentStatus());
+        }
         bill.setPaymentMethod(req.getPaymentMethod());
 
         Bill saved = billRepository.save(bill);

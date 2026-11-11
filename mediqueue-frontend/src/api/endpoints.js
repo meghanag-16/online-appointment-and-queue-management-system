@@ -2,6 +2,7 @@ export const ENDPOINTS = {
   // Auth
   REGISTER: '/auth/register',
   LOGIN:    '/auth/login',
+  ME:       '/auth/me',
 
   // Appointments
   APPOINTMENTS:            '/appointments',
@@ -25,6 +26,10 @@ export const ENDPOINTS = {
   DOCTORS_SEARCH: (q)  => `/doctors/search?q=${encodeURIComponent(q)}`,
   DOCTOR_SLOTS:   (id) => `/doctors/${id}/slots`,
 
-  // Departments
+  // Departments (public list, used by the sign-up form)
   DEPARTMENTS: '/departments',
+
+  // Users (administrator)
+  USERS:            '/users',
+  USER_STATUS:      (id) => `/users/${id}/status`,
 }

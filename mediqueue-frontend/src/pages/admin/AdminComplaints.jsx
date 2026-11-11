@@ -2,6 +2,7 @@ import { useState, useEffect } from "react";
 import { getAllComplaints, resolveComplaint } from "../../api/complaintApi";
 
 import PageLayout from "../../components/layout/PageLayout";
+import { errorMessage } from "../../api/axiosInstance";
 import PageTitle from "../../components/common/PageTitle";
 
 export default function AdminComplaints() {
@@ -34,8 +35,8 @@ export default function AdminComplaints() {
       setMessage("Complaint resolved successfully!");
       setError("");
       fetchComplaints();
-    } catch {
-      setError("Failed to resolve complaint.");
+    } catch (err) {
+      setError(errorMessage(err, "Failed to resolve complaint."));
       setMessage("");
     }
   };

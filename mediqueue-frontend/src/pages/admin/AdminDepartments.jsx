@@ -1,6 +1,7 @@
 import { useState, useEffect } from "react";
 import { getAllDepartments, addDepartment } from "../../api/adminApi";
 import PageLayout from "../../components/layout/PageLayout";
+import { errorMessage } from "../../api/axiosInstance";
 import PageTitle from "../../components/common/PageTitle";
 
 export default function AdminDepartments() {
@@ -27,8 +28,8 @@ export default function AdminDepartments() {
       setMessage("Department added successfully!");
       setError(""); setName(""); setDescription("");
       fetchDepartments();
-    } catch {
-      setError("Failed to add department."); setMessage("");
+    } catch (err) {
+      setError(errorMessage(err, "Failed to add department.")); setMessage("");
     }
   };
 

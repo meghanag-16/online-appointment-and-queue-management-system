@@ -2,7 +2,7 @@ import { useEffect, useState } from 'react'
 import PageLayout from '../../components/layout/PageLayout'
 import PageTitle from '../../components/common/PageTitle'
 import Spinner from '../../components/common/Spinner'
-import axiosInstance from '../../api/axiosInstance'
+import axiosInstance, { errorMessage } from '../../api/axiosInstance'
 import { useAuth } from '../../context/AuthContext'
 
 export default function DoctorDashboard() {
@@ -18,7 +18,7 @@ export default function DoctorDashboard() {
         const res = await axiosInstance.get(`/doctor/dashboard/${user.userId}`)
         setStats(res.data)
       } catch (err) {
-        setError('Unable to load doctor dashboard data.')
+        setError(errorMessage(err, 'Unable to load doctor dashboard data.'))
       } finally {
         setLoading(false)
       }

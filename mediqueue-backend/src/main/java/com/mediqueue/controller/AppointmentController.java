@@ -1,42 +1,57 @@
 package com.mediqueue.controller;
 
 import com.mediqueue.dto.AppointmentResponse;
+import com.mediqueue.dto.AppointmentStatsResponse;
 import com.mediqueue.dto.BookAppointmentRequest;
-import com.mediqueue.entity.Appointment;
-import com.mediqueue.entity.enums.AppointmentStatus;
-import com.mediqueue.repository.AppointmentRepository;
+import com.mediqueue.dto.StatusUpdateRequest;
 import com.mediqueue.service.AppointmentService;
+import jakarta.validation.Valid;
+import org.springframework.format.annotation.DateTimeFormat;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.web.bind.annotation.*;
 
 import java.time.LocalDate;
-import java.util.HashMap;
 import java.util.List;
-import java.util.Map;
-import java.util.stream.Collectors;
 
+/**
+ * Role checks are here (@PreAuthorize); ownership checks ("is this MY appointment?") are in
+ * AppointmentService via AccessGuard.
+ */
 @RestController
 @RequestMapping("/api/v1/appointments")
 public class AppointmentController {
 
     private final AppointmentService appointmentService;
-    private final AppointmentRepository appointmentRepository;
 
-    public AppointmentController(AppointmentService appointmentService,
-                                  AppointmentRepository appointmentRepository) {
+    public AppointmentController(AppointmentService appointmentService) {
         this.appointmentService = appointmentService;
-        this.appointmentRepository = appointmentRepository;
     }
 
     @PostMapping
     @PreAuthorize("hasAnyRole('PATIENT','RECEPTIONIST','ADMINISTRATOR')")
-    public ResponseEntity<AppointmentResponse> book(@RequestBody BookAppointmentRequest req) {
+    public ResponseEntity<AppointmentResponse> book(@Valid @RequestBody BookAppointmentRequest req) {
         return ResponseEntity.status(HttpStatus.CREATED).body(appointmentService.bookAppointment(req));
     }
 
+    /** Receptionist/Admin: all appointments, optional ?date=YYYY-MM-DD. */
+    @GetMapping("/all")
+    @PreAuthorize("hasAnyRole('RECEPTIONIST','ADMINISTRATOR')")
+    public ResponseEntity<List<AppointmentResponse>> getAllAppointments(
+            @RequestParam(required = false) @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) LocalDate date) {
+        return ResponseEntity.ok(appointmentService.getAll(date));
+    }
+
+    /** Receptionist/Admin: dashboard stats. */
+    @GetMapping("/stats")
+    @PreAuthorize("hasAnyRole('RECEPTIONIST','ADMINISTRATOR')")
+    public ResponseEntity<AppointmentStatsResponse> getStats() {
+        return ResponseEntity.ok(appointmentService.getStats());
+    }
+
     @GetMapping("/{id}")
+    @PreAuthorize("hasAnyRole('PATIENT','DOCTOR','LAB_TECHNICIAN','RECEPTIONIST','ADMINISTRATOR')")
     public ResponseEntity<AppointmentResponse> getById(@PathVariable Long id) {
         return ResponseEntity.ok(appointmentService.getAppointment(id));
     }
@@ -53,71 +68,12 @@ public class AppointmentController {
         return ResponseEntity.ok(appointmentService.getAppointmentsForDoctor(doctorId));
     }
 
-    /** Receptionist/Admin: get ALL appointments with optional date filter */
-    @GetMapping("/all")
-    @PreAuthorize("hasAnyRole('RECEPTIONIST','ADMINISTRATOR')")
-    public ResponseEntity<List<Map<String, Object>>> getAllAppointments(
-            @RequestParam(required = false) String date) {
-        List<Appointment> appointments;
-        if (date != null && !date.isBlank()) {
-            appointments = appointmentRepository.findByAppointmentDate(LocalDate.parse(date));
-        } else {
-            appointments = appointmentRepository.findAll();
-        }
-        List<Map<String, Object>> response = appointments.stream().map(a -> {
-            Map<String, Object> item = new HashMap<>();
-            item.put("appointmentId", a.getAppointmentId());
-            item.put("patientName", a.getPatient() != null ? a.getPatient().getName() : "—");
-            item.put("patientId",   a.getPatient() != null ? a.getPatient().getUserId() : "—");
-            item.put("doctorName",  a.getDoctor()  != null ? a.getDoctor().getName()  : "—");
-            item.put("doctorId",    a.getDoctor()  != null ? a.getDoctor().getUserId() : "—");
-            item.put("appointmentDate", a.getAppointmentDate());
-            item.put("reasonForVisit",  a.getReasonForVisit());
-            item.put("status",    a.getAppointmentStatus());
-            item.put("priority",  a.getPriority());
-            item.put("slotId",    a.getSlot() != null ? a.getSlot().getSlotId() : null);
-            item.put("startTime", a.getSlot() != null ? a.getSlot().getStartTime() : null);
-            item.put("endTime",   a.getSlot() != null ? a.getSlot().getEndTime()   : null);
-            return item;
-        }).collect(Collectors.toList());
-        return ResponseEntity.ok(response);
-    }
-
-    /** Receptionist/Admin: update appointment status */
+    /** Receptionist/Admin, or the doctor on the appointment: update status. */
     @PatchMapping("/{id}/status")
     @PreAuthorize("hasAnyRole('RECEPTIONIST','ADMINISTRATOR','DOCTOR')")
-    public ResponseEntity<?> updateStatus(@PathVariable Long id,
-                                           @RequestBody Map<String, String> body) {
-        try {
-            Appointment a = appointmentRepository.findById(id)
-                .orElse(null);
-            if (a == null) return ResponseEntity.notFound().build();
-            a.setAppointmentStatus(AppointmentStatus.valueOf(body.get("status").toUpperCase()));
-            appointmentRepository.save(a);
-            return ResponseEntity.ok(Map.of("message", "Status updated", "appointmentId", id));
-        } catch (Exception e) {
-            return ResponseEntity.badRequest().body(Map.of("error", e.getMessage()));
-        }
-    }
-
-    /** Receptionist/Admin: dashboard stats */
-    @GetMapping("/stats")
-    @PreAuthorize("hasAnyRole('RECEPTIONIST','ADMINISTRATOR')")
-    public ResponseEntity<Map<String, Object>> getStats() {
-        LocalDate today = LocalDate.now();
-        List<Appointment> all = appointmentRepository.findAll();
-        long todayTotal    = all.stream().filter(a -> today.equals(a.getAppointmentDate())).count();
-        long todayBooked   = all.stream().filter(a -> today.equals(a.getAppointmentDate()) && a.getAppointmentStatus() == AppointmentStatus.BOOKED).count();
-        long todayDone     = all.stream().filter(a -> today.equals(a.getAppointmentDate()) && a.getAppointmentStatus() == AppointmentStatus.COMPLETED).count();
-        long todayCancelled= all.stream().filter(a -> today.equals(a.getAppointmentDate()) && a.getAppointmentStatus() == AppointmentStatus.CANCELLED).count();
-        long totalAll      = all.size();
-        Map<String, Object> stats = new HashMap<>();
-        stats.put("todayTotal",     todayTotal);
-        stats.put("todayBooked",    todayBooked);
-        stats.put("todayCompleted", todayDone);
-        stats.put("todayCancelled", todayCancelled);
-        stats.put("totalAll",       totalAll);
-        return ResponseEntity.ok(stats);
+    public ResponseEntity<AppointmentResponse> updateStatus(@PathVariable Long id,
+                                                            @Valid @RequestBody StatusUpdateRequest body) {
+        return ResponseEntity.ok(appointmentService.updateStatus(id, body.status()));
     }
 
     @PatchMapping("/{id}/cancel")

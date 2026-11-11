@@ -3,7 +3,7 @@ import PageLayout from '../../components/layout/PageLayout'
 import PageTitle from '../../components/common/PageTitle'
 import Spinner from '../../components/common/Spinner'
 import StatusBadge from '../../components/common/StatusBadge'
-import axiosInstance from '../../api/axiosInstance'
+import axiosInstance, { errorMessage } from '../../api/axiosInstance'
 
 const STATUS_OPTIONS = ['BOOKED','CONFIRMED','IN_PROGRESS','COMPLETED','CANCELLED','NO_SHOW']
 
@@ -58,7 +58,7 @@ export default function ReceptionistAppointments() {
     try {
       await axiosInstance.patch(`/appointments/${id}/status`, { status })
       fetchAppointments()
-    } catch {}
+    } catch (err) { alert(errorMessage(err, 'Could not update the status.')) }
   }
 
   async function handleCancel(id) {
@@ -66,7 +66,7 @@ export default function ReceptionistAppointments() {
     try {
       await axiosInstance.patch(`/appointments/${id}/cancel`)
       fetchAppointments()
-    } catch {}
+    } catch (err) { alert(errorMessage(err, 'Could not cancel the appointment.')) }
   }
 
   async function handleBook() {
@@ -85,7 +85,7 @@ export default function ReceptionistAppointments() {
       setSlots([])
       fetchAppointments()
     } catch (err) {
-      setBookErr(err.response?.data?.error || 'Booking failed.')
+      setBookErr(errorMessage(err, 'Booking failed.'))
     }
   }
 

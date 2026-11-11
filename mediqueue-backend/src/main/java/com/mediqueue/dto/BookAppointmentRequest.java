@@ -1,12 +1,25 @@
 package com.mediqueue.dto;
 
+import jakarta.validation.constraints.NotBlank;
+import jakarta.validation.constraints.NotNull;
+import jakarta.validation.constraints.Size;
+
 import java.time.LocalDate;
+
+/**
+ * patientId is used only when a receptionist/administrator books on a patient's behalf; for a
+ * patient it is ignored and taken from the login. priority and createdByRole are likewise decided
+ * by the server from the caller's role, not trusted from the body.
+ */
 
 public class BookAppointmentRequest {
     private String patientId;
+    @NotBlank(message = "Doctor is required")
     private String doctorId;
+    @NotNull(message = "Time slot is required")
     private Long slotId;
     private LocalDate appointmentDate;
+    @Size(max = 2000, message = "Reason for visit must be at most 2000 characters")
     private String reasonForVisit;
     private String priority;
     private String createdByRole;

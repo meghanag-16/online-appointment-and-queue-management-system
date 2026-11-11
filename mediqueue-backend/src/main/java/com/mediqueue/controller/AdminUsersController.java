@@ -1,39 +1,50 @@
 package com.mediqueue.controller;
 
+import com.mediqueue.dto.RegisterRequest;
+import com.mediqueue.dto.StatusUpdateRequest;
 import com.mediqueue.dto.UserDTO;
-import com.mediqueue.repository.UserRepository;
+import com.mediqueue.service.UserAccountService;
+import jakarta.validation.Valid;
+import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.web.bind.annotation.*;
 
 import java.util.List;
-import java.util.stream.Collectors;
 
+/** Administrator user management: list, create (any role), view profile, approve/suspend/deactivate. */
 @RestController
 @RequestMapping("/api/v1/users")
+@PreAuthorize("hasRole('ADMINISTRATOR')")
 public class AdminUsersController {
 
-    private final UserRepository userRepository;
+    private final UserAccountService userAccountService;
 
-    public AdminUsersController(UserRepository userRepository) {
-        this.userRepository = userRepository;
+    public AdminUsersController(UserAccountService userAccountService) {
+        this.userAccountService = userAccountService;
     }
 
     @GetMapping
-    @PreAuthorize("hasRole('ADMINISTRATOR')")
     public ResponseEntity<List<UserDTO>> getAllUsers() {
-        List<Object[]> rawUsers = userRepository.findAllUsersRaw();
-        List<UserDTO> users = rawUsers.stream()
-            .map(row -> new UserDTO(
-                (String) row[0],
-                (String) row[1],
-                (String) row[2],
-                (String) row[3],
-                (String) row[4],
-                (String) row[5]
-            ))
-            .collect(Collectors.toList());
-        return ResponseEntity.ok(users);
+        return ResponseEntity.ok(userAccountService.listUsers());
+    }
+
+    /** Same RegisterRequest and same creation path as public sign-up, but ACTIVE immediately. */
+    @PostMapping
+    public ResponseEntity<Object> createUser(@Valid @RequestBody RegisterRequest request) {
+        var user = userAccountService.createByAdmin(request);
+        return ResponseEntity.status(HttpStatus.CREATED).body(UserDTO.profileOf(user));
+    }
+
+    @GetMapping("/{userId}")
+    public ResponseEntity<Object> getUser(@PathVariable String userId) {
+        return ResponseEntity.ok(userAccountService.getProfile(userId));
+    }
+
+    /** {"status": "ACTIVE" | "SUSPENDED" | "DEACTIVATED" | "PENDING_APPROVAL"} */
+    @PatchMapping("/{userId}/status")
+    public ResponseEntity<UserDTO> updateStatus(@PathVariable String userId,
+                                                @Valid @RequestBody StatusUpdateRequest body) {
+        return ResponseEntity.ok(userAccountService.updateStatus(userId, body.status()));
     }
 }
-
