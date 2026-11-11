@@ -25,7 +25,7 @@
         <google-java-format.version>1.28.0</google-java-format.version>
         <maven-checkstyle-plugin.version>3.6.0</maven-checkstyle-plugin.version>
         <checkstyle.version>10.26.1</checkstyle.version>
-        <jacoco.version>0.8.14</jacoco.version>
+        <jacoco.version>0.8.16</jacoco.version>
         <!-- the coverage gate is enforced only when the integration tests run (CI sets -Dcoverage.check=true) -->
         <coverage.check>false</coverage.check>
         <!-- minimum line coverage of the service and business-logic packages (unit + integration tests) -->
