@@ -11,7 +11,7 @@ CREATE TABLE users (
     username VARCHAR(50) UNIQUE NOT NULL,
     password VARCHAR(255) NOT NULL,
     role ENUM('PATIENT','DOCTOR','LAB_TECHNICIAN','RECEPTIONIST','ADMINISTRATOR'),
-    account_status ENUM('ACTIVE','SUSPENDED','DEACTIVATED','PENDING_APPROVAL') DEFAULT 'ACTIVE'
+    account_status ENUM('ACTIVE','SUSPENDED','DEACTIVATED') DEFAULT 'ACTIVE'
 );
 
 CREATE TABLE patients (
@@ -49,11 +49,28 @@ CREATE TABLE time_slots (
     status     ENUM('AVAILABLE','BOOKED','BLOCKED','CANCELLED')
                    NOT NULL DEFAULT 'AVAILABLE',
     CONSTRAINT fk_slot_doctor FOREIGN KEY (doctor_id)
-        REFERENCES doctors(user_id) ON DELETE CASCADE
+        REFERENCES doctors(user_id) ON DELETE CASCADE,
+    INDEX idx_slot_doctor_start (doctor_id, start_time),
+    INDEX idx_slot_status_start (status, start_time)
+);
+
+-- Hospital-wide slot settings edited by the administrator (single row, settings_id = 1).
+-- The backend creates the row with defaults on first start.
+CREATE TABLE slot_settings (
+    settings_id          INT PRIMARY KEY,
+    slot_minutes         INT          NOT NULL DEFAULT 30,
+    day_start            TIME         NOT NULL DEFAULT '09:00:00',
+    day_end              TIME         NOT NULL DEFAULT '17:00:00',
+    break_start          TIME         NULL     DEFAULT '13:00:00',
+    break_end            TIME         NULL     DEFAULT '14:00:00',
+    working_days         VARCHAR(80)  NOT NULL DEFAULT 'MONDAY,TUESDAY,WEDNESDAY,THURSDAY,FRIDAY,SATURDAY',
+    booking_window_days  INT          NOT NULL DEFAULT 7,
+    change_cutoff_hours  INT          NOT NULL DEFAULT 2,
+    updated_at           DATETIME
 );
 
 CREATE TABLE appointments (
-    appointment_id     BIGINT PRIMARY KEY,
+    appointment_id     BIGINT AUTO_INCREMENT PRIMARY KEY,
     patient_id         VARCHAR(50)  NOT NULL,
     doctor_id          VARCHAR(50)  NOT NULL,
     slot_id            BIGINT,

@@ -34,19 +34,10 @@ public class AuthServiceImpl implements AuthService {
         this.jwtUtil = jwtUtil;
     }
 
+    /** Public sign-up is for patients only; they are logged in straight away. */
     @Override
     public AuthResponse register(RegisterRequest req) {
-        User user = userAccountService.selfRegister(req);
-
-        if (user.getAccountStatus() != AccountStatus.ACTIVE) {
-            // Staff self-registration: no token until an administrator approves the account.
-            return new AuthResponse(null, user.getUserId(), user.getUsername(), user.getName(),
-                user.getRole(), user.getAccountStatus(),
-                "Account created. An administrator must approve it before you can log in.");
-        }
-        String token = jwtUtil.generateToken(user.getUsername(), user.getRole().name());
-        return new AuthResponse(token, user.getUserId(), user.getUsername(), user.getName(),
-            user.getRole(), user.getAccountStatus(), null);
+        return tokenFor(userAccountService.registerPatient(req));
     }
 
     @Override
@@ -62,7 +53,10 @@ public class AuthServiceImpl implements AuthService {
         if (user.getAccountStatus() != AccountStatus.ACTIVE) {
             throw new AccountInactiveException("Your account is " + AccountStatus.describe(user.getAccountStatus()) + ".");
         }
+        return tokenFor(user);
+    }
 
+    private AuthResponse tokenFor(User user) {
         String token = jwtUtil.generateToken(user.getUsername(), user.getRole().name());
         return new AuthResponse(token, user.getUserId(), user.getUsername(), user.getName(),
             user.getRole(), user.getAccountStatus(), null);

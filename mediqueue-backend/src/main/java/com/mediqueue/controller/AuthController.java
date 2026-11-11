@@ -1,8 +1,10 @@
 package com.mediqueue.controller;
 
 import com.mediqueue.dto.AuthResponse;
+import com.mediqueue.dto.ChangePasswordRequest;
 import com.mediqueue.dto.LoginRequest;
 import com.mediqueue.dto.RegisterRequest;
+import com.mediqueue.dto.UpdateProfileRequest;
 import com.mediqueue.security.CurrentUserService;
 import com.mediqueue.service.AuthService;
 import com.mediqueue.service.UserAccountService;
@@ -10,6 +12,8 @@ import jakarta.validation.Valid;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
+
+import java.util.Map;
 
 @RestController
 @RequestMapping("/api/v1/auth")
@@ -28,8 +32,8 @@ public class AuthController {
     }
 
     /**
-     * Public sign-up. Patients get a token straight away; staff roles are created
-     * PENDING_APPROVAL and get no token until an administrator activates them.
+     * Public sign-up — patients only. Any other role gets 403: doctors, lab technicians,
+     * receptionists and administrators are created by an administrator.
      */
     @PostMapping("/register")
     public ResponseEntity<AuthResponse> register(@Valid @RequestBody RegisterRequest request) {
@@ -45,5 +49,18 @@ public class AuthController {
     @GetMapping("/me")
     public ResponseEntity<Object> me() {
         return ResponseEntity.ok(userAccountService.getProfile(currentUser.userId()));
+    }
+
+    /** Any logged-in user updates their own details ("My Profile" page in every portal). */
+    @PutMapping("/me")
+    public ResponseEntity<Object> updateMe(@Valid @RequestBody UpdateProfileRequest request) {
+        return ResponseEntity.ok(userAccountService.updateOwnProfile(request));
+    }
+
+    /** Any logged-in user changes their own password. */
+    @PutMapping("/me/password")
+    public ResponseEntity<Map<String, String>> changePassword(@Valid @RequestBody ChangePasswordRequest request) {
+        userAccountService.changeOwnPassword(request);
+        return ResponseEntity.ok(Map.of("message", "Password changed"));
     }
 }

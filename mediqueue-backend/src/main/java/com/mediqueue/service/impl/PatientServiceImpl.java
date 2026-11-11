@@ -2,6 +2,10 @@ package com.mediqueue.service.impl;
 
 import com.mediqueue.dto.MedicalRecordResponse;
 import com.mediqueue.dto.PatientDashboardResponse;
+import com.mediqueue.dto.PatientSummaryDTO;
+import com.mediqueue.entity.enums.AccountStatus;
+import com.mediqueue.repository.PatientRepository;
+import org.springframework.data.domain.PageRequest;
 import com.mediqueue.entity.enums.AppointmentStatus;
 import com.mediqueue.entity.enums.PaymentStatus;
 import com.mediqueue.entity.enums.ResolutionStatus;
@@ -17,6 +21,7 @@ import org.springframework.transaction.annotation.Transactional;
 
 import java.time.LocalDate;
 import java.util.List;
+import java.util.Locale;
 
 @Service
 @Transactional(readOnly = true)
@@ -31,19 +36,31 @@ public class PatientServiceImpl implements PatientService {
     private final LabReportRepository labReportRepository;
     private final MedicalRecordRepository medicalRecordRepository;
     private final AccessGuard accessGuard;
+    private final PatientRepository patientRepository;
 
     public PatientServiceImpl(AppointmentRepository appointmentRepository,
                               BillRepository billRepository,
                               ComplaintRepository complaintRepository,
                               LabReportRepository labReportRepository,
                               MedicalRecordRepository medicalRecordRepository,
-                              AccessGuard accessGuard) {
+                              AccessGuard accessGuard,
+                              PatientRepository patientRepository) {
         this.appointmentRepository = appointmentRepository;
         this.billRepository = billRepository;
         this.complaintRepository = complaintRepository;
         this.labReportRepository = labReportRepository;
         this.medicalRecordRepository = medicalRecordRepository;
         this.accessGuard = accessGuard;
+        this.patientRepository = patientRepository;
+    }
+
+    @Override
+    public List<PatientSummaryDTO> searchPatients(String query) {
+        String text = query == null ? "" : query.trim().toLowerCase(Locale.ROOT);
+        String term = "%" + text.replace("%", "").replace("_", "") + "%";
+        return patientRepository.search(term, AccountStatus.ACTIVE, PageRequest.of(0, 20)).stream()
+            .map(PatientSummaryDTO::from)
+            .toList();
     }
 
     @Override

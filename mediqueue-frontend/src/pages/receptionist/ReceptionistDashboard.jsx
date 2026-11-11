@@ -3,8 +3,10 @@ import PageLayout from '../../components/layout/PageLayout'
 import PageTitle from '../../components/common/PageTitle'
 import Spinner from '../../components/common/Spinner'
 import StatusBadge from '../../components/common/StatusBadge'
-import axiosInstance from '../../api/axiosInstance'
-import { formatDate } from '../../utils/formatters'
+import AppointmentStatusSelect from '../../components/booking/AppointmentStatusSelect'
+import axiosInstance, { errorMessage } from '../../api/axiosInstance'
+import { ENDPOINTS } from '../../api/endpoints'
+import { todayLocal, formatTime } from '../../utils/dates'
 
 function StatCard({ label, value, color }) {
   return (
@@ -16,42 +18,41 @@ function StatCard({ label, value, color }) {
 }
 
 export default function ReceptionistDashboard() {
-  const [stats, setStats]       = useState(null)
-  const [today, setToday]       = useState([])
-  const [loading, setLoading]   = useState(true)
+  const [stats, setStats] = useState(null)
+  const [today, setToday] = useState([])
+  const [loading, setLoading] = useState(true)
+  const [error, setError] = useState('')
 
   useEffect(() => { fetchAll() }, [])
 
   async function fetchAll() {
     setLoading(true)
     try {
-      const todayStr = new Date().toISOString().split('T')[0]
+      // Local calendar day (not UTC), so early-morning IST shows today, not yesterday.
       const [statsRes, todayRes] = await Promise.all([
-        axiosInstance.get('/appointments/stats'),
-        axiosInstance.get(`/appointments/all?date=${todayStr}`)
+        axiosInstance.get(ENDPOINTS.APPOINTMENTS_STATS),
+        axiosInstance.get(ENDPOINTS.APPOINTMENTS_ALL(todayLocal())),
       ])
-      setStats(statsRes.data)
-      setToday(todayRes.data)
-    } catch { setStats(null) }
-    finally { setLoading(false) }
+      setStats(statsRes.data); setToday(todayRes.data); setError('')
+    } catch (err) {
+      setStats(null); setError(errorMessage(err, 'Could not load the dashboard.'))
+    } finally { setLoading(false) }
   }
 
-  async function handleStatus(id, status) {
+  async function handleStatus(a, status) {
+    if (status === 'CANCELLED' && !window.confirm(`Cancel ${a.patientName}'s appointment?`)) return
     try {
-      await axiosInstance.patch(`/appointments/${id}/status`, { status })
+      await axiosInstance.patch(ENDPOINTS.UPDATE_STATUS(a.appointmentId), { status })
       fetchAll()
-    } catch {}
+    } catch (err) { setError(errorMessage(err, 'Could not update the status.')) }
   }
-
-  const statusOptions = ['BOOKED','CONFIRMED','IN_PROGRESS','COMPLETED','CANCELLED','NO_SHOW']
 
   return (
     <PageLayout>
       <PageTitle title="Receptionist Dashboard" subtitle="Front desk overview" />
-
+      {error && <div className="alert alert-error">{error}</div>}
       {loading ? <Spinner /> : (
         <>
-          {/* Stats row */}
           <div style={{ display: 'flex', gap: 16, flexWrap: 'wrap', marginBottom: 28 }}>
             <StatCard label="Today's Appointments" value={stats?.todayTotal} color="var(--color-dark)" />
             <StatCard label="Booked" value={stats?.todayBooked} color="var(--color-accent)" />
@@ -60,23 +61,14 @@ export default function ReceptionistDashboard() {
             <StatCard label="Total All Time" value={stats?.totalAll} color="#7f8c8d" />
           </div>
 
-          {/* Today's appointments table */}
           <div className="card" style={{ padding: 0 }}>
-            <div style={{ padding: '16px 20px', borderBottom: '1px solid var(--color-border-tertiary)' }}>
+            <div style={{ padding: '16px 20px', borderBottom: '1px solid var(--color-border)' }}>
               <h3 style={{ margin: 0 }}>Today's Appointments</h3>
             </div>
             <div className="table-wrapper">
               <table>
                 <thead>
-                  <tr>
-                    <th>ID</th>
-                    <th>Patient</th>
-                    <th>Doctor</th>
-                    <th>Time</th>
-                    <th>Reason</th>
-                    <th>Status</th>
-                    <th>Update</th>
-                  </tr>
+                  <tr><th>ID</th><th>Patient</th><th>Doctor</th><th>Time</th><th>Reason</th><th>Status</th><th>Update</th></tr>
                 </thead>
                 <tbody>
                   {today.length === 0 && (
@@ -87,20 +79,10 @@ export default function ReceptionistDashboard() {
                       <td style={{ fontSize: 12 }}>{a.appointmentId}</td>
                       <td><strong>{a.patientName}</strong></td>
                       <td>{a.doctorName}</td>
-                      <td style={{ fontSize: 12 }}>
-                        {a.startTime ? new Date(a.startTime).toLocaleTimeString('en-IN', { hour: '2-digit', minute: '2-digit' }) : '—'}
-                      </td>
+                      <td style={{ fontSize: 12 }}>{formatTime(a.startTime)}</td>
                       <td style={{ fontSize: 12 }}>{a.reasonForVisit || '—'}</td>
                       <td><StatusBadge status={a.status} /></td>
-                      <td>
-                        <select
-                          value={a.status}
-                          onChange={e => handleStatus(a.appointmentId, e.target.value)}
-                          style={{ padding: '4px 8px', borderRadius: 6, border: '1px solid #ddd',
-                            fontSize: 12, cursor: 'pointer' }}>
-                          {statusOptions.map(s => <option key={s} value={s}>{s.replace('_',' ')}</option>)}
-                        </select>
-                      </td>
+                      <td><AppointmentStatusSelect appointment={a} onChange={handleStatus} /></td>
                     </tr>
                   ))}
                 </tbody>

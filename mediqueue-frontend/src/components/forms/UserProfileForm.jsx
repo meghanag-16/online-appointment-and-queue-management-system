@@ -1,9 +1,10 @@
 import { useEffect, useState } from 'react'
 import { getPublicDepartments } from '../../api/authApi'
+import { todayLocal } from '../../utils/dates'
 
 /**
- * The ONE user form, shared by public sign-up (RegisterPage) and administrator user creation
- * (AdminUsers, AdminDoctors). It collects exactly the fields of the backend RegisterRequest,
+ * The ONE user form, shared by public patient sign-up (RegisterPage) and administrator user
+ * creation (AdminUsers, AdminDoctors). Only administrators can create non-patient accounts. It collects exactly the fields of the backend RegisterRequest,
  * so a user created either way ends up with the same data for their role.
  *
  * Props:
@@ -77,7 +78,7 @@ export default function UserProfileForm({
   const [loading, setLoading] = useState(false)
 
   const role = fixedRole || form.role
-  const today = new Date().toISOString().slice(0, 10)
+  const today = todayLocal()
 
   // Departments are only needed (and only fetched) for doctors.
   useEffect(() => {

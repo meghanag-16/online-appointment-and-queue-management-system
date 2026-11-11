@@ -5,10 +5,12 @@ import com.mediqueue.dto.DoctorDashboardResponse;
 import com.mediqueue.dto.QueueEntryResponse;
 import com.mediqueue.dto.SlotResponse;
 import com.mediqueue.service.DoctorService;
+import org.springframework.format.annotation.DateTimeFormat;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.web.bind.annotation.*;
 
+import java.time.LocalDate;
 import java.util.List;
 
 @RestController
@@ -21,17 +23,26 @@ public class DoctorController {
         this.doctorService = doctorService;
     }
 
+    /** Open future slots; ?date=YYYY-MM-DD for one day only. Empty for an inactive doctor. */
     @GetMapping("/doctors/{doctorId}/slots")
     @PreAuthorize("hasAnyRole('PATIENT','DOCTOR','RECEPTIONIST','ADMINISTRATOR')")
-    public ResponseEntity<List<SlotResponse>> getAvailableSlots(@PathVariable String doctorId) {
-        return ResponseEntity.ok(doctorService.getAvailableSlots(doctorId));
+    public ResponseEntity<List<SlotResponse>> getAvailableSlots(
+            @PathVariable String doctorId,
+            @RequestParam(required = false) @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) LocalDate date) {
+        return ResponseEntity.ok(doctorService.getAvailableSlots(doctorId, date));
     }
 
-    /** RECEPTIONIST added: the "Book for Patient" doctor dropdown calls this. */
+    /**
+     * ?q= name / specialization / department text, ?departmentId=, ?date=YYYY-MM-DD (only doctors
+     * with an open slot that day). Only active doctors are returned.
+     */
     @GetMapping("/doctors/search")
     @PreAuthorize("hasAnyRole('PATIENT','DOCTOR','RECEPTIONIST','ADMINISTRATOR')")
-    public ResponseEntity<List<DoctorDTO>> searchDoctors(@RequestParam(required = false) String q) {
-        return ResponseEntity.ok(doctorService.searchDoctors(q));
+    public ResponseEntity<List<DoctorDTO>> searchDoctors(
+            @RequestParam(required = false) String q,
+            @RequestParam(required = false) String departmentId,
+            @RequestParam(required = false) @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) LocalDate date) {
+        return ResponseEntity.ok(doctorService.searchDoctors(q, departmentId, date));
     }
 
     @GetMapping("/doctor/dashboard/{doctorId}")

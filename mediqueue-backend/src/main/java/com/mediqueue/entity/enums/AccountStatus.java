@@ -1,11 +1,8 @@
 package com.mediqueue.entity.enums;
 
-/**
- * PENDING_APPROVAL: a self-registered staff account (doctor, lab technician, receptionist,
- * administrator) waiting for an administrator to activate it. Only ACTIVE accounts can log in.
- */
+/** Only ACTIVE accounts can log in. Staff accounts are created ACTIVE by an administrator. */
 public enum AccountStatus {
-    ACTIVE, SUSPENDED, DEACTIVATED, PENDING_APPROVAL;
+    ACTIVE, SUSPENDED, DEACTIVATED;
 
     /** Human-readable form used in login/401 messages. */
     public static String describe(AccountStatus status) {
@@ -13,7 +10,6 @@ public enum AccountStatus {
             case ACTIVE -> "active";
             case SUSPENDED -> "suspended. Please contact the hospital administrator";
             case DEACTIVATED -> "deactivated. Please contact the hospital administrator";
-            case PENDING_APPROVAL -> "awaiting administrator approval";
         };
     }
 }

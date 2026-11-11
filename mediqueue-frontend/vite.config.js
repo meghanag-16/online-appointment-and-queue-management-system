@@ -5,7 +5,8 @@ export default defineConfig({
   plugins: [react()],
   server: {
     proxy: {
-      '/api': 'http://localhost:8080'
+      // Override with API_PROXY_TARGET if the backend runs elsewhere (e.g. http://localhost:8091)
+      '/api': process.env.API_PROXY_TARGET || 'http://localhost:8080'
     }
   }
 })

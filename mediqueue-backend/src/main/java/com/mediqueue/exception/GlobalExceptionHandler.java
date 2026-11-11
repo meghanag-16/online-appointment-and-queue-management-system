@@ -32,7 +32,7 @@ import java.util.Map;
  * why something failed instead of a generic "unexpected error".
  *
  * 400 bad input, 401 not logged in, 403 not allowed, 404 not found, 405 wrong method,
- * 409 duplicate/conflict, 413 file too large, 415 wrong content type, 422 slot unavailable,
+ * 409 duplicate/conflict or slot taken (with alternateSlots), 413 file too large, 415 wrong content type,
  * 500 real bugs only (logged with a stack trace).
  */
 @RestControllerAdvice
@@ -167,11 +167,13 @@ public class GlobalExceptionHandler {
         return error(HttpStatus.PAYLOAD_TOO_LARGE, "File is too large (maximum 10 MB)", req);
     }
 
-    // ── 422 ─────────────────────────────────────────────────────────────────
+    /** Slot taken: 409 with the suggested alternates, so the UI can offer them as clickable cards. */
     @ExceptionHandler(SlotUnavailableException.class)
     public ResponseEntity<Map<String, Object>> handleSlotUnavailable(SlotUnavailableException ex,
                                                                      HttpServletRequest req) {
-        return error(HttpStatus.UNPROCESSABLE_ENTITY, ex.getMessage(), req);
+        Map<String, Object> body = ErrorResponses.body(HttpStatus.CONFLICT, ex.getMessage(), req.getRequestURI());
+        body.put("alternateSlots", ex.getAlternateSlots());
+        return ResponseEntity.status(HttpStatus.CONFLICT).body(body);
     }
 
     // ── explicit statuses ───────────────────────────────────────────────────

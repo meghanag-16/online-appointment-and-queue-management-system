@@ -28,7 +28,7 @@ import java.util.Map;
  *
  * It never modifies or deletes existing rows. Users are built through {@link UserFactory},
  * the same creational path used by registration, so seeded users match real ones.
- * Time slots for the seeded doctors are generated afterwards by SlotScheduler
+ * Time slots for the seeded doctors are generated afterwards by SlotScheduler/SlotService
  * (it runs on ApplicationReadyEvent, which fires after all ApplicationRunners).
  */
 @Component
