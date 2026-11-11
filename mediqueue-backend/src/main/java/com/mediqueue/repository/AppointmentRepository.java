@@ -27,6 +27,36 @@ public interface AppointmentRepository extends JpaRepository<Appointment, Long> 
     // ── counts (database-side, no findAll().stream()) ──────────────────────
     long countByAppointmentStatus(AppointmentStatus status);
     long countByAppointmentDate(LocalDate date);
+    long countByAppointmentDateGreaterThanEqualAndAppointmentStatusIn(LocalDate from, Collection<AppointmentStatus> statuses);
+
+    /** Lab search: one appointment by ID, or a patient's appointments by patient ID or name. */
+    @Query("""
+        select a from Appointment a
+        where a.appointmentId = :appointmentId
+           or a.patient.userId = :text
+           or lower(a.patient.name) like lower(concat('%', :text, '%'))
+        order by a.appointmentDate desc, a.appointmentId desc
+        """)
+    List<Appointment> searchForLab(@Param("appointmentId") Long appointmentId,
+                                   @Param("text") String text,
+                                   org.springframework.data.domain.Pageable page);
+
+    /**
+     * Live appointments starting within (from, until] that have not had a reminder yet.
+     * Used by the reminder job; the NOT EXISTS keeps it to one reminder per appointment.
+     */
+    @Query("""
+        select a from Appointment a
+        where a.appointmentStatus in :statuses
+          and a.slot.startTime > :from
+          and a.slot.startTime <= :until
+          and not exists (select n.notificationId from Notification n
+                          where n.appointmentId = a.appointmentId
+                            and n.type = com.mediqueue.entity.enums.NotificationType.APPOINTMENT_REMINDER)
+        """)
+    List<Appointment> findDueForReminder(@Param("statuses") Collection<AppointmentStatus> statuses,
+                                         @Param("from") java.time.LocalDateTime from,
+                                         @Param("until") java.time.LocalDateTime until);
     long countByAppointmentDateAndAppointmentStatus(LocalDate date, AppointmentStatus status);
     long countByDoctor_UserIdAndAppointmentDateAndAppointmentStatusNot(String doctorId, LocalDate date, AppointmentStatus status);
     long countByDoctor_UserIdAndAppointmentDateAndAppointmentStatus(String doctorId, LocalDate date, AppointmentStatus status);

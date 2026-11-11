@@ -1,10 +1,13 @@
 package com.mediqueue.controller;
 
+import com.mediqueue.dto.AccountCreatedResponse;
+import com.mediqueue.dto.AdminAccountRequests;
 import com.mediqueue.dto.RegisterRequest;
 import com.mediqueue.dto.StatusUpdateRequest;
 import com.mediqueue.dto.UserDTO;
 import com.mediqueue.service.UserAccountService;
 import jakarta.validation.Valid;
+import jakarta.validation.Validator;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.access.prepost.PreAuthorize;
@@ -19,9 +22,11 @@ import java.util.List;
 public class AdminUsersController {
 
     private final UserAccountService userAccountService;
+    private final Validator validator;
 
-    public AdminUsersController(UserAccountService userAccountService) {
+    public AdminUsersController(UserAccountService userAccountService, Validator validator) {
         this.userAccountService = userAccountService;
+        this.validator = validator;
     }
 
     @GetMapping
@@ -29,11 +34,23 @@ public class AdminUsersController {
         return ResponseEntity.ok(userAccountService.listUsers());
     }
 
-    /** The only way to create doctor, lab technician, receptionist and administrator accounts. */
+    /**
+     * The only way to create doctor, lab technician, receptionist and administrator accounts.
+     * The response carries a one-time temporary password; the user must change it at first login.
+     */
     @PostMapping
-    public ResponseEntity<Object> createUser(@Valid @RequestBody RegisterRequest request) {
-        var user = userAccountService.createByAdmin(request);
-        return ResponseEntity.status(HttpStatus.CREATED).body(UserDTO.profileOf(user));
+    public ResponseEntity<AccountCreatedResponse> createUser(@RequestBody RegisterRequest request) {
+        AdminAccountRequests.validate(validator, request);
+        var created = userAccountService.createByAdmin(request);
+        return ResponseEntity.status(HttpStatus.CREATED)
+            .body(new AccountCreatedResponse(UserDTO.profileOf(created.user()), created.temporaryPassword()));
+    }
+
+    /** New temporary password for a user who forgot theirs; they must change it at next login. */
+    @PostMapping("/{userId}/reset-password")
+    public ResponseEntity<AccountCreatedResponse> resetPassword(@PathVariable String userId) {
+        String temporaryPassword = userAccountService.resetPassword(userId);
+        return ResponseEntity.ok(new AccountCreatedResponse(userAccountService.getProfile(userId), temporaryPassword));
     }
 
     @GetMapping("/{userId}")

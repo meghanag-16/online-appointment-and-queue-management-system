@@ -3,7 +3,9 @@ package com.mediqueue.entity;
 import com.mediqueue.entity.enums.ResolutionStatus;
 import jakarta.persistence.*;
 import java.time.LocalDate;
+import java.time.LocalDateTime;
 
+/** A patient's complaint, optionally about one of their appointments or bills. OPEN → UNDER_REVIEW → RESOLVED. */
 @Entity
 @Table(name = "complaints")
 public class Complaint {
@@ -15,6 +17,14 @@ public class Complaint {
     @ManyToOne(fetch = FetchType.LAZY)
     @JoinColumn(name = "patient_id", nullable = false)
     private Patient patient;
+
+    @ManyToOne(fetch = FetchType.LAZY)
+    @JoinColumn(name = "appointment_id")
+    private Appointment appointment;
+
+    @ManyToOne(fetch = FetchType.LAZY)
+    @JoinColumn(name = "bill_id")
+    private Bill bill;
 
     @Column(name = "issue_type", length = 100)
     private String issueType;
@@ -29,22 +39,29 @@ public class Complaint {
     @Column(name = "resolution_status")
     private ResolutionStatus resolutionStatus = ResolutionStatus.OPEN;
 
-    public Complaint() {}
+    /** The administrator's note: what was found or done. Shown to the patient. */
+    @Column(name = "resolution_note", columnDefinition = "TEXT")
+    private String resolutionNote;
 
-    public Complaint(String complaintId, Patient patient, String issueType, String description, LocalDate createdOn, ResolutionStatus resolutionStatus) {
-        this.complaintId = complaintId;
-        this.patient = patient;
-        this.issueType = issueType;
-        this.description = description;
-        this.createdOn = createdOn;
-        this.resolutionStatus = resolutionStatus;
-    }
+    @Column(name = "updated_at")
+    private LocalDateTime updatedAt;
+
+    @Column(name = "resolved_at")
+    private LocalDateTime resolvedAt;
+
+    public Complaint() {}
 
     public String getComplaintId() { return complaintId; }
     public void setComplaintId(String complaintId) { this.complaintId = complaintId; }
 
     public Patient getPatient() { return patient; }
     public void setPatient(Patient patient) { this.patient = patient; }
+
+    public Appointment getAppointment() { return appointment; }
+    public void setAppointment(Appointment appointment) { this.appointment = appointment; }
+
+    public Bill getBill() { return bill; }
+    public void setBill(Bill bill) { this.bill = bill; }
 
     public String getIssueType() { return issueType; }
     public void setIssueType(String issueType) { this.issueType = issueType; }
@@ -58,8 +75,18 @@ public class Complaint {
     public ResolutionStatus getResolutionStatus() { return resolutionStatus; }
     public void setResolutionStatus(ResolutionStatus resolutionStatus) { this.resolutionStatus = resolutionStatus; }
 
+    public String getResolutionNote() { return resolutionNote; }
+    public void setResolutionNote(String resolutionNote) { this.resolutionNote = resolutionNote; }
+
+    public LocalDateTime getUpdatedAt() { return updatedAt; }
+    public void setUpdatedAt(LocalDateTime updatedAt) { this.updatedAt = updatedAt; }
+
+    public LocalDateTime getResolvedAt() { return resolvedAt; }
+    public void setResolvedAt(LocalDateTime resolvedAt) { this.resolvedAt = resolvedAt; }
+
     @PrePersist
     public void prePersist() {
         if (createdOn == null) createdOn = LocalDate.now();
+        if (updatedAt == null) updatedAt = LocalDateTime.now();
     }
 }

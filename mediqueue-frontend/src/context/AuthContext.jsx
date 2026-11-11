@@ -5,7 +5,8 @@ import { TOKEN_KEY, USER_KEY } from '../api/axiosInstance'
 const AuthContext = createContext(null)
 
 function store(data) {
-  const userData = { token: data.token, userId: data.userId, username: data.username, name: data.name, role: data.role }
+  const userData = { token: data.token, userId: data.userId, username: data.username, name: data.name, role: data.role,
+    mustChangePassword: !!data.mustChangePassword }
   localStorage.setItem(TOKEN_KEY, data.token)
   localStorage.setItem(USER_KEY, JSON.stringify(userData))
   return userData

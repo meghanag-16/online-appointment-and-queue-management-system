@@ -1,5 +1,7 @@
 package com.mediqueue.service.impl;
 
+import com.mediqueue.audit.AuditAction;
+import com.mediqueue.audit.AuditService;
 import com.mediqueue.dto.QueueEntryResponse;
 import com.mediqueue.entity.Appointment;
 import com.mediqueue.entity.VirtualQueue;
@@ -35,19 +37,22 @@ public class QueueServiceImpl implements QueueService {
     private final AppointmentService appointmentService;
     private final AccessGuard accessGuard;
     private final CurrentUserService currentUser;
+    private final AuditService auditService;
 
     public QueueServiceImpl(VirtualQueueRepository queueRepository,
                             PrescriptionRepository prescriptionRepository,
                             QueueManager queueManager,
                             AppointmentService appointmentService,
                             AccessGuard accessGuard,
-                            CurrentUserService currentUser) {
+                            CurrentUserService currentUser,
+                            AuditService auditService) {
         this.queueRepository = queueRepository;
         this.prescriptionRepository = prescriptionRepository;
         this.queueManager = queueManager;
         this.appointmentService = appointmentService;
         this.accessGuard = accessGuard;
         this.currentUser = currentUser;
+        this.auditService = auditService;
     }
 
     @Override
@@ -131,6 +136,9 @@ public class QueueServiceImpl implements QueueService {
         }
         e.setOverridePosition(position);
         queueRepository.saveAndFlush(e);
+        auditService.record(AuditAction.QUEUE_POSITION_OVERRIDDEN, "QUEUE_ENTRY", queueId,
+            e.getAppointment().getPatient().getName() + " in " + com.mediqueue.service.facade.NotificationFacadeImpl.doctor(e.getDoctor()) + "'s queue on "
+                + e.getQueueDate() + (position == null ? ": override cleared" : ": pinned to position " + position));
         queueManager.reorder(e.getDoctor().getUserId(), e.getQueueDate());
         return getQueue(e.getDoctor().getUserId(), e.getQueueDate());
     }

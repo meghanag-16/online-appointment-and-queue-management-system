@@ -8,6 +8,7 @@ const NAV_LINKS = {
     { to: '/patient/book',         label: 'Book Slot'    },
     { to: '/patient/billing',      label: 'Billing'      },
     { to: '/patient/prescriptions', label: 'Prescriptions' },
+    { to: '/patient/reports',      label: 'Lab Reports'  },
     { to: '/patient/records',      label: 'My Records'   },
     { to: '/patient/complaints',   label: 'Complaints'   },
   ],
@@ -18,12 +19,13 @@ const NAV_LINKS = {
     { to: '/doctor/prescriptions', label: 'Prescriptions' },
   ],
   LAB_TECHNICIAN: [
-    { to: '/lab/dashboard', label: 'Dashboard'   },
-    { to: '/lab/reports',   label: 'Lab Reports' },
+    { to: '/lab/dashboard', label: 'Upload Reports' },
+    { to: '/lab/reports',   label: 'All Reports'    },
   ],
   RECEPTIONIST: [
     { to: '/receptionist/dashboard',    label: 'Dashboard'    },
     { to: '/receptionist/appointments', label: 'Appointments' },
+    { to: '/receptionist/billing',      label: 'Billing'      },
     { to: '/receptionist/queue',        label: 'Queues'       },
   ],
   ADMINISTRATOR: [
@@ -32,8 +34,10 @@ const NAV_LINKS = {
     { to: '/admin/doctors',     label: 'Doctors'     },
     { to: '/admin/queue',       label: 'Queues'      },
     { to: '/admin/departments', label: 'Departments' },
+    { to: '/admin/billing',     label: 'Billing'     },
     { to: '/admin/complaints',  label: 'Complaints'  },
     { to: '/admin/settings',    label: 'Slot Settings' },
+    { to: '/admin/audit',       label: 'Audit Log'   },
   ],
 }
 

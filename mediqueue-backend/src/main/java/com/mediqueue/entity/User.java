@@ -43,6 +43,10 @@ public abstract class User {
     @Column(name = "account_status")
     private AccountStatus accountStatus = AccountStatus.ACTIVE;
 
+    /** Set when an administrator created the account or reset its password; cleared by a password change. */
+    @Column(name = "must_change_password", nullable = false)
+    private boolean mustChangePassword = false;
+
     public User() {}
 
     public User(String userId, String name, LocalDate dateOfBirth, String gender, String phoneNumber, String email, String username, String password, UserRole role, AccountStatus accountStatus) {
@@ -87,4 +91,7 @@ public abstract class User {
 
     public AccountStatus getAccountStatus() { return accountStatus; }
     public void setAccountStatus(AccountStatus accountStatus) { this.accountStatus = accountStatus; }
+
+    public boolean isMustChangePassword() { return mustChangePassword; }
+    public void setMustChangePassword(boolean mustChangePassword) { this.mustChangePassword = mustChangePassword; }
 }

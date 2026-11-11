@@ -29,6 +29,12 @@ export function formatCurrency(amount) {
   }).format(amount)
 }
 
+/** "Dr. Name", without doubling the title when the stored name already has it. */
+export function drName(name) {
+  if (!name) return '—'
+  return /^dr\.?\s/i.test(name.trim()) ? name.trim() : `Dr. ${name.trim()}`
+}
+
 /**
  * Converts a SCREAMING_SNAKE_CASE enum value to Title Case.
  */

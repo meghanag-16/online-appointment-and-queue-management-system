@@ -15,6 +15,7 @@ import { todayLocal } from '../../utils/dates'
  *  - roleNote:     (role) => optional note shown under the role selector
  *  - onSubmit:     async (payload) => void; throw to show the server's error
  *  - resetOnSuccess: clear the form after a successful submit
+ *  - showPassword: false for administrator forms (the server generates a temporary password)
  */
 export const ALL_ROLES = ['PATIENT', 'DOCTOR', 'LAB_TECHNICIAN', 'RECEPTIONIST', 'ADMINISTRATOR']
 
@@ -69,6 +70,7 @@ export default function UserProfileForm({
   roleNote,
   onSubmit,
   resetOnSuccess = false,
+  showPassword = true,
 }) {
   const [form, setForm] = useState({ ...EMPTY, role: fixedRole || roles[0] || 'PATIENT' })
   const [departments, setDepartments] = useState([])
@@ -100,7 +102,9 @@ export default function UserProfileForm({
     setFieldErrors({})
     setLoading(true)
     try {
-      await onSubmit(buildUserPayload({ ...form, role }))
+      const payload = buildUserPayload({ ...form, role })
+      if (!showPassword) delete payload.password
+      await onSubmit(payload)
       if (resetOnSuccess) setForm({ ...EMPTY, role: fixedRole || roles[0] || 'PATIENT' })
     } catch (err) {
       setError(err?.response?.data?.error || err?.userMessage || 'Could not save. Please try again.')
@@ -152,12 +156,12 @@ export default function UserProfileForm({
         {fe('email')}
       </div>
 
-      <div className="form-group">
+      {showPassword && <div className="form-group">
         <label htmlFor="upf-password">{passwordLabel}</label>
         <input id="upf-password" className="form-control" type="password" placeholder={passwordHint}
           value={form.password} onChange={set('password')} required minLength={8} autoComplete="new-password" />
         {fe('password')}
-      </div>
+      </div>}
 
       <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 16 }}>
         <div className="form-group">

@@ -55,6 +55,16 @@ axiosInstance.interceptors.response.use(
       }
     }
 
+    // 403 PASSWORD_CHANGE_REQUIRED = still on the administrator's temporary password.
+    if (status === 403 && err.response?.data?.code === 'PASSWORD_CHANGE_REQUIRED') {
+      try {
+        const stored = JSON.parse(localStorage.getItem(USER_KEY) || 'null')
+        if (stored) localStorage.setItem(USER_KEY, JSON.stringify({ ...stored, mustChangePassword: true }))
+      } catch { /* ignore */ }
+      if (!window.location.pathname.startsWith('/change-password')) window.location.assign('/change-password')
+      return Promise.reject(err)
+    }
+
     // 403 = logged in but not allowed → tell the page layout to show the Access Denied banner.
     if (status === 403 && !isAuthCall(err.config)) {
       window.dispatchEvent(new CustomEvent(ACCESS_DENIED_EVENT, { detail: err.userMessage }))

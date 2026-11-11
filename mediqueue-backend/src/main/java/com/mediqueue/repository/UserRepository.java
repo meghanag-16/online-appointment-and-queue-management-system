@@ -12,6 +12,11 @@ public interface UserRepository extends JpaRepository<User, String> {
     Optional<User> findByEmail(String email);
     boolean existsByUsername(String username);
     boolean existsByEmail(String email);
+    long countByRole(com.mediqueue.entity.enums.UserRole role);
+    long countByAccountStatus(com.mediqueue.entity.enums.AccountStatus status);
+    long countByRoleAndAccountStatus(com.mediqueue.entity.enums.UserRole role, com.mediqueue.entity.enums.AccountStatus status);
+    List<User> findByRoleAndAccountStatus(com.mediqueue.entity.enums.UserRole role, com.mediqueue.entity.enums.AccountStatus status);
+    List<User> findByAccountStatus(com.mediqueue.entity.enums.AccountStatus status);
 
     /*
      * Native projections: rows created outside the app (e.g. by hand in MySQL) may lack a row in

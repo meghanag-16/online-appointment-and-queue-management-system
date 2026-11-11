@@ -1,5 +1,7 @@
 package com.mediqueue.service.impl;
 
+import com.mediqueue.audit.AuditAction;
+import com.mediqueue.audit.AuditService;
 import com.mediqueue.dto.ChangePasswordRequest;
 import com.mediqueue.dto.RegisterRequest;
 import com.mediqueue.dto.UpdateProfileRequest;
@@ -18,6 +20,7 @@ import com.mediqueue.factory.UserFactory;
 import com.mediqueue.repository.DepartmentRepository;
 import com.mediqueue.repository.UserRepository;
 import com.mediqueue.security.CurrentUserService;
+import com.mediqueue.security.TemporaryPasswords;
 import com.mediqueue.service.MedicalRecordService;
 import com.mediqueue.service.SlotService;
 import com.mediqueue.service.UserAccountService;
@@ -39,6 +42,7 @@ public class UserAccountServiceImpl implements UserAccountService {
     private final CurrentUserService currentUser;
     private final SlotService slotService;
     private final MedicalRecordService medicalRecordService;
+    private final AuditService auditService;
 
     public UserAccountServiceImpl(UserRepository userRepository,
                                   DepartmentRepository departmentRepository,
@@ -46,7 +50,8 @@ public class UserAccountServiceImpl implements UserAccountService {
                                   PasswordEncoder passwordEncoder,
                                   CurrentUserService currentUser,
                                   SlotService slotService,
-                                  MedicalRecordService medicalRecordService) {
+                                  MedicalRecordService medicalRecordService,
+                                  AuditService auditService) {
         this.userRepository = userRepository;
         this.departmentRepository = departmentRepository;
         this.userFactory = userFactory;
@@ -54,6 +59,7 @@ public class UserAccountServiceImpl implements UserAccountService {
         this.currentUser = currentUser;
         this.slotService = slotService;
         this.medicalRecordService = medicalRecordService;
+        this.auditService = auditService;
     }
 
     @Override
@@ -67,12 +73,33 @@ public class UserAccountServiceImpl implements UserAccountService {
     }
 
     @Override
-    public User createByAdmin(RegisterRequest request) {
+    public CreatedAccount createByAdmin(RegisterRequest request) {
         if (request.getRole() == null) throw new BadRequestException("Role is required");
+        String temporaryPassword = TemporaryPasswords.generate();
+        request.setPassword(temporaryPassword);
         User user = createUser(request);
+        user.setMustChangePassword(true);
+        user = userRepository.save(user);
         // A newly onboarded doctor can be booked straight away (no wait for the nightly run).
         if (user instanceof Doctor doctor) slotService.generateForDoctor(doctor);
-        return user;
+        auditService.record(AuditAction.USER_CREATED, "USER", user.getUserId(),
+            user.getName() + " (" + user.getRole() + "), username " + user.getUsername());
+        return new CreatedAccount(user, temporaryPassword);
+    }
+
+    @Override
+    public String resetPassword(String userId) {
+        if (userId.equals(currentUser.userId())) {
+            throw new BadRequestException("Use My Profile to change your own password");
+        }
+        User user = userRepository.findById(userId)
+            .orElseThrow(() -> new ResourceNotFoundException("User not found: " + userId));
+        String temporaryPassword = TemporaryPasswords.generate();
+        user.setPassword(passwordEncoder.encode(temporaryPassword));
+        user.setMustChangePassword(true);
+        userRepository.save(user);
+        auditService.record(AuditAction.PASSWORD_RESET, "USER", userId, user.getName() + " (" + user.getRole() + ")");
+        return temporaryPassword;
     }
 
     private User createUser(RegisterRequest req) {
@@ -181,6 +208,7 @@ public class UserAccountServiceImpl implements UserAccountService {
             throw new BadRequestException("New password must be different from the current one");
         }
         user.setPassword(passwordEncoder.encode(req.newPassword()));
+        user.setMustChangePassword(false);
         userRepository.save(user);
     }
 
@@ -198,8 +226,13 @@ public class UserAccountServiceImpl implements UserAccountService {
         }
         User user = userRepository.findById(userId)
             .orElseThrow(() -> new ResourceNotFoundException("User not found: " + userId));
+        AccountStatus previous = user.getAccountStatus();
         user.setAccountStatus(newStatus);
         User saved = userRepository.save(user);
+        if (previous != newStatus) {
+            auditService.record(AuditAction.USER_STATUS_CHANGED, "USER", userId,
+                saved.getName() + " (" + saved.getRole() + "): " + previous + " → " + newStatus);
+        }
 
         // An inactive doctor cannot be booked: withdraw their open slots; reactivation brings them back.
         if (saved instanceof Doctor doctor) {

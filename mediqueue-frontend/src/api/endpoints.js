@@ -22,6 +22,34 @@ export const ENDPOINTS = {
   BILL_BY_APPT:     (apptId)       => `/billing/appointment/${apptId}`,
   BILL_BY_PATIENT:  (pid)          => `/billing/patient/${pid}`,
   UPDATE_PAYMENT:   (billId)       => `/billing/${billId}/payment`,
+  BILLS_ALL:        (status = '', q = '') => {
+    const p = new URLSearchParams()
+    if (status) p.set('status', status)
+    if (q) p.set('q', q)
+    const qs = p.toString()
+    return qs ? `/billing/all?${qs}` : '/billing/all'
+  },
+
+  // Lab reports
+  LAB_SEARCH:          (q)   => `/lab/appointments?q=${encodeURIComponent(q)}`,
+  LAB_UPLOAD:          '/lab/upload',
+  LAB_BY_APPOINTMENT:  (aid) => `/lab/appointment/${aid}`,
+  LAB_BY_PATIENT:      (pid) => `/lab/patient/${pid}`,
+  LAB_ALL:             '/lab/all',
+  LAB_DOWNLOAD:        (rid) => `/lab/reports/${rid}/download`,
+
+  // Notifications (every user: their own)
+  NOTIFICATIONS_MINE:     (limit = 20) => `/notifications/mine?limit=${limit}`,
+  NOTIFICATION_READ:      (id) => `/notifications/${id}/read`,
+  NOTIFICATIONS_READ_ALL: '/notifications/mine/read-all',
+  NOTIFICATION_ALERT:     '/notifications/alert',
+  REMINDERS_RUN:          '/notifications/reminders/run',
+
+  // Complaints
+  COMPLAINTS:        '/complaints',
+  COMPLAINTS_MINE:   '/complaints/mine',
+  COMPLAINTS_ALL:    (status = '') => status ? `/complaints/all?status=${status}` : '/complaints/all',
+  COMPLAINT_STATUS:  (id) => `/complaints/${id}/status`,
 
   // Doctors
   DOCTORS:        '/doctors',
@@ -64,4 +92,12 @@ export const ENDPOINTS = {
   // Users (administrator)
   USERS:            '/users',
   USER_STATUS:      (id) => `/users/${id}/status`,
+  USER_RESET_PASSWORD: (id) => `/users/${id}/reset-password`,
+  ADMIN_DASHBOARD:  '/admin/dashboard',
+  ADMIN_AUDIT:      (params = {}) => {
+    const p = new URLSearchParams()
+    Object.entries(params).forEach(([k, v]) => { if (v) p.set(k, v) })
+    const qs = p.toString()
+    return qs ? `/admin/audit?${qs}` : '/admin/audit'
+  },
 }

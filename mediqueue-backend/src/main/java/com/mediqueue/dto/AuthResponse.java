@@ -12,6 +12,8 @@ public class AuthResponse {
     private UserRole role;
     private AccountStatus accountStatus;
     private String message;
+    /** True when the password was set by the administrator: the user must choose a new one first. */
+    private boolean mustChangePassword;
 
     public AuthResponse() {}
 
@@ -54,4 +56,7 @@ public class AuthResponse {
 
     public String getMessage() { return message; }
     public void setMessage(String message) { this.message = message; }
+
+    public boolean isMustChangePassword() { return mustChangePassword; }
+    public void setMustChangePassword(boolean mustChangePassword) { this.mustChangePassword = mustChangePassword; }
 }

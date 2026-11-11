@@ -1,11 +1,16 @@
 package com.mediqueue.service.impl;
 
-import com.mediqueue.billing.*;
+import com.mediqueue.audit.AuditAction;
+import com.mediqueue.audit.AuditService;
+import com.mediqueue.billing.BillingStrategy;
+import com.mediqueue.billing.BillingStrategySelector;
 import com.mediqueue.dto.BillResponse;
 import com.mediqueue.dto.PaymentUpdateRequest;
 import com.mediqueue.entity.Appointment;
 import com.mediqueue.entity.Bill;
+import com.mediqueue.entity.enums.BillingType;
 import com.mediqueue.entity.enums.PaymentStatus;
+import com.mediqueue.exception.BadRequestException;
 import com.mediqueue.exception.ResourceNotFoundException;
 import com.mediqueue.repository.AppointmentRepository;
 import com.mediqueue.repository.BillRepository;
@@ -14,127 +19,182 @@ import com.mediqueue.service.BillingService;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
-import java.math.BigDecimal;
+import java.time.LocalDateTime;
+import java.util.EnumSet;
 import java.util.List;
-import java.util.stream.Collectors;
+import java.util.Locale;
+import java.util.Map;
+import java.util.Set;
+
+import static com.mediqueue.entity.enums.PaymentStatus.*;
 
 @Service
 @Transactional
 public class BillingServiceImpl implements BillingService {
 
-    private final BillRepository        billRepository;
+    /** Bills whose amount may still change. */
+    private static final Set<PaymentStatus> UNPAID = EnumSet.of(PENDING, FAILED);
+
+    /** Status changes the front desk may make. VOID is set only by the system when a visit is cancelled. */
+    private static final Map<PaymentStatus, Set<PaymentStatus>> MANUAL_TRANSITIONS = Map.of(
+        PENDING,  EnumSet.of(PAID, FAILED),
+        FAILED,   EnumSet.of(PAID, PENDING),
+        PAID,     EnumSet.of(REFUNDED),
+        REFUNDED, EnumSet.noneOf(PaymentStatus.class),
+        VOID,     EnumSet.noneOf(PaymentStatus.class));
+
+    public static final List<String> PAYMENT_METHODS = List.of("CASH", "CARD", "UPI", "INSURANCE", "NET_BANKING");
+
+    private final BillRepository billRepository;
     private final AppointmentRepository appointmentRepository;
-    private final StandardBilling       standardBilling;
-    private final EmergencyBilling      emergencyBilling;
-    private final FollowUpBilling       followUpBilling;
-    private final BillingContext        billingContext;
-    private final AccessGuard           accessGuard;
+    private final BillingStrategySelector selector;
+    private final AccessGuard accessGuard;
+    private final AuditService auditService;
 
     public BillingServiceImpl(BillRepository billRepository, AppointmentRepository appointmentRepository,
-                            StandardBilling standardBilling, EmergencyBilling emergencyBilling,
-                            FollowUpBilling followUpBilling, BillingContext billingContext,
-                            AccessGuard accessGuard) {
+                              BillingStrategySelector selector, AccessGuard accessGuard, AuditService auditService) {
         this.billRepository = billRepository;
         this.appointmentRepository = appointmentRepository;
-        this.standardBilling = standardBilling;
-        this.emergencyBilling = emergencyBilling;
-        this.followUpBilling = followUpBilling;
-        this.billingContext = billingContext;
+        this.selector = selector;
         this.accessGuard = accessGuard;
+        this.auditService = auditService;
     }
 
     @Override
     public BillResponse generateBill(Long appointmentId, String billingType) {
-        Appointment appointment = appointmentRepository.findById(appointmentId)
-            .orElseThrow(() -> new ResourceNotFoundException("Appointment not found: " + appointmentId));
-
-        // ── select strategy ──────────────────────────────────────────────────
-        BillingStrategy strategy = resolveStrategy(billingType);
-        billingContext.setStrategy(strategy);
-
-        BigDecimal amount;
-        try {
-                amount = billingContext.executeStrategy(appointment);
-        if (amount == null) {
-                amount = BigDecimal.valueOf(500); // fallback
+        Appointment appointment = findAppointment(appointmentId);
+        Bill bill = billRepository.findByAppointment_AppointmentId(appointmentId).orElse(null);
+        if (bill != null && !UNPAID.contains(bill.getPaymentStatus())) {
+            throw new BadRequestException("This bill is " + label(bill.getPaymentStatus()) + " and can no longer be re-priced");
         }
-        } catch (Exception e) {
-               amount = BigDecimal.valueOf(500); // fallback if strategy fails
-        }     
-
-        // ── persist bill ─────────────────────────────────────────────────────
-        Bill bill = billRepository.findByAppointment_AppointmentId(appointmentId)
-            .orElse(new Bill());
-        bill.setAppointment(appointment);
-        bill.setTotalAmount(amount);
-        bill.setPaymentStatus(PaymentStatus.PENDING);
-
-        Bill saved = billRepository.save(bill);
-        return toResponse(saved, billingContext.currentStrategyName());
+        BillingStrategy strategy = billingType == null || billingType.isBlank() || billingType.equalsIgnoreCase("AUTO")
+            ? selector.select(appointment)
+            : selector.strategyFor(parseType(billingType));
+        Bill saved = price(appointment, bill, strategy);
+        auditService.record(AuditAction.BILL_REPRICED, "BILL", saved.getBillId(),
+            "Appointment #" + appointmentId + " priced as " + strategy.type() + ": " + saved.getTotalAmount());
+        return toResponse(saved);
     }
 
     @Override
-    // NOT readOnly — if no bill exists yet this auto-generates (inserts) a standard one,
-    // which fails inside a read-only transaction on MySQL.
+    public void priceAppointment(Long appointmentId) {
+        Appointment appointment = findAppointment(appointmentId);
+        Bill bill = billRepository.findByAppointment_AppointmentId(appointmentId).orElse(null);
+        if (bill != null && !UNPAID.contains(bill.getPaymentStatus())) return;   // paid/void bills are final
+        price(appointment, bill, selector.select(appointment));
+    }
+
+    @Override
+    public void settleCancelledAppointment(Long appointmentId) {
+        billRepository.findByAppointment_AppointmentId(appointmentId).ifPresent(bill -> {
+            if (UNPAID.contains(bill.getPaymentStatus())) bill.setPaymentStatus(VOID);
+            else if (bill.getPaymentStatus() == PAID) bill.setPaymentStatus(REFUNDED);
+            billRepository.save(bill);
+        });
+    }
+
+    @Override
+    @Transactional(readOnly = true)
     public BillResponse getBill(Long appointmentId) {
-        Appointment appointment = appointmentRepository.findById(appointmentId)
-            .orElseThrow(() -> new ResourceNotFoundException("Appointment not found: " + appointmentId));
+        Appointment appointment = findAppointment(appointmentId);
         accessGuard.requireAppointmentDocumentRead(appointment, false);
         return billRepository.findByAppointment_AppointmentId(appointmentId)
-            .map(bill -> toResponse(bill, null))
-            .orElseGet(() -> generateBill(appointmentId, "STANDARD"));
+            .map(this::toResponse)
+            .orElseThrow(() -> new ResourceNotFoundException("No bill exists for appointment " + appointmentId));
     }
 
     @Override
     @Transactional(readOnly = true)
     public List<BillResponse> getBillsForPatient(String patientId) {
         accessGuard.requireSelfOrStaff(patientId);
-        return billRepository.findByAppointment_Patient_UserId(patientId)
-            .stream()
-            .map(bill -> toResponse(bill, null))
-            .collect(Collectors.toList());
+        return billRepository.findByAppointment_Patient_UserIdOrderByGeneratedAtDesc(patientId)
+            .stream().map(this::toResponse).toList();
+    }
+
+    @Override
+    @Transactional(readOnly = true)
+    public List<BillResponse> getAll(String status, String query) {
+        List<Bill> bills = status == null || status.isBlank()
+            ? billRepository.findAllByOrderByGeneratedAtDesc()
+            : billRepository.findByPaymentStatusOrderByGeneratedAtDesc(parseStatus(status));
+        String q = query == null ? "" : query.trim().toLowerCase(Locale.ROOT);
+        return bills.stream()
+            .map(this::toResponse)
+            .filter(b -> q.isEmpty()
+                || String.valueOf(b.getAppointmentId()).equals(q)
+                || String.valueOf(b.getBillId()).equals(q)
+                || (b.getPatientId() != null && b.getPatientId().toLowerCase(Locale.ROOT).contains(q))
+                || (b.getPatientName() != null && b.getPatientName().toLowerCase(Locale.ROOT).contains(q)))
+            .toList();
     }
 
     @Override
     public BillResponse updatePaymentStatus(Long billId, PaymentUpdateRequest req) {
         Bill bill = billRepository.findById(billId)
             .orElseThrow(() -> new ResourceNotFoundException("Bill not found: " + billId));
-
         if (req.getPaymentStatus() == null || req.getPaymentStatus().isBlank()) {
-            throw new IllegalArgumentException("Payment status is required");
+            throw new BadRequestException("Payment status is required");
         }
-        try {
-            bill.setPaymentStatus(PaymentStatus.valueOf(req.getPaymentStatus().trim().toUpperCase()));
-        } catch (IllegalArgumentException e) {
-            throw new IllegalArgumentException("Invalid payment status: " + req.getPaymentStatus());
+        PaymentStatus target = parseStatus(req.getPaymentStatus());
+        PaymentStatus current = bill.getPaymentStatus();
+        if (target == current) return toResponse(bill);
+        if (!MANUAL_TRANSITIONS.get(current).contains(target)) {
+            throw new BadRequestException("A " + label(current) + " bill cannot be marked " + label(target));
         }
-        bill.setPaymentMethod(req.getPaymentMethod());
-
+        if (target == PAID) {
+            String method = req.getPaymentMethod() == null ? "" : req.getPaymentMethod().trim().toUpperCase(Locale.ROOT);
+            if (!PAYMENT_METHODS.contains(method)) {
+                throw new BadRequestException("Choose how it was paid: " + String.join(", ", PAYMENT_METHODS));
+            }
+            bill.setPaymentMethod(method);
+            bill.setPaidAt(LocalDateTime.now());
+        }
+        bill.setPaymentStatus(target);
         Bill saved = billRepository.save(bill);
-        return toResponse(saved, null);
+        auditService.record(AuditAction.BILL_PAYMENT_UPDATED, "BILL", billId,
+            label(current) + " → " + label(target) + (target == PAID ? " (" + saved.getPaymentMethod() + ")" : "")
+                + ", appointment #" + saved.getAppointment().getAppointmentId());
+        return toResponse(saved);
     }
 
     // ── helpers ───────────────────────────────────────────────────────────────
 
-    private BillingStrategy resolveStrategy(String type) {
-        if (type == null) return standardBilling;
-        return switch (type.toUpperCase()) {
-            case "EMERGENCY"  -> emergencyBilling;
-            case "FOLLOW_UP"  -> followUpBilling;
-            default           -> standardBilling;
-        };
+    private Bill price(Appointment appointment, Bill bill, BillingStrategy strategy) {
+        if (bill == null) {
+            bill = new Bill();
+            bill.setAppointment(appointment);
+            bill.setPaymentStatus(PENDING);
+        }
+        bill.setBillingType(strategy.type());
+        bill.setTotalAmount(strategy.calculate(appointment));
+        return billRepository.save(bill);
     }
 
-    private BillResponse toResponse(Bill bill, String strategyName) {
-        BillResponse r = new BillResponse();
-        r.setBillId(bill.getBillId());
-        if (bill.getAppointment() != null)
-            r.setAppointmentId(bill.getAppointment().getAppointmentId());
-        r.setTotalAmount(bill.getTotalAmount());
-        r.setPaymentStatus(bill.getPaymentStatus());
-        r.setPaymentMethod(bill.getPaymentMethod());
-        r.setGeneratedAt(bill.getGeneratedAt());
-        r.setBillingStrategy(strategyName);
-        return r;
+    private BillResponse toResponse(Bill bill) {
+        BillingType type = bill.getBillingType() != null ? bill.getBillingType() : BillingType.STANDARD;
+        return BillResponse.from(bill, selector.strategyFor(type).description());
     }
+
+    private Appointment findAppointment(Long appointmentId) {
+        return appointmentRepository.findById(appointmentId)
+            .orElseThrow(() -> new ResourceNotFoundException("Appointment not found: " + appointmentId));
+    }
+
+    private static BillingType parseType(String type) {
+        try {
+            return BillingType.valueOf(type.trim().toUpperCase(Locale.ROOT));
+        } catch (IllegalArgumentException e) {
+            throw new BadRequestException("Invalid billing type: " + type + " (allowed: AUTO, STANDARD, EMERGENCY, FOLLOW_UP)");
+        }
+    }
+
+    private static PaymentStatus parseStatus(String status) {
+        try {
+            return PaymentStatus.valueOf(status.trim().toUpperCase(Locale.ROOT));
+        } catch (IllegalArgumentException e) {
+            throw new BadRequestException("Invalid payment status: " + status);
+        }
+    }
+
+    private static String label(PaymentStatus s) { return s.name().toLowerCase(Locale.ROOT); }
 }

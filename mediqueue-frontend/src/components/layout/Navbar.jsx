@@ -1,5 +1,6 @@
 import { useAuth } from '../../context/AuthContext'
 import { formatEnum } from '../../utils/formatters'
+import NotificationBell from './NotificationBell'
 
 export default function Navbar() {
   const { user, logout } = useAuth()
@@ -13,6 +14,7 @@ export default function Navbar() {
     }}>
       {user && (
         <>
+          <NotificationBell />
           <span style={{ fontSize: '0.875rem', color: 'var(--color-text-muted)' }}>
             {user.username}
           </span>

@@ -21,8 +21,16 @@ public interface UserAccountService {
     /** Public sign-up: creates an ACTIVE patient. Any other requested role is rejected (403). */
     User registerPatient(RegisterRequest request);
 
-    /** Administrator creates an account for any role; it is ACTIVE immediately. */
-    User createByAdmin(RegisterRequest request);
+    /**
+     * Administrator creates an account for any role; it is ACTIVE immediately. The server generates a
+     * temporary password (returned once) that the user must change at their first login.
+     */
+    CreatedAccount createByAdmin(RegisterRequest request);
+
+    /** Administrator: replace a user's password with a new temporary one they must change at next login. */
+    String resetPassword(String userId);
+
+    record CreatedAccount(User user, String temporaryPassword) {}
 
     List<UserDTO> listUsers();
 
@@ -32,7 +40,7 @@ public interface UserAccountService {
     /** The logged-in user updates their own contact (and role-appropriate) details. */
     Object updateOwnProfile(UpdateProfileRequest request);
 
-    /** The logged-in user changes their own password; the current password must match. */
+    /** The logged-in user changes their own password; the current password must match. Clears the must-change flag. */
     void changeOwnPassword(ChangePasswordRequest request);
 
     /** Administrator activates, suspends or deactivates an account. */

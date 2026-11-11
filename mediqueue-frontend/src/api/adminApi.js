@@ -1,4 +1,5 @@
 import axiosInstance from './axiosInstance';
+import { ENDPOINTS } from './endpoints';
 
 export const getAllDoctors = () =>
   axiosInstance.get('/admin/doctors');
@@ -19,16 +20,21 @@ export const addDepartment = (departmentData) =>
 export const updateSlotSettings = (settings) =>
   axiosInstance.put('/admin/settings/slots', settings);
 
-export const getAuditLogs = () =>
-  axiosInstance.get('/admin/audit');
+/** Audit log; params: { action, from, to, q, limit } (all optional). */
+export const getAuditLogs = (params = {}) =>
+  axiosInstance.get(ENDPOINTS.ADMIN_AUDIT(params));
 
-export const overrideQueue = (queueData) =>
-  axiosInstance.put('/admin/queue/override', queueData);
+export const getAdminDashboard = () =>
+  axiosInstance.get(ENDPOINTS.ADMIN_DASHBOARD);
+
+/** New temporary password for a user; they must change it at next login. */
+export const resetUserPassword = (userId) =>
+  axiosInstance.post(ENDPOINTS.USER_RESET_PASSWORD(userId));
 
 export const getAllUsers = () =>
   axiosInstance.get('/users');
 
-/** Create a user of any role with the same fields as self-registration. */
+/** Create a user of any role; the response is { user, temporaryPassword }. */
 export const createUser = (userData) =>
   axiosInstance.post('/users', userData);
 

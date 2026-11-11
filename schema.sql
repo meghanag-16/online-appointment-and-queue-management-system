@@ -11,7 +11,9 @@ CREATE TABLE users (
     username VARCHAR(50) UNIQUE NOT NULL,
     password VARCHAR(255) NOT NULL,
     role ENUM('PATIENT','DOCTOR','LAB_TECHNICIAN','RECEPTIONIST','ADMINISTRATOR'),
-    account_status ENUM('ACTIVE','SUSPENDED','DEACTIVATED') DEFAULT 'ACTIVE'
+    account_status ENUM('ACTIVE','SUSPENDED','DEACTIVATED') DEFAULT 'ACTIVE',
+    -- set for accounts created by the administrator: the temporary password must be changed at first login
+    must_change_password BIT(1) NOT NULL DEFAULT b'0'
 );
 
 CREATE TABLE patients (
@@ -118,6 +120,10 @@ CREATE TABLE lab_reports (
     upload_time     DATETIME     DEFAULT CURRENT_TIMESTAMP,
     file_path       VARCHAR(500),
     remarks         TEXT,
+    original_file_name VARCHAR(255),
+    content_type    VARCHAR(100),
+    file_size       BIGINT,
+    uploaded_by     VARCHAR(50),
     CONSTRAINT fk_lr_appointment FOREIGN KEY (appointment_id)
         REFERENCES appointments(appointment_id) ON DELETE CASCADE
 );
@@ -126,9 +132,11 @@ CREATE TABLE bills (
     bill_id         BIGINT AUTO_INCREMENT PRIMARY KEY,
     appointment_id  BIGINT UNIQUE,
     total_amount    DECIMAL(10,2)  DEFAULT 0.00,
-    payment_status  ENUM('PENDING','PAID','FAILED','REFUNDED') DEFAULT 'PENDING',
+    payment_status  ENUM('PENDING','PAID','FAILED','REFUNDED','VOID') DEFAULT 'PENDING',
     payment_method  VARCHAR(50),
     generated_at    TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    billing_type    ENUM('STANDARD','EMERGENCY','FOLLOW_UP') NOT NULL DEFAULT 'STANDARD',
+    paid_at         DATETIME NULL,
     CONSTRAINT fk_bill_appointment FOREIGN KEY (appointment_id)
         REFERENCES appointments(appointment_id) ON DELETE CASCADE
 );
@@ -140,20 +148,34 @@ CREATE TABLE complaints (
     description        TEXT,
     created_on         DATE    DEFAULT (CURRENT_DATE),
     resolution_status  ENUM('OPEN','UNDER_REVIEW','RESOLVED') DEFAULT 'OPEN',
+    appointment_id     BIGINT NULL,
+    bill_id            BIGINT NULL,
+    resolution_note    TEXT NULL,
+    updated_at         DATETIME NULL,
+    resolved_at        DATETIME NULL,
     CONSTRAINT fk_comp_patient FOREIGN KEY (patient_id)
-        REFERENCES patients(user_id) ON DELETE CASCADE
+        REFERENCES patients(user_id) ON DELETE CASCADE,
+    CONSTRAINT fk_comp_appointment FOREIGN KEY (appointment_id)
+        REFERENCES appointments(appointment_id) ON DELETE SET NULL,
+    CONSTRAINT fk_comp_bill FOREIGN KEY (bill_id)
+        REFERENCES bills(bill_id) ON DELETE SET NULL
 );
 
 CREATE TABLE notifications (
-    notification_id  BIGINT PRIMARY KEY,
+    notification_id  BIGINT AUTO_INCREMENT PRIMARY KEY,
     recipient_id     VARCHAR(50)  NOT NULL,
     type             ENUM('APPOINTMENT_REMINDER','REPORT_READY',
                           'PRESCRIPTION_AVAILABLE','GENERAL_ALERT'),
     message          TEXT,
     timestamp        DATETIME DEFAULT CURRENT_TIMESTAMP,
     delivery_status  ENUM('SENT','FAILED','PENDING') DEFAULT 'PENDING',
+    is_read          BIT(1) NOT NULL DEFAULT b'0',
+    appointment_id   BIGINT NULL,
+    channel          VARCHAR(20) NULL,
     CONSTRAINT fk_notif_user FOREIGN KEY (recipient_id)
-        REFERENCES users(user_id) ON DELETE CASCADE
+        REFERENCES users(user_id) ON DELETE CASCADE,
+    INDEX idx_notif_recipient_time (recipient_id, timestamp),
+    INDEX idx_notif_appointment_type (appointment_id, type)
 );
 
 CREATE TABLE virtual_queue (
@@ -172,6 +194,20 @@ CREATE TABLE virtual_queue (
     INDEX idx_vq_doctor_date (doctor_id, queue_date)
 );
 
+-- Key actions (bookings, cancellations, priority and queue overrides, account changes, complaints, payments).
+CREATE TABLE audit_log (
+    audit_id     BIGINT AUTO_INCREMENT PRIMARY KEY,
+    created_at   DATETIME     NOT NULL,
+    actor_id     VARCHAR(50)  NULL,
+    actor_name   VARCHAR(100) NULL,
+    actor_role   VARCHAR(30)  NULL,
+    action       VARCHAR(50)  NOT NULL,
+    target_type  VARCHAR(50)  NULL,
+    target_id    VARCHAR(50)  NULL,
+    details      TEXT         NULL,
+    INDEX idx_audit_time (created_at),
+    INDEX idx_audit_action (action)
+);
 
 -- Sub-tables for joined inheritance (created by Hibernate on ddl-auto=update; listed here for reference)
 CREATE TABLE IF NOT EXISTS lab_technicians (user_id VARCHAR(50) PRIMARY KEY, CONSTRAINT fk_lt_user FOREIGN KEY (user_id) REFERENCES users(user_id) ON DELETE CASCADE);
