@@ -125,7 +125,7 @@ export default function PatientComplaints() {
           {complaints === null && <LoadingState />}
           {complaints?.length === 0 && (
             <Card>
-              <EmptyState icon="💬" title="No complaints yet" description="You haven't raised any complaints." />
+              <EmptyState icon="message" title="No complaints yet" description="You haven't raised any complaints." />
             </Card>
           )}
           {complaints?.map(c => (

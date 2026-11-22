@@ -57,7 +57,7 @@ export default function PatientBilling() {
           {bills.length === 0 && !error && (
             <Card>
               <EmptyState
-                icon="🧾"
+                icon="receipt"
                 title="No bills yet"
                 description="A bill is created when you book an appointment."
               />

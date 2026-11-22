@@ -78,7 +78,7 @@ export default function PatientAppointments() {
       {data && data.length === 0 && (
         <Card>
           <EmptyState
-            icon="🗓️"
+            icon="calendar"
             title="No appointments yet"
             description="Book a slot with any doctor; it shows up here."
             action={

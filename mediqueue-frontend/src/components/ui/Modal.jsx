@@ -1,5 +1,6 @@
 import { useEffect, useId, useRef } from 'react'
 import { useEscapeKey } from '../../hooks/useEscapeKey'
+import Icon from './Icon'
 
 /**
  * A dialog over the page. Closes on Escape, on the close button and on a click outside the panel;
@@ -33,7 +34,7 @@ export default function Modal({ title, subtitle, onClose, footer, size = 'md', t
             {subtitle && <p className="card-subtitle">{subtitle}</p>}
           </div>
           <button type="button" className="btn btn-ghost btn-sm" aria-label="Close" onClick={onClose}>
-            ✕
+            <Icon name="close" size={18} />
           </button>
         </div>
         {children}

@@ -47,12 +47,6 @@ export default function Sidebar() {
 
   return (
     <aside className="sidebar">
-      <div className="sidebar-brand">
-        <span className="brand-mark" aria-hidden="true">
-          M
-        </span>
-        MediQueue
-      </div>
       <nav className="sidebar-nav" aria-label="Main">
         {links.map(link => (
           <NavLink key={link.to} to={link.to} className="sidebar-link">

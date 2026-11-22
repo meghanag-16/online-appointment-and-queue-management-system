@@ -30,7 +30,7 @@ export default function PatientPrescriptions() {
       {data && data.length === 0 && (
         <Card className="max-w-md">
           <EmptyState
-            icon="💊"
+            icon="pill"
             title="No prescriptions yet"
             description="They appear here as soon as your doctor issues one."
           />

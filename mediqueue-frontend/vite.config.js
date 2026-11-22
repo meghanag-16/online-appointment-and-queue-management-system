@@ -14,7 +14,21 @@ export default defineConfig({
   server: {
     proxy: {
       // Override with API_PROXY_TARGET if the backend runs elsewhere (e.g. http://localhost:8091)
-      '/api': process.env.API_PROXY_TARGET || 'http://localhost:8080',
+      '/api': {
+        target: process.env.API_PROXY_TARGET || 'http://localhost:8080',
+        // The browser only talks to this dev server, so proxied calls are not cross-site. Drop the
+        // Origin header so the API's CORS check doesn't reject the page when Vite picks another port
+        // (5174 when 5173 is busy) or it is opened as 127.0.0.1 / a network address.
+        configure: proxy => proxy.on('proxyReq', proxyReq => proxyReq.removeHeader('origin')),
+      },
+    },
+  },
+  preview: {
+    proxy: {
+      '/api': {
+        target: process.env.API_PROXY_TARGET || 'http://localhost:8080',
+        configure: proxy => proxy.on('proxyReq', proxyReq => proxyReq.removeHeader('origin')),
+      },
     },
   },
 })

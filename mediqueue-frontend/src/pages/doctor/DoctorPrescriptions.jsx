@@ -166,7 +166,7 @@ export default function DoctorPrescriptions() {
 
       <Card title="Issued prescriptions" className="max-w-lg">
         {prescriptions.length === 0 ? (
-          <EmptyState icon="💊" title="None yet" />
+          <EmptyState icon="pill" title="None yet" />
         ) : (
           <div className="divider-list">
             {prescriptions.map(p => (

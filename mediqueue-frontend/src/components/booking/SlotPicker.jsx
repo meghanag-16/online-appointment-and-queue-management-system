@@ -63,7 +63,11 @@ export default function SlotPicker({ doctorId, selectedSlotId, onSelect, exclude
   if (error) return <ErrorState message={error} />
   if (days.length === 0) {
     return (
-      <EmptyState icon="🗓️" title="No open slots" description="This doctor has no free time in the booking window." />
+      <EmptyState
+        icon="calendar"
+        title="No open slots"
+        description="This doctor has no free time in the booking window."
+      />
     )
   }
 

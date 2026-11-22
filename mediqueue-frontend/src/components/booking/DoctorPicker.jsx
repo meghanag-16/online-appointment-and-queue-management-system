@@ -80,7 +80,11 @@ export default function DoctorPicker({ selectedDoctorId, onSelect, compact = fal
       <ErrorState message={error} />
       {loading && <LoadingState label="Searching doctors…" />}
       {!loading && !error && doctors.length === 0 && (
-        <EmptyState icon="🩺" title="No doctors match these filters" description="Try another department or day." />
+        <EmptyState
+          icon="stethoscope"
+          title="No doctors match these filters"
+          description="Try another department or day."
+        />
       )}
 
       {!loading && (
