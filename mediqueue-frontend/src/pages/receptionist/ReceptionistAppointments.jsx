@@ -1,5 +1,6 @@
 import { useState, useEffect } from 'react'
 import PageLayout from '../../components/layout/PageLayout'
+import Icon from '../../components/ui/Icon'
 import PageTitle from '../../components/common/PageTitle'
 import StatusBadge from '../../components/common/StatusBadge'
 import PatientPicker from '../../components/booking/PatientPicker'
@@ -218,7 +219,8 @@ export default function ReceptionistAppointments() {
             resetBooking()
           }}
         >
-          {showBook ? '✕ Close' : '+ Book for Patient'}
+          <Icon name={showBook ? 'close' : 'plus'} size={16} />
+          {showBook ? 'Close' : 'Book for Patient'}
         </Button>
       </div>
 

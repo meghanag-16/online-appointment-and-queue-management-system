@@ -1,5 +1,5 @@
 import StatusBadge from '../common/StatusBadge'
-import { Card, Cell, Table } from '../ui'
+import { Card, Cell, Icon, Table } from '../ui'
 import { formatTime } from '../../utils/dates'
 
 const HEADERS = ['#', 'Patient', 'Slot', 'Reason', 'Priority', 'Status', 'Actions']
@@ -28,9 +28,9 @@ export default function QueueTable({ entries, renderActions, emptyText = 'Nobody
             <td className="strong text-lg">
               {e.queuePosition}
               {e.overridePosition != null && (
-                <span title="Position set by the administrator" className="text-xs">
+                <span className="text-accent">
                   {' '}
-                  📌
+                  <Icon name="pin" size={14} title="Position set by the administrator" />
                 </span>
               )}
             </td>

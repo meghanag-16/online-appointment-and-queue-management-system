@@ -1,190 +1,279 @@
-import { Link } from 'react-router-dom'
+import Icon from '../../components/ui/Icon'
+import SiteHeader from '../../components/layout/SiteHeader'
+import SiteFooter from '../../components/layout/SiteFooter'
+import { SITE } from '../../config/site'
 import './landing.css'
 
-const FEATURES = [
+const TRUST = [
+  { icon: 'clock', label: 'Live wait updates' },
+  { icon: 'shield', label: 'Private, secure records' },
+  { icon: 'building', label: 'Five specialist departments' },
+]
+
+const SERVICES = [
   {
-    icon: '🗓️',
-    title: 'Book in a minute',
-    text: 'Find a doctor by department, name or day, pick an open slot, done. A taken slot suggests the nearest free ones.',
+    icon: 'calendar',
+    tone: 'accent',
+    title: 'Appointments on your terms',
+    text: 'Choose your doctor and a time that suits you, from home and at any hour. No phone queues, no front-desk scramble.',
   },
   {
-    icon: '⏱️',
-    title: 'A live queue',
-    text: 'Every booking joins the doctor’s queue for the day. High-priority patients move up and screens update on their own.',
+    icon: 'clock',
+    tone: 'info',
+    title: 'Know when it is your turn',
+    text: 'Follow your place in line as it moves, so you can arrive when you are needed instead of waiting around.',
   },
   {
-    icon: '💊',
-    title: 'Prescriptions & records',
-    text: 'Doctors see the history of their own patients and issue digital prescriptions that land in the patient’s record.',
+    icon: 'file',
+    tone: 'purple',
+    title: 'Your health, in one place',
+    text: 'Prescriptions, lab results and past visits stay together, ready whenever you or your doctor need them.',
   },
   {
-    icon: '🧪',
-    title: 'Lab reports',
-    text: 'The lab uploads PDF or image reports; the patient is notified and downloads them from their portal.',
-  },
-  {
-    icon: '🧾',
-    title: 'Fair billing',
-    text: 'Bills are created at booking: standard, follow-up or emergency rates, voided or refunded if the visit is cancelled.',
-  },
-  {
-    icon: '🔔',
-    title: 'Notifications',
-    text: 'Reminders before the visit, plus alerts when a report or prescription is ready or a complaint is answered.',
+    icon: 'bell',
+    tone: 'success',
+    title: 'Reminders that keep you on track',
+    text: 'A gentle nudge before every visit, and a note the moment your results or prescription are ready.',
   },
 ]
 
-const ROLES = [
-  ['Patients', 'Book, cancel or reschedule, and keep prescriptions, reports and bills in one place.'],
-  ['Doctors', 'Run the day’s queue: call next, start, finish, and prescribe.'],
-  ['Front desk', 'Book for walk-ins, mark urgent cases high priority and collect payments.'],
-  ['Lab', 'Find the appointment and attach the report in seconds.'],
-  ['Administrators', 'Manage staff, departments and schedules, review complaints and the audit log.'],
+const VISIT_POINTS = [
+  'Clear, upfront charges for every visit',
+  'Prescriptions you can read, keep and refer back to',
+  'Lab reports you can download whenever you like',
+  'A direct line to raise a concern and hear back',
 ]
 
-const QUEUE = [
-  { pos: 1, name: 'Ananya R.', time: '09:30', tag: 'In consultation', tone: 'purple' },
-  { pos: 2, name: 'Karan M.', time: '10:00', tag: 'High priority', tone: 'accent' },
-  { pos: 3, name: 'Priya S.', time: '09:45', tag: 'Waiting', tone: 'info' },
-  { pos: 4, name: 'Rahul T.', time: '10:15', tag: 'Waiting', tone: 'info' },
+const DEPARTMENTS = [
+  {
+    icon: 'heart',
+    name: 'Cardiology',
+    text: 'Heart health checks, blood pressure care and long-term support for cardiac conditions.',
+  },
+  {
+    icon: 'bone',
+    name: 'Orthopedics',
+    text: 'Treatment for joint pain, fractures, sports injuries and conditions of the spine.',
+  },
+  {
+    icon: 'baby',
+    name: 'Pediatrics',
+    text: 'Gentle, attentive care for infants, children and teenagers as they grow.',
+  },
+  {
+    icon: 'stethoscope',
+    name: 'General Medicine',
+    text: 'Your first stop for everyday illness, routine check-ups and ongoing health concerns.',
+  },
+  {
+    icon: 'sparkle',
+    name: 'Dermatology',
+    text: 'Expert help for skin, hair and nail conditions, from allergies to chronic care.',
+  },
 ]
 
-/** Public landing page: what MediQueue does, with a CSS-only 3D illustration of a live queue. */
+const AUDIENCES = [
+  {
+    title: 'For doctors',
+    lead: 'More time with patients, less time chasing paperwork.',
+    points: ['A clear view of the day ahead', 'Patient history at a glance', 'Digital prescriptions in moments'],
+  },
+  {
+    title: 'For patients',
+    lead: 'Care that respects your time and keeps you informed.',
+    points: [
+      'Book, move or cancel visits yourself',
+      'See your turn approach in real time',
+      'Reports, bills and prescriptions together',
+      'Reminders before every appointment',
+    ],
+    featured: true,
+  },
+  {
+    title: 'For hospital teams',
+    lead: 'A calmer front desk, lab and administration.',
+    points: [
+      'Fast bookings for walk-in patients',
+      'Urgent cases seen first',
+      'Reports shared the moment they are ready',
+    ],
+  },
+]
+
+const BEFORE_VISIT = [
+  { icon: 'file', text: 'A photo ID and any earlier prescriptions' },
+  { icon: 'flask', text: 'Recent test results or scans, if you have them' },
+  { icon: 'clock', text: 'Arrive 10 minutes before your time' },
+  { icon: 'calendar', text: 'Plans changed? Reschedule up to 2 hours before' },
+]
+
+/** Public landing page: who MediQueue is for and what it makes better. */
 export default function LandingPage() {
   return (
     <div className="landing">
-      <header className="landing-nav">
-        <span className="landing-brand">
-          <span className="brand-mark" aria-hidden="true">
-            M
-          </span>
-          MediQueue
-        </span>
-        <nav className="row" aria-label="Account">
-          <Link to="/login" className="btn btn-ghost">
-            Sign in
-          </Link>
-          <Link to="/register" className="btn btn-primary">
-            Register
-          </Link>
-        </nav>
-      </header>
+      <SiteHeader showAccount onLanding />
 
       <main>
-        <section className="landing-hero">
-          <div className="landing-hero-copy">
-            <p className="landing-eyebrow">Online appointments & queue management</p>
-            <h1>
-              Less waiting room.
-              <br />
-              <span className="text-accent">More care.</span>
-            </h1>
-            <p className="landing-lead">
-              MediQueue books doctor appointments, runs a live queue for every doctor and keeps prescriptions, lab
-              reports, bills and complaints in one place, for patients, doctors, the front desk, the lab and
-              administrators.
-            </p>
-            <div className="row">
-              <Link to="/register" className="btn btn-primary btn-lg" data-testid="landing-register">
-                Book an appointment
-              </Link>
-              <Link to="/login" className="btn btn-outline btn-lg" data-testid="landing-login">
-                Staff sign in
-              </Link>
-            </div>
-          </div>
-
-          <div className="scene" aria-hidden="true">
-            <div className="scene-stage">
-              <div className="panel panel-back">
-                <p className="panel-label">Today</p>
-                <p className="panel-big">24</p>
-                <p className="panel-sub">appointments</p>
-              </div>
-              <div className="panel panel-main">
-                <div className="panel-head">
-                  <span className="strong">Dr. Mehta · Cardiology</span>
-                  <span className="live-dot">Live</span>
-                </div>
-                {QUEUE.map(q => (
-                  <div key={q.pos} className="queue-line">
-                    <span className="queue-pos">{q.pos}</span>
-                    <span className="queue-name">{q.name}</span>
-                    <span className="queue-time">{q.time}</span>
-                    <span className={`badge badge-${q.tone}`}>{q.tag}</span>
-                  </div>
+        <section className="lp-hero" aria-labelledby="hero-title">
+          <div className="lp-container lp-hero-grid">
+            <div className="lp-hero-copy">
+              <h1 id="hero-title">
+                Better hospital visits start with <span className="text-accent">less waiting.</span>
+              </h1>
+              <p className="lp-lead">
+                See the right specialist at a time that suits you, know exactly when you will be called, and keep every
+                prescription, report and bill close at hand. Your energy should go into getting better, not standing in
+                line.
+              </p>
+              <ul className="lp-trust" aria-label="Highlights">
+                {TRUST.map(t => (
+                  <li key={t.label}>
+                    <Icon name={t.icon} size={18} />
+                    {t.label}
+                  </li>
                 ))}
-              </div>
-              <div className="panel panel-float">
-                <p className="panel-label">🔔 Report ready</p>
-                <p className="panel-sub">Lipid profile is ready to download</p>
-              </div>
+              </ul>
+            </div>
+
+            <figure className="lp-hero-photo">
+              <img
+                src="/images/hero.jpg"
+                alt="A doctor going over notes with a smiling patient"
+                width="1400"
+                height="933"
+              />
+              <figcaption className="lp-photo-chip">
+                <span className="lp-chip-dot" aria-hidden="true" />
+                <span>
+                  <span className="block strong text-sm">Open for appointments</span>
+                  <span className="block text-xs muted">{SITE.hours}</span>
+                </span>
+              </figcaption>
+            </figure>
+          </div>
+        </section>
+
+        <section id="services" className="lp-section lp-tinted" aria-labelledby="services-title">
+          <div className="lp-container">
+            <h2 id="services-title" className="lp-heading">
+              Care that fits around your day
+            </h2>
+            <p className="lp-subheading">
+              Everything that used to mean phone calls, paper slips and long waits, handled simply and in one place.
+            </p>
+            <div className="lp-services">
+              {SERVICES.map(s => (
+                <article key={s.title} className="lp-service">
+                  <span className={`lp-icon-tile tone-${s.tone}`}>
+                    <Icon name={s.icon} size={22} />
+                  </span>
+                  <h3>{s.title}</h3>
+                  <p>{s.text}</p>
+                </article>
+              ))}
             </div>
           </div>
         </section>
 
-        <section className="landing-section" aria-labelledby="features-title">
-          <h2 id="features-title">Everything a clinic visit needs</h2>
-          <div className="landing-grid">
-            {FEATURES.map(f => (
-              <article key={f.title} className="card feature-card">
-                <span className="feature-icon" aria-hidden="true">
-                  {f.icon}
-                </span>
-                <h3>{f.title}</h3>
-                <p className="muted text-sm">{f.text}</p>
-              </article>
-            ))}
+        <section id="your-visit" className="lp-section" aria-labelledby="visit-title">
+          <div className="lp-container lp-split">
+            <div className="lp-split-art">
+              <img
+                className="lp-visit-photo"
+                src="/images/visit.jpg"
+                alt="A doctor smiling as she talks a patient through his results"
+                width="1400"
+                height="933"
+                loading="lazy"
+              />
+              <aside className="lp-prep" aria-labelledby="prep-title">
+                <h3 id="prep-title">Before your visit</h3>
+                <ul>
+                  {BEFORE_VISIT.map(b => (
+                    <li key={b.text}>
+                      <span className="lp-prep-icon">
+                        <Icon name={b.icon} size={16} />
+                      </span>
+                      {b.text}
+                    </li>
+                  ))}
+                </ul>
+              </aside>
+            </div>
+
+            <div className="lp-split-copy">
+              <h2 id="visit-title" className="lp-heading lp-left">
+                A calmer visit, from booking to recovery
+              </h2>
+              <p className="lp-subheading lp-left">
+                A hospital visit is more than the few minutes with your doctor. We look after the moments before and
+                after too, so nothing gets lost and you always know what comes next.
+              </p>
+              <ul className="lp-checklist">
+                {VISIT_POINTS.map(p => (
+                  <li key={p}>
+                    <span className="lp-check">
+                      <Icon name="check" size={14} strokeWidth={2.6} />
+                    </span>
+                    {p}
+                  </li>
+                ))}
+              </ul>
+            </div>
           </div>
         </section>
 
-        <section className="landing-section landing-steps" aria-labelledby="steps-title">
-          <h2 id="steps-title">How a visit works</h2>
-          <ol className="steps">
-            <li>
-              <strong>Book</strong>
-              <span>Pick a doctor and an open time.</span>
-            </li>
-            <li>
-              <strong>Queue</strong>
-              <span>Arrive and follow your place in the live queue.</span>
-            </li>
-            <li>
-              <strong>Consult</strong>
-              <span>Your doctor sees your history and prescribes.</span>
-            </li>
-            <li>
-              <strong>Follow up</strong>
-              <span>Reports, bills and reminders arrive in your portal.</span>
-            </li>
-          </ol>
-        </section>
-
-        <section className="landing-section" aria-labelledby="roles-title">
-          <h2 id="roles-title">One system, five roles</h2>
-          <div className="landing-grid">
-            {ROLES.map(([title, text]) => (
-              <article key={title} className="card role-card">
-                <h3>{title}</h3>
-                <p className="muted text-sm">{text}</p>
-              </article>
-            ))}
+        <section id="departments" className="lp-section" aria-labelledby="departments-title">
+          <div className="lp-container">
+            <h2 id="departments-title" className="lp-heading">
+              Specialists under one roof
+            </h2>
+            <p className="lp-subheading">
+              Experienced doctors across five departments, so the care you need is never far away.
+            </p>
+            <div className="lp-departments">
+              {DEPARTMENTS.map(d => (
+                <article key={d.name} className="lp-department">
+                  <span className="lp-dept-icon">
+                    <Icon name={d.icon} size={26} />
+                  </span>
+                  <h3>{d.name}</h3>
+                  <p>{d.text}</p>
+                </article>
+              ))}
+            </div>
           </div>
         </section>
 
-        <section className="landing-cta">
-          <h2>Ready for your next visit?</h2>
-          <p>Create a patient account and book in under a minute.</p>
-          <Link to="/register" className="btn btn-primary btn-lg">
-            Create patient account
-          </Link>
+        <section className="lp-section lp-tinted" aria-labelledby="audience-title">
+          <div className="lp-container">
+            <h2 id="audience-title" className="lp-heading">
+              Made for everyone in the building
+            </h2>
+            <p className="lp-subheading">
+              When patients, doctors and staff share the same picture, the whole day runs more smoothly.
+            </p>
+            <div className="lp-audiences">
+              {AUDIENCES.map(a => (
+                <article key={a.title} className={`lp-audience ${a.featured ? 'is-featured' : ''}`.trim()}>
+                  <h3>{a.title}</h3>
+                  <p className="lp-audience-lead">{a.lead}</p>
+                  <ul>
+                    {a.points.map(p => (
+                      <li key={p}>
+                        <Icon name="check-circle" size={18} />
+                        {p}
+                      </li>
+                    ))}
+                  </ul>
+                </article>
+              ))}
+            </div>
+          </div>
         </section>
       </main>
 
-      <footer className="landing-footer">
-        <span>MediQueue — online appointment and queue management</span>
-        <Link to="/login">Sign in</Link>
-      </footer>
+      <SiteFooter />
     </div>
   )
 }

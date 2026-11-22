@@ -33,13 +33,19 @@ jest.mock('../context/AuthContext', () => ({
 }))
 
 // ── Mock axiosInstance ────────────────────────────────────────────────────────
-jest.mock('../api/axiosInstance', () => ({
-  default: {
-    get: jest.fn(),
-    post: jest.fn(),
-    patch: jest.fn(),
-  },
-}))
+jest.mock('../api/axiosInstance', () => {
+  const actual = jest.requireActual('../api/axiosInstance')
+  return {
+    default: {
+      get: jest.fn(),
+      post: jest.fn(),
+      patch: jest.fn(),
+    },
+    errorMessage: actual.errorMessage,
+    isServerUnreachable: actual.isServerUnreachable,
+    SERVER_UNREACHABLE: actual.SERVER_UNREACHABLE,
+  }
+})
 
 // ─────────────────────────────────────────────────────────────────────────────
 // Component imports
@@ -182,6 +188,19 @@ describe('LoginPage', () => {
     })
   })
 
+  test('says the server is unreachable instead of blaming the password when the API is down', async () => {
+    // What the dev proxy / nginx return when the backend is not running: an empty 500
+    mockLogin.mockRejectedValue({ request: {}, response: { status: 500, data: '' } })
+    render(<LoginPage />)
+
+    fireEvent.change(screen.getByLabelText(/username/i), { target: { value: 'admin' } })
+    fireEvent.change(screen.getByLabelText(/password/i), { target: { value: 'right-password' } })
+    fireEvent.click(screen.getByRole('button', { name: /sign in/i }))
+
+    expect(await screen.findByText(/cannot reach the server/i)).toBeInTheDocument()
+    expect(screen.queryByText(/invalid username or password/i)).not.toBeInTheDocument()
+  })
+
   test('button shows loading state while logging in', async () => {
     mockLogin.mockImplementation(() => new Promise(res => setTimeout(res, 500)))
     render(<LoginPage />)
@@ -217,7 +236,7 @@ describe('RegisterPage', () => {
   test('has no role selector (only patients can sign up)', () => {
     render(<RegisterPage />)
     expect(screen.queryByLabelText(/role/i)).not.toBeInTheDocument()
-    expect(screen.getByText(/create patient account/i)).toBeInTheDocument()
+    expect(screen.getByText(/create your patient account/i)).toBeInTheDocument()
   })
 
   test('calls register with correct payload on submit', async () => {

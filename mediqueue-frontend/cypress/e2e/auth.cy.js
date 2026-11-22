@@ -3,10 +3,11 @@
 describe('Landing page and sign-in', () => {
   it('shows the landing page to visitors and links to sign in and sign up', () => {
     cy.visit('/')
-    cy.contains('h1', 'Less waiting room.')
-    cy.get('[data-testid="landing-login"]').click()
+    cy.contains('h1', 'Better hospital visits start with')
+    cy.get('[data-testid="header-login"]').click()
     cy.location('pathname').should('eq', '/login')
-    cy.contains('a', 'Register').click()
+    cy.get('.site-header').should('not.contain', 'Register')
+    cy.contains('.auth-panel a', 'Register').click()
     cy.location('pathname').should('eq', '/register')
   })
 

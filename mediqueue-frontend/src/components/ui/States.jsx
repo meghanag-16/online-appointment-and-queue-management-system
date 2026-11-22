@@ -1,4 +1,5 @@
 import Button from './Button'
+import Icon from './Icon'
 
 /** Shown while data loads. */
 export function LoadingState({ label = 'Loading…' }) {
@@ -11,11 +12,12 @@ export function LoadingState({ label = 'Loading…' }) {
 }
 
 /** Shown when there is nothing to list yet; `action` is an optional button or link. */
-export function EmptyState({ icon = '📭', title, description, action }) {
+/** `icon` is an Icon name (see Icon.jsx). */
+export function EmptyState({ icon = 'inbox', title, description, action }) {
   return (
     <div className="empty-state" data-testid="empty-state">
       <div className="empty-state-icon" aria-hidden="true">
-        {icon}
+        <Icon name={icon} size={24} />
       </div>
       {title && <p className="empty-state-title">{title}</p>}
       {description && <p className="text-sm">{description}</p>}

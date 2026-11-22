@@ -138,7 +138,7 @@ export default function AdminDoctors() {
         <Card title="All doctors">
           <ErrorState message={loadError} onRetry={fetchDoctors} />
           {doctors === null && <LoadingState label="Loading doctors…" />}
-          {doctors?.length === 0 && !loadError && <EmptyState icon="🩺" title="No doctors yet" />}
+          {doctors?.length === 0 && !loadError && <EmptyState icon="stethoscope" title="No doctors yet" />}
           <div className="divider-list">
             {doctors?.map(doc => (
               <Fragment key={doc.userId}>

@@ -1,4 +1,5 @@
 import { createContext, useCallback, useContext, useMemo, useRef, useState } from 'react'
+import Icon from './Icon'
 
 const ToastContext = createContext(null)
 const DURATION_MS = 4500
@@ -36,7 +37,7 @@ export function ToastProvider({ children }) {
           <div key={t.id} className={`toast toast-${t.tone}`} role={t.tone === 'error' ? 'alert' : 'status'}>
             <span>{t.message}</span>
             <button type="button" className="toast-close" aria-label="Dismiss" onClick={() => dismiss(t.id)}>
-              ✕
+              <Icon name="close" size={16} />
             </button>
           </div>
         ))}

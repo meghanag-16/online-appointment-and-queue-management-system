@@ -221,7 +221,7 @@ const cases = [
   ['slot settings', () => require('../pages/admin/AdminSettings').default, 'ADMINISTRATOR', 'Save settings'],
   ['audit log', () => require('../pages/admin/AdminAudit').default, 'ADMINISTRATOR', 'Booked'],
   ['my profile', () => require('../pages/shared/ProfilePage').default, 'PATIENT', 'Change password'],
-  ['landing page', () => require('../pages/landing/LandingPage').default, 'PATIENT', 'Everything a clinic visit needs'],
+  ['landing page', () => require('../pages/landing/LandingPage').default, 'PATIENT', 'Care that fits around your day'],
   ['not found', () => require('../pages/shared/NotFound').default, 'PATIENT', 'Page not found'],
   ['access denied', () => require('../pages/shared/Unauthorized').default, 'PATIENT', 'Access Denied'],
 ]

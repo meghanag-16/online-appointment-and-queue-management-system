@@ -77,7 +77,7 @@ export default function AdminComplaints() {
         <div className="stack max-w-lg">
           {complaints.length === 0 && (
             <Card>
-              <EmptyState icon="✅" title="No complaints here" />
+              <EmptyState icon="check-circle" title="No complaints here" />
             </Card>
           )}
           {complaints.map(c => (

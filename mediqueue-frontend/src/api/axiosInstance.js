@@ -44,8 +44,20 @@ export function errorMessage(err, fallback = 'Something went wrong. Please try a
   if (data?.error) return data.error
   if (typeof data === 'string' && data.trim()) return data
   if (err?.response?.status === 413) return 'File is too large (maximum 10 MB)'
-  if (err?.request && !err?.response) return 'Cannot reach the server. Is the backend running?'
+  if (isServerUnreachable(err)) return SERVER_UNREACHABLE
   return err?.message || fallback
+}
+
+export const SERVER_UNREACHABLE = 'Cannot reach the server right now. Please try again in a moment.'
+
+/**
+ * No answer from the API: either no response at all, or an empty 5xx from a proxy in front of it
+ * (the Vite dev proxy and nginx answer 500/502/503/504 with no body when the backend is down).
+ */
+export function isServerUnreachable(err) {
+  const res = err?.response
+  if (err?.request && !res) return true
+  return !!res && res.status >= 500 && !res.data?.error && !(typeof res.data === 'string' && res.data.trim())
 }
 
 const isAuthCall = config => /\/auth\/(login|register)$/.test(config?.url || '')

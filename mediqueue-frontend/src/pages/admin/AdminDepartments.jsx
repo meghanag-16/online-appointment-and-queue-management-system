@@ -72,7 +72,7 @@ export default function AdminDepartments() {
         <Card title="All departments">
           <ErrorState message={loadError} onRetry={load} />
           {departments === null && <LoadingState />}
-          {departments?.length === 0 && !loadError && <EmptyState icon="🏥" title="No departments yet" />}
+          {departments?.length === 0 && !loadError && <EmptyState icon="building" title="No departments yet" />}
           {departments?.length > 0 && (
             <div className="divider-list">
               {departments.map(d => (

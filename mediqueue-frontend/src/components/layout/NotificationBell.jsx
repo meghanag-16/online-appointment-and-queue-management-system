@@ -4,6 +4,7 @@ import { usePolling } from '../../hooks/usePolling'
 import { useEscapeKey } from '../../hooks/useEscapeKey'
 import { formatDateTime, formatEnum } from '../../utils/formatters'
 import Button from '../ui/Button'
+import Icon from '../ui/Icon'
 import { EmptyState } from '../ui/States'
 
 /** Bell in the top bar: unread count, and a list of the latest notifications. Refreshes every 30 seconds. */
@@ -66,7 +67,7 @@ export default function NotificationBell() {
           if (!open) load()
         }}
       >
-        🔔
+        <Icon name="bell" size={18} />
         {unread > 0 && (
           <span className="count-dot" data-testid="notification-count">
             {unread > 99 ? '99+' : unread}
@@ -83,7 +84,7 @@ export default function NotificationBell() {
               </Button>
             )}
           </div>
-          {inbox.items.length === 0 && <EmptyState icon="🔕" title="No notifications yet" />}
+          {inbox.items.length === 0 && <EmptyState icon="bell-off" title="No notifications yet" />}
           {inbox.items.map(n => (
             <button
               type="button"
